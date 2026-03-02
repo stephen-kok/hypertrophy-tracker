@@ -404,6 +404,7 @@ function ExerciseCard(props){
     expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
       h("div",{style:{fontSize:12,color:"#6b7280",fontStyle:"italic",marginBottom:6}},exercise.notes),
       overload?h("div",{style:{fontSize:12,color:"#22c55e",background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.12)",borderRadius:8,padding:"8px 10px",marginBottom:8}},"💪 All sets at top of rep range last session. Move up to ",h("strong",null,overload.to+" "+unit)," (+"+overload.increment+")"):null,
+      exercise.rir?h("div",{style:{fontSize:11,color:"#818cf8",background:"rgba(99,102,241,0.06)",border:"1px solid rgba(99,102,241,0.12)",borderRadius:6,padding:"5px 8px",marginBottom:6}},"Target: ",h("strong",null,exercise.rir+" RIR")," (reps in reserve)"):null,
       h(MachineWeightInput,{exId:exercise.id,isMachine:!!exercise.machine}),
       h(WarmupSets,{exId:exercise.id,dayId:dayId}),
       h(SetLogger,{key:exercise.id+"_"+dataRev,exId:exercise.id,numSets:exercise.sets,dayId:dayId,onSetUpdate:onSetUpdate,onSetDone:onToggleDone,exKey:exKey,rest:exercise.rest,isMachine:!!exercise.machine}),
@@ -416,15 +417,93 @@ function ExerciseCard(props){
 }
 
 /* ── Cardio ── */
+var CARDIO_TYPES=[
+  {id:"treadmill",label:"Treadmill",icon:"\uD83C\uDFC3",fields:[{key:"duration",label:"MIN",type:"numeric"},{key:"incline",label:"INCLINE %",type:"decimal"},{key:"speed",label:"SPEED",type:"decimal"}],defaults:{duration:30,incline:12,speed:3.0}},
+  {id:"bike",label:"Bike",icon:"\uD83D\uDEB2",fields:[{key:"duration",label:"MIN",type:"numeric"},{key:"resistance",label:"LEVEL",type:"numeric"},{key:"rpm",label:"RPM",type:"numeric"}],defaults:{duration:30,resistance:8,rpm:80}},
+  {id:"stairclimber",label:"Stair Climber",icon:"\uD83E\uDDF1",fields:[{key:"duration",label:"MIN",type:"numeric"},{key:"level",label:"LEVEL",type:"numeric"},{key:"floors",label:"FLOORS",type:"numeric"}],defaults:{duration:20,level:8,floors:0}},
+  {id:"rowing",label:"Rowing",icon:"\uD83D\uDEA3",fields:[{key:"duration",label:"MIN",type:"numeric"},{key:"resistance",label:"LEVEL",type:"numeric"},{key:"distance",label:"METERS",type:"numeric"}],defaults:{duration:20,resistance:6,distance:0}},
+  {id:"other",label:"Other",icon:"\u2764\uFE0F",fields:[{key:"duration",label:"MIN",type:"numeric"},{key:"notes",label:"NOTES",type:"text"}],defaults:{duration:30,notes:""}}
+];
+
 function CardioLog(props){
   var dayId=props.dayId;var unit=getUnit();var cardioKey="cardio_"+dayId+"_"+today();
-  var s=useState(function(){return lsGet(cardioKey)||{done:false,duration:30,incline:12,speed:3.0}}),data=s[0],setData=s[1];
+  var s=useState(function(){var saved=lsGet(cardioKey);return saved||{done:false,type:"treadmill",duration:30,incline:12,speed:3.0}}),data=s[0],setData=s[1];
   var s2=useState(data.done),expanded=s2[0],setExpanded=s2[1];
   var save=function(d){setData(d);lsSet(cardioKey,d)};var update=function(field,val){save(Object.assign({},data,{[field]:val}))};var toggleDone=function(){save(Object.assign({},data,{done:!data.done}));if(!expanded)setExpanded(true)};
+  var cardioType=CARDIO_TYPES.find(function(c){return c.id===(data.type||"treadmill")})||CARDIO_TYPES[0];
+  var switchType=function(typeId){var ct=CARDIO_TYPES.find(function(c){return c.id===typeId})||CARDIO_TYPES[0];save(Object.assign({},ct.defaults,{done:data.done,type:typeId}))};
   var speedLabel=unit==="kg"?"km/h":"mph";
+  var iStyle={background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 4px",color:"#e5e7eb",fontSize:14,fontWeight:600,textAlign:"center",outline:"none",width:"100%"};
   return h("div",{style:{background:data.done?"rgba(34,197,94,0.03)":"rgba(255,255,255,0.025)",borderRadius:14,border:data.done?"1px solid rgba(34,197,94,0.12)":"1px solid rgba(255,255,255,0.055)",padding:"12px 14px",marginTop:12}},
-    h("div",{onClick:function(){setExpanded(!expanded)},style:{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",WebkitUserSelect:"none",userSelect:"none"}},h("div",{style:{display:"flex",alignItems:"center",gap:8}},h("span",{style:{fontSize:18}},"\uD83C\uDFC3"),h("span",{style:{fontSize:14,fontWeight:700,color:data.done?"#6b7280":"#f1f5f9"}},"Treadmill — Cardio"),data.done?h("span",{style:{fontSize:10,fontWeight:700,color:"#22c55e",background:"rgba(34,197,94,0.1)",padding:"2px 6px",borderRadius:4,marginLeft:4}},"Done"):null),h("span",{style:{fontSize:16,color:"#3f3f46",transform:expanded?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}},"\u25BE")),
-    expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}},h("div",null,h("label",{style:{fontSize:10,fontWeight:700,color:"#4b5563",display:"block",marginBottom:4}},"MIN"),h("input",{type:"number",inputMode:"numeric",value:data.duration,onChange:function(e){update("duration",e.target.value)},style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 4px",color:"#e5e7eb",fontSize:14,fontWeight:600,textAlign:"center",outline:"none",width:"100%"}})),h("div",null,h("label",{style:{fontSize:10,fontWeight:700,color:"#4b5563",display:"block",marginBottom:4}},"INCLINE %"),h("input",{type:"number",inputMode:"decimal",value:data.incline,onChange:function(e){update("incline",e.target.value)},style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 4px",color:"#e5e7eb",fontSize:14,fontWeight:600,textAlign:"center",outline:"none",width:"100%"}})),h("div",null,h("label",{style:{fontSize:10,fontWeight:700,color:"#4b5563",display:"block",marginBottom:4}},speedLabel.toUpperCase()),h("input",{type:"number",inputMode:"decimal",value:data.speed,onChange:function(e){update("speed",e.target.value)},style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"8px 4px",color:"#e5e7eb",fontSize:14,fontWeight:600,textAlign:"center",outline:"none",width:"100%"}}))),h("button",{onClick:toggleDone,style:{width:"100%",padding:"10px",borderRadius:10,border:data.done?"1px solid rgba(34,197,94,0.3)":"1px solid rgba(255,255,255,0.1)",background:data.done?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.03)",color:data.done?"#22c55e":"#9ca3af",fontSize:13,fontWeight:700,cursor:"pointer"}},data.done?"✓ Completed":"Mark Complete")));
+    h("div",{onClick:function(){setExpanded(!expanded)},style:{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",WebkitUserSelect:"none",userSelect:"none"}},h("div",{style:{display:"flex",alignItems:"center",gap:8}},h("span",{style:{fontSize:18}},cardioType.icon),h("span",{style:{fontSize:14,fontWeight:700,color:data.done?"#6b7280":"#f1f5f9"}},cardioType.label+" — Cardio"),data.done?h("span",{style:{fontSize:10,fontWeight:700,color:"#22c55e",background:"rgba(34,197,94,0.1)",padding:"2px 6px",borderRadius:4,marginLeft:4}},"Done"):null),h("span",{style:{fontSize:16,color:"#3f3f46",transform:expanded?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}},"\u25BE")),
+    expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
+      /* Cardio type selector */
+      h("div",{style:{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"}},CARDIO_TYPES.map(function(ct){var active=ct.id===(data.type||"treadmill");return h("button",{key:ct.id,onClick:function(){switchType(ct.id)},style:{padding:"4px 10px",borderRadius:6,border:active?"1px solid rgba(245,158,11,0.4)":"1px solid rgba(255,255,255,0.08)",background:active?"rgba(245,158,11,0.1)":"transparent",color:active?"#f59e0b":"#6b7280",fontSize:10,fontWeight:600,cursor:"pointer"}},ct.icon+" "+ct.label)})),
+      /* Dynamic fields */
+      h("div",{style:{display:"grid",gridTemplateColumns:"repeat("+Math.min(cardioType.fields.length,3)+", 1fr)",gap:8,marginBottom:10}},cardioType.fields.map(function(f){var fieldLabel=f.key==="speed"?speedLabel.toUpperCase():f.label;return h("div",{key:f.key},h("label",{style:{fontSize:10,fontWeight:700,color:"#4b5563",display:"block",marginBottom:4}},fieldLabel),f.type==="text"?h("input",{type:"text",value:data[f.key]||"",onChange:function(e){update(f.key,e.target.value)},placeholder:"...",style:Object.assign({},iStyle,{textAlign:"left",fontSize:12})}):h("input",{type:"number",inputMode:f.type==="decimal"?"decimal":"numeric",value:data[f.key]||"",onChange:function(e){update(f.key,e.target.value)},style:iStyle}))})),
+      h("button",{onClick:toggleDone,style:{width:"100%",padding:"10px",borderRadius:10,border:data.done?"1px solid rgba(34,197,94,0.3)":"1px solid rgba(255,255,255,0.1)",background:data.done?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.03)",color:data.done?"#22c55e":"#9ca3af",fontSize:13,fontWeight:700,cursor:"pointer"}},data.done?"✓ Completed":"Mark Complete")));
+}
+
+/* ── Weekly Volume Dashboard ── */
+var MUSCLE_LABELS={chest:"Chest",back:"Back",quads:"Quads",hamstrings:"Hams",glutes:"Glutes",front_delt:"Front Delt",side_delt:"Side Delt",rear_delt:"Rear Delt",biceps:"Biceps",triceps:"Triceps",calves:"Calves",abs:"Abs"};
+var VOLUME_TARGETS={chest:[10,20],back:[10,20],quads:[10,20],hamstrings:[10,16],glutes:[8,16],front_delt:[6,12],side_delt:[10,20],rear_delt:[6,12],biceps:[10,20],triceps:[10,16],calves:[8,16],abs:[8,16]};
+
+function calcWeeklyVolume(config){
+  var vol={};
+  config.days.forEach(function(day){
+    var saved=loadDayData(day.id);
+    var customs=getCustomExercises(day.id);
+    var allEx=day.exercises.concat(customs);
+    allEx.forEach(function(ex){
+      var muscles=ex.muscles||[];
+      var sets=saved.exercises&&saved.exercises[ex.id];
+      var doneSets=sets?sets.filter(function(s){return s.done}).length:0;
+      if(doneSets>0){muscles.forEach(function(m){if(!vol[m])vol[m]=0;vol[m]+=doneSets})}
+    });
+  });
+  return vol;
+}
+
+function VolumeDashboard(props){
+  var onClose=props.onClose,config=props.config;
+  var vol=useMemo(function(){return calcWeeklyVolume(config)},[config]);
+  var muscleKeys=Object.keys(MUSCLE_LABELS);
+  var maxSets=Math.max(20,Math.max.apply(null,muscleKeys.map(function(m){return vol[m]||0})));
+  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()}},h("div",{className:"sheet fade-in"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},h("h3",{style:{fontSize:18,fontWeight:800,color:"#f1f5f9"}},"Weekly Volume"),h("button",{onClick:onClose,style:{background:"none",border:"none",color:"#6b7280",fontSize:20,cursor:"pointer"}},"✕")),
+    h("div",{style:{fontSize:11,color:"#6b7280",marginBottom:14}},"Sets completed this week per muscle group. Target: 10-20 sets for most muscles."),
+    muscleKeys.map(function(m){
+      var sets=vol[m]||0;var target=VOLUME_TARGETS[m]||[10,20];
+      var pct=sets/maxSets;
+      var color=sets===0?"#3f3f46":sets<target[0]?"#f59e0b":sets>target[1]?"#ef4444":"#22c55e";
+      var label=sets===0?"—":sets<target[0]?"Low":sets>target[1]?"High":"Good";
+      return h("div",{key:m,style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+        h("div",{style:{width:70,fontSize:11,fontWeight:600,color:"#9ca3af",textAlign:"right",flexShrink:0}},MUSCLE_LABELS[m]),
+        h("div",{style:{flex:1,height:16,borderRadius:4,background:"rgba(255,255,255,0.04)",overflow:"hidden",position:"relative"}},
+          h("div",{style:{width:(pct*100)+"%",height:"100%",borderRadius:4,background:color,transition:"width 0.3s",minWidth:sets>0?2:0}}),
+          h("span",{style:{position:"absolute",right:4,top:0,lineHeight:"16px",fontSize:9,fontWeight:700,color:"#9ca3af"}},sets>0?sets:"")),
+        h("span",{style:{width:30,fontSize:9,fontWeight:700,color:color,textAlign:"left",flexShrink:0}},label));
+    })));
+}
+
+/* ── Deload Check ── */
+function getDeloadWarning(config){
+  var warnings=[];
+  config.days.forEach(function(day){
+    day.exercises.forEach(function(ex){
+      var hist=getHistory(day.id,ex.id,10);
+      var recentRpe=[];
+      hist.slice(0,3).forEach(function(entry){
+        var dayData=loadDayData(day.id,entry.date);
+        if(dayData.rpe&&dayData.rpe[ex.id])recentRpe.push(dayData.rpe[ex.id]);
+      });
+      if(recentRpe.length>=2){
+        var avg=recentRpe.reduce(function(a,b){return a+b},0)/recentRpe.length;
+        if(avg>=9&&warnings.indexOf(ex.name)===-1)warnings.push(ex.name);
+      }
+    });
+  });
+  return warnings.length>0?warnings:null;
 }
 
 /* ── Body Metrics ── */
@@ -478,7 +557,7 @@ function AddExerciseForm(props){
 
 /* ── Day View ── */
 function DayView(props){
-  var day=props.day,refresh=props.refresh;
+  var day=props.day,refresh=props.refresh,config=props.config;
   var dayData=useDayData();
   var s5=useState(false),showComplete=s5[0],setShowComplete=s5[1];var s6=useState(false),dismissed=s6[0],setDismissed=s6[1];
   var s8=useState(false),showAddForm=s8[0],setShowAddForm=s8[1];
@@ -491,8 +570,10 @@ function DayView(props){
   var nextExIdx=-1;
   for(var ni=0;ni<allExercises.length;ni++){var exD=saved.exercises&&saved.exercises[allExercises[ni].id];var exDone=exD?exD.filter(function(s){return s.done}).length:0;if(exDone<allExercises[ni].sets){nextExIdx=ni;break}}
   var removeCustom=function(exId){var next=removeCustomExercise(day.id,exId);setCustoms(next);refresh()};
+  var deloadWarnings=useMemo(function(){return config?getDeloadWarning(config):null},[config]);
   useEffect(function(){if(allComplete&&!dismissed)setShowComplete(true)},[allComplete,dismissed]);
   return h("div",{style:{paddingBottom:40}},h("div",{style:{marginBottom:14}},h("h2",{style:{fontSize:18,fontWeight:800,margin:0,color:"#f1f5f9",letterSpacing:-.3}},day.title),h("p",{style:{fontSize:12,color:"#6b7280",margin:"3px 0 0",fontStyle:"italic"}},day.subtitle),h("div",{style:{marginTop:10,display:"flex",alignItems:"center",gap:10}},h("div",{style:{flex:1,height:4,borderRadius:2,background:"rgba(255,255,255,0.06)",overflow:"hidden"}},h("div",{style:{width:(pct*100)+"%",height:"100%",borderRadius:2,background:pct>=1?"#22c55e":"#f59e0b",transition:"width 0.3s"}})),h("span",{style:{fontSize:11,fontWeight:700,color:pct>=1?"#22c55e":"#9ca3af",fontVariantNumeric:"tabular-nums",flexShrink:0}},doneSets+"/"+totalSets),allComplete?h("button",{onClick:function(){setShowComplete(true)},style:{fontSize:10,fontWeight:700,color:"#22c55e",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:6,padding:"3px 8px",cursor:"pointer"}},"Summary"):null)),
+    deloadWarnings?h("div",{style:{background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.15)",borderRadius:10,padding:"10px 12px",marginBottom:10}},h("div",{style:{fontSize:12,fontWeight:700,color:"#ef4444",marginBottom:4}},"⚠ Consider a Deload"),h("div",{style:{fontSize:11,color:"#9ca3af",lineHeight:1.5}},"High RPE (9+) for 2+ sessions on: ",deloadWarnings.join(", "),". Consider reducing weight 40-50% this week to recover.")):null,
     day.exercises.map(function(ex,i){return h(ExerciseCard,{key:ex.id,exercise:ex,index:i,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===i})}),
     customs.length>0?h("div",{style:{borderTop:"1px solid rgba(99,102,241,0.1)",marginTop:8,paddingTop:8}},h("div",{style:{fontSize:10,fontWeight:700,color:"#818cf8",marginBottom:6,letterSpacing:.5}},"CUSTOM EXERCISES"),customs.map(function(ex,i){var ci=day.exercises.length+i;return h("div",{key:ex.id,style:{position:"relative"}},h(ExerciseCard,{exercise:ex,index:ci,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===ci}),h("button",{onClick:function(){removeCustom(ex.id)},style:{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:6,border:"1px solid rgba(239,68,68,0.3)",background:"rgba(239,68,68,0.08)",color:"#ef4444",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}},"✕"))})):null,
     showAddForm?h(AddExerciseForm,{dayId:day.id,onAdd:function(){setCustoms(getCustomExercises(day.id));setShowAddForm(false);refresh()},onCancel:function(){setShowAddForm(false)}}):h("button",{onClick:function(){setShowAddForm(true)},style:{width:"100%",padding:"10px",borderRadius:10,border:"1px dashed rgba(99,102,241,0.3)",background:"transparent",color:"#818cf8",fontSize:12,fontWeight:600,cursor:"pointer",marginTop:8}},"+ Add Exercise"),
@@ -546,7 +627,7 @@ function ProfileSelector(){
 function MainApp(props){
   var config=props.config;var DAYS=config.days;
   var s=useState(0),activeDay=s[0],setActiveDay=s[1];var s2=useState(0),tick=s2[0],setTick=s2[1];
-  var s3=useState(false),showSettings=s3[0],setShowSettings=s3[1];var s4=useState(false),showMetrics=s4[0],setShowMetrics=s4[1];
+  var s3=useState(false),showSettings=s3[0],setShowSettings=s3[1];var s4=useState(false),showMetrics=s4[0],setShowMetrics=s4[1];var sv=useState(false),showVolume=sv[0],setShowVolume=sv[1];
   var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0],setDayMapState=s7[1];
   var scrollRef=useRef(null);var refresh=useCallback(function(){setTick(function(t){return t+1})},[]);
   var dayData=useDayData();
@@ -569,6 +650,7 @@ function MainApp(props){
             h("span",{style:{fontSize:9,color:"#3f3f46",fontWeight:700,letterSpacing:.5}},config.subtitle||""))),
         h("div",{style:{display:"flex",alignItems:"center",gap:6}},
           h("div",{style:{textAlign:"right"}},h("div",{style:{fontSize:11,color:"#6b7280"}},new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})),h("div",{style:{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}},h("span",{style:{fontSize:10,color:"#4b5563"}},"Session:"),h(SessionTimer,null))),
+          h("button",{onClick:function(){setShowVolume(true)},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"6px 8px",cursor:"pointer",fontSize:12,color:"#6b7280"}},"📊"),
           h("button",{onClick:function(){setShowMetrics(true)},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"6px 8px",cursor:"pointer",fontSize:13,color:"#6b7280"}},"⚖"),
           h("button",{onClick:function(){setShowSettings(true)},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"6px 8px",cursor:"pointer",fontSize:14,color:"#6b7280"}},"⚙"))),
       /* Tabs */
@@ -579,7 +661,8 @@ function MainApp(props){
     /* Floating timer */
     h(FloatingTimer,null),
     showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,dayMap:dayMap,setDayMapState:setDayMapState}):null,
-    showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null);
+    showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
+    showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null);
 }
 
 /* ══════════════════════════════════════════
