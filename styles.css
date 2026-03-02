@@ -114,15 +114,22 @@ input[type="number"]{-moz-appearance:textfield}
 
 /* ═══ STEPPER ═══ */
 .stepper{display:flex;align-items:center;gap:2px}
-.stepper-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:5px;width:24px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text-muted);flex-shrink:0;padding:0}
+.stepper-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:5px;width:32px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text-muted);flex-shrink:0;padding:0;min-height:44px;min-width:32px}
 .stepper-btn:active{background:rgba(255,255,255,0.1)}
 
 /* ═══ SET CHECK ═══ */
-.set-check{width:32px;height:32px;border-radius:7px;border:2px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-dim);transition:all .15s}
+.set-check{width:44px;height:44px;border-radius:9px;border:2px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-dim);transition:all .15s}
 .set-check--done{border-color:var(--success);background:rgba(34,197,94,0.15);color:var(--success)}
 
 /* ═══ RPE BUTTONS ═══ */
-.rpe-btn{flex:1;padding:6px 2px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;text-align:center;transition:all .15s}
+.rpe-btn{flex:1;padding:10px 2px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;text-align:center;transition:all .15s;min-height:44px}
+
+/* ═══ SAVE INDICATOR ═══ */
+@keyframes saveFlash{0%{opacity:1}100%{opacity:0}}
+.save-indicator{position:fixed;top:max(env(safe-area-inset-top,0px),8px);right:16px;z-index:50;font-size:10px;font-weight:700;color:var(--success);background:var(--success-bg);border:1px solid var(--success-border);border-radius:6px;padding:3px 8px;animation:saveFlash 1.5s ease-out forwards;pointer-events:none}
+
+/* ═══ EXTRA SET ═══ */
+.set-row--extra{border-left:2px solid var(--accent);padding-left:4px;border-radius:2px}
 
 /* ═══ PROGRESS BAR ═══ */
 .progress{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.06);overflow:hidden}

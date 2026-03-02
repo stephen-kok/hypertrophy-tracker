@@ -179,6 +179,35 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v17 — Phases 5-8: Close the Loop, UX, Reliability, Maturity (2026-03-02)
+**Phase 5 — Close the Loop**
+- Readiness check now adjusts workout (volume & intensity reduction based on score)
+- Deload strategies apply real changes: reduced weights, halved sets, or active recovery
+- RIR integration into overload algorithm — won't suggest weight increase at RIR 0-1
+- Volume progression: suggests adding extra sets when stuck at same weight for 3 sessions
+- Superset rest logic: timer waits for both exercises before starting rest
+
+**Phase 6 — UX Tightening**
+- Touch target audit: all interactive elements meet 44px minimum (stepper, checkboxes, RPE)
+- Haptic feedback (vibration) on set completion
+- Save indicator flash confirming auto-save
+- Extra set visual distinction with accent left border
+- Session timer dropdown chevron for discoverability
+- Swipe gesture refinement (80px threshold, 2x angle ratio)
+- Completion summary changed from blocking full-screen to dismissible bottom sheet
+
+**Phase 7 — Architecture & Reliability**
+- Config validation on load with clear error messages for malformed JSON
+- Per-exercise card error boundaries (graceful degradation instead of full-app crash)
+- e1RM Epley formula capped at 10 reps for accuracy
+- What's New modal for returning users after version updates
+- App version tracking to control feature announcements
+
+**Phase 8 — Product Maturity**
+- One-tap backup export from completion summary
+- Week-over-week volume trend per muscle group in Volume Dashboard
+- Previous week comparison with delta arrows
+
 ### v16 — Phases 0-4: Training Intelligence & Periodization (2026-03-02)
 **Phase 0 — Foundation**
 - SRI integrity hashes on React CDN scripts
