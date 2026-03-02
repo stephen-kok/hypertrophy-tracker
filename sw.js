@@ -1,4 +1,4 @@
-var CACHE_NAME = 'hypertrophy-v6';
+var CACHE_NAME = 'hypertrophy-v7';
 var URLS_TO_CACHE = [
   './',
   './index.html',

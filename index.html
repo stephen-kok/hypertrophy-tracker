@@ -11,11 +11,9 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGEwYTBmIi8+PHRleHQgeD0iOTAiIHk9IjEwNSIgZm9udC1mYW1pbHk9Ii1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNzAiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmNTllMGIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhUPC90ZXh0Pjwvc3ZnPg==">
 <link rel="manifest" href="manifest.json">
 <style>
-:root{--bg:#0a0a0f;--bg-card:rgba(255,255,255,0.025);--bg-header:rgba(10,10,15,0.97);--bg-sheet:#141419;--bg-overlay:rgba(0,0,0,.7);--text:#e5e7eb;--text-secondary:#9ca3af;--text-muted:#6b7280;--text-dim:#4b5563;--text-faint:#3f3f46;--border:rgba(255,255,255,0.06);--input-bg:rgba(255,255,255,0.06);--input-border:rgba(255,255,255,0.1)}
-html.light{--bg:#f5f5f5;--bg-card:rgba(0,0,0,0.03);--bg-header:rgba(245,245,245,0.97);--bg-sheet:#ffffff;--bg-overlay:rgba(0,0,0,.4);--text:#1a1a2e;--text-secondary:#4b5563;--text-muted:#6b7280;--text-dim:#9ca3af;--text-faint:#d1d5db;--border:rgba(0,0,0,0.08);--input-bg:rgba(0,0,0,0.04);--input-border:rgba(0,0,0,0.12)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{height:100%;width:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{background:#0a0a0f;color:#e5e7eb;font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type="number"]{-moz-appearance:textfield}
 .fade-in{animation:fadeIn .2s ease}
@@ -23,8 +21,8 @@ input[type="number"]{-moz-appearance:textfield}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 .timer-active{animation:pulse 1.5s ease-in-out infinite}
 ::-webkit-scrollbar{display:none}
-.overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.sheet{background:var(--bg-sheet);border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;padding:24px 20px;padding-bottom:max(env(safe-area-inset-bottom,0px),24px)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.sheet{background:#141419;border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;padding:24px 20px;padding-bottom:max(env(safe-area-inset-bottom,0px),24px)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toggle-track{width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;transition:background .2s}
 .toggle-knob{width:20px;height:20px;border-radius:10px;background:#fff;position:absolute;top:2px;transition:left .2s}
