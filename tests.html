@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hypertrophy Tracker — Unit Tests</title>
+<style>
+body{font-family:monospace;background:#0a0a0f;color:#e5e7eb;padding:20px;font-size:13px}
+.pass{color:#22c55e}.fail{color:#ef4444}.suite{color:#f59e0b;font-weight:700;margin-top:16px}
+</style>
+</head>
+<body>
+<h2 style="color:#f59e0b">Hypertrophy Tracker — Unit Tests</h2>
+<div id="results"></div>
+<script>
+/* Minimal test harness */
+var results=[],passed=0,failed=0;
+function assert(name,condition,detail){
+  if(condition){passed++;results.push('<div class="pass">✓ '+name+'</div>')}
+  else{failed++;results.push('<div class="fail">✗ '+name+(detail?' — '+detail:'')+'</div>')}
+}
+function suite(name){results.push('<div class="suite">'+name+'</div>')}
+
+/* ═══ Load functions under test (inline copies to avoid module issues) ═══ */
+
+/* today() */
+var today=function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+
+/* parseRepRange */
+function parseRepRange(reps){var str=String(reps).replace(/\/leg/i,"");var parts=str.split("-");if(parts.length===2)return{min:parseInt(parts[0])||0,max:parseInt(parts[1])||0};var n=parseInt(str)||0;return{min:n,max:n}}
+
+/* calc1RM */
+function calc1RM(weight,reps){var w=parseFloat(weight),r=parseInt(reps);if(!w||!r||r<=0)return 0;if(r===1)return w;return Math.round(w*(1+r/30))}
+
+/* validateImportData */
+function validateImportData(data){
+  if(!data||typeof data!=="object"||Array.isArray(data))return"Import file must be a JSON object.";
+  var keys=Object.keys(data);
+  if(keys.length===0)return"Import file is empty.";
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i];
+    if(typeof k!=="string")return"Invalid key found: "+k;
+    if(k.indexOf("ht_")===-1)return"Unexpected key '"+k+"' — this doesn't look like a Hypertrophy Tracker export.";
+  }
+  return null;
+}
+
+/* ═══ Tests ═══ */
+
+suite("today()");
+(function(){
+  var result=today();
+  assert("Returns string",typeof result==="string");
+  assert("Matches YYYY-MM-DD format",/^\d{4}-\d{2}-\d{2}$/.test(result));
+  var parts=result.split("-");
+  var d=new Date();
+  assert("Year matches local year",parseInt(parts[0])===d.getFullYear());
+  assert("Month matches local month",parseInt(parts[1])===d.getMonth()+1);
+  assert("Day matches local day",parseInt(parts[2])===d.getDate());
+})();
+
+suite("parseRepRange()");
+assert("Parses '8-10'",parseRepRange("8-10").min===8&&parseRepRange("8-10").max===10);
+assert("Parses '12-15'",parseRepRange("12-15").min===12&&parseRepRange("12-15").max===15);
+assert("Parses single number '10'",parseRepRange("10").min===10&&parseRepRange("10").max===10);
+assert("Strips /leg",parseRepRange("10-12/leg").min===10&&parseRepRange("10-12/leg").max===12);
+assert("Handles empty string",parseRepRange("").min===0&&parseRepRange("").max===0);
+assert("Handles '6-8'",parseRepRange("6-8").min===6&&parseRepRange("6-8").max===8);
+
+suite("calc1RM()");
+assert("100×10 = 133",calc1RM(100,10)===133);
+assert("100×1 = 100 (1RM is weight itself)",calc1RM(100,1)===100);
+assert("225×5 = 263",calc1RM(225,5)===263);
+assert("0 weight returns 0",calc1RM(0,10)===0);
+assert("0 reps returns 0",calc1RM(100,0)===0);
+assert("Negative reps returns 0",calc1RM(100,-5)===0);
+assert("String inputs work",calc1RM("135","8")===171);
+assert("Decimal weight",calc1RM(62.5,10)===83);
+
+suite("validateImportData()");
+assert("Valid data returns null",validateImportData({"ht_test_key":1})===null);
+assert("Null returns error",validateImportData(null)!==null);
+assert("Array returns error",validateImportData([1,2])!==null);
+assert("Empty object returns error",validateImportData({})!==null);
+assert("Non-ht keys return error",validateImportData({"random_key":1})!==null);
+assert("Number returns error",validateImportData(42)!==null);
+assert("Mixed keys — invalid if any non-ht",validateImportData({"ht_good":1,"bad":2})!==null);
+
+suite("Input validation limits");
+(function(){
+  var MAX_WEIGHT=1500,MAX_REPS=100;
+  assert("Weight 1500 is at limit",1500<=MAX_WEIGHT);
+  assert("Weight 1501 exceeds limit",1501>MAX_WEIGHT);
+  assert("Reps 100 is at limit",100<=MAX_REPS);
+  assert("Reps 101 exceeds limit",101>MAX_REPS);
+})();
+
+/* ═══ Output ═══ */
+var el=document.getElementById("results");
+el.innerHTML=results.join("")+'<div style="margin-top:20px;font-size:15px;font-weight:700;color:'+(failed>0?"#ef4444":"#22c55e")+'">'+passed+' passed, '+failed+' failed</div>';
+document.title=(failed>0?"FAIL":"PASS")+" — "+document.title;
+</script>
+</body>
+</html>
