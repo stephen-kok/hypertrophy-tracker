@@ -1,0 +1,16 @@
+{
+  "name": "Hypertrophy Tracker",
+  "short_name": "Hypertrophy",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "description": "5-day bodybuilding split tracker with progressive overload coaching",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGEwYTBmIi8+PHRleHQgeD0iOTAiIHk9IjEwNSIgZm9udC1mYW1pbHk9Ii1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNzAiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmNTllMGIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhUPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ]
+}
