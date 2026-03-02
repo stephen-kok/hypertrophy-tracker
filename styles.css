@@ -180,7 +180,7 @@ input[type="number"]{-moz-appearance:textfield}
 .fatigue-dot{width:8px;height:8px;border-radius:50%;transition:background .2s}
 
 /* ═══ TOAST ═══ */
-.toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:400;background:var(--surface-hover);border:1px solid var(--accent-border);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:220px;max-width:90vw}
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);z-index:400;background:var(--surface-hover);border:1px solid var(--accent-border);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:220px;max-width:90vw}
 
 /* ═══ ARIA / FOCUS ═══ */
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

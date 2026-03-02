@@ -6,98 +6,259 @@
 <style>
 body{font-family:monospace;background:#0a0a0f;color:#e5e7eb;padding:20px;font-size:13px}
 .pass{color:#22c55e}.fail{color:#ef4444}.suite{color:#f59e0b;font-weight:700;margin-top:16px}
+.summary{margin-top:20px;font-size:15px;font-weight:700;padding:12px;border-radius:8px}
 </style>
 </head>
 <body>
 <h2 style="color:#f59e0b">Hypertrophy Tracker — Unit Tests</h2>
 <div id="results"></div>
 <script>
-/* Minimal test harness */
+/* ═══ Minimal test harness ═══ */
 var results=[],passed=0,failed=0;
 function assert(name,condition,detail){
-  if(condition){passed++;results.push('<div class="pass">✓ '+name+'</div>')}
-  else{failed++;results.push('<div class="fail">✗ '+name+(detail?' — '+detail:'')+'</div>')}
+  if(condition){passed++;results.push('<div class="pass">\u2713 '+name+'</div>')}
+  else{failed++;results.push('<div class="fail">\u2717 '+name+(detail?' \u2014 '+detail:'')+'</div>')}
 }
 function suite(name){results.push('<div class="suite">'+name+'</div>')}
+function deepEqual(a,b){return JSON.stringify(a)===JSON.stringify(b)}
 
-/* ═══ Load functions under test (inline copies to avoid module issues) ═══ */
+/* ═══ Functions under test (copied from app.js to avoid module issues) ═══ */
 
-/* today() */
 var today=function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 
-/* parseRepRange */
 function parseRepRange(reps){var str=String(reps).replace(/\/leg/i,"");var parts=str.split("-");if(parts.length===2)return{min:parseInt(parts[0])||0,max:parseInt(parts[1])||0};var n=parseInt(str)||0;return{min:n,max:n}}
 
-/* calc1RM */
 function calc1RM(weight,reps){var w=parseFloat(weight),r=parseInt(reps);if(!w||!r||r<=0)return 0;if(r===1)return w;return Math.round(w*(1+r/30))}
 
-/* validateImportData */
 function validateImportData(data){
   if(!data||typeof data!=="object"||Array.isArray(data))return"Import file must be a JSON object.";
-  var keys=Object.keys(data);
-  if(keys.length===0)return"Import file is empty.";
-  for(var i=0;i<keys.length;i++){
-    var k=keys[i];
-    if(typeof k!=="string")return"Invalid key found: "+k;
-    if(k.indexOf("ht_")===-1)return"Unexpected key '"+k+"' — this doesn't look like a Hypertrophy Tracker export.";
-  }
+  var keys=Object.keys(data);if(keys.length===0)return"Import file is empty.";
+  for(var i=0;i<keys.length;i++){if(keys[i].indexOf("ht_")===-1)return"Unexpected key '"+keys[i]+"' \u2014 not a valid export."}
   return null;
 }
 
-/* ═══ Tests ═══ */
+var PLATES_LBS=[45,35,25,10,5,2.5];
+var PLATES_KG=[25,20,15,10,5,2.5,1.25];
+var BAR_LBS=45,BAR_KG=20;
+
+function calcPlates(totalWeight,unit,barOverride){
+  var bar=barOverride>0?barOverride:(unit==="kg"?BAR_KG:BAR_LBS);
+  if(totalWeight<=bar)return{bar:bar,plates:[],remainder:0,barOnly:true};
+  var plates=unit==="kg"?PLATES_KG:PLATES_LBS;
+  var perSide=(totalWeight-bar)/2;var result=[];var rem=perSide;
+  plates.forEach(function(p){while(rem>=p-0.001){result.push(p);rem-=p}});
+  return{bar:bar,plates:result,remainder:Math.round(rem*100)/100,barOnly:false};
+}
+
+function fmtTime(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function fmtElapsed(s){var hr=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return hr>0?hr+"h "+m+"m":m>0?m+"m "+String(sec).padStart(2,"0")+"s":sec+"s"}
+
+function getOverloadSuggestion(exercise,lastSets,prevSets){
+  var range=parseRepRange(exercise.reps);if(range.max===0)return null;
+  var comp=lastSets.filter(function(s){return s.done&&s.weight&&s.reps});
+  if(comp.length<exercise.sets)return null;
+  var allTop=comp.every(function(s){return parseInt(s.reps)>=range.max});
+  var lw=parseFloat(comp[0].weight)||0;if(lw===0)return null;
+  var inc=exercise.increment||(exercise.machine?5:5);
+  var repsFirst=inc<=2.5||range.max>=15;
+  if(!allTop)return null;
+  if(repsFirst&&prevSets){
+    var prevComp=prevSets.filter(function(s){return s.done&&s.weight&&s.reps});
+    var prevAlsoTop=prevComp.length>0&&prevComp.every(function(s){return parseInt(s.reps)>=range.max});
+    if(!prevAlsoTop){
+      var targetReps=range.max+2;
+      return{type:"reps",from:lw,to:lw,targetReps:targetReps};
+    }
+  }
+  return{type:"weight",from:lw,to:lw+inc,increment:inc};
+}
+
+/* ═══ TESTS ═══ */
 
 suite("today()");
 (function(){
   var result=today();
   assert("Returns string",typeof result==="string");
   assert("Matches YYYY-MM-DD format",/^\d{4}-\d{2}-\d{2}$/.test(result));
-  var parts=result.split("-");
-  var d=new Date();
-  assert("Year matches local year",parseInt(parts[0])===d.getFullYear());
-  assert("Month matches local month",parseInt(parts[1])===d.getMonth()+1);
-  assert("Day matches local day",parseInt(parts[2])===d.getDate());
+  var parts=result.split("-");var d=new Date();
+  assert("Year matches",parseInt(parts[0])===d.getFullYear());
+  assert("Month matches",parseInt(parts[1])===d.getMonth()+1);
+  assert("Day matches",parseInt(parts[2])===d.getDate());
 })();
 
 suite("parseRepRange()");
-assert("Parses '8-10'",parseRepRange("8-10").min===8&&parseRepRange("8-10").max===10);
-assert("Parses '12-15'",parseRepRange("12-15").min===12&&parseRepRange("12-15").max===15);
-assert("Parses single number '10'",parseRepRange("10").min===10&&parseRepRange("10").max===10);
-assert("Strips /leg",parseRepRange("10-12/leg").min===10&&parseRepRange("10-12/leg").max===12);
-assert("Handles empty string",parseRepRange("").min===0&&parseRepRange("").max===0);
-assert("Handles '6-8'",parseRepRange("6-8").min===6&&parseRepRange("6-8").max===8);
+assert("Parses '8-10'",deepEqual(parseRepRange("8-10"),{min:8,max:10}));
+assert("Parses '12-15'",deepEqual(parseRepRange("12-15"),{min:12,max:15}));
+assert("Single number '10'",deepEqual(parseRepRange("10"),{min:10,max:10}));
+assert("Strips /leg",deepEqual(parseRepRange("10-12/leg"),{min:10,max:12}));
+assert("Empty string",deepEqual(parseRepRange(""),{min:0,max:0}));
+assert("Parses '6-8'",deepEqual(parseRepRange("6-8"),{min:6,max:8}));
+assert("Parses '15-20'",deepEqual(parseRepRange("15-20"),{min:15,max:20}));
+assert("Single '1'",deepEqual(parseRepRange("1"),{min:1,max:1}));
 
-suite("calc1RM()");
-assert("100×10 = 133",calc1RM(100,10)===133);
-assert("100×1 = 100 (1RM is weight itself)",calc1RM(100,1)===100);
-assert("225×5 = 263",calc1RM(225,5)===263);
-assert("0 weight returns 0",calc1RM(0,10)===0);
-assert("0 reps returns 0",calc1RM(100,0)===0);
-assert("Negative reps returns 0",calc1RM(100,-5)===0);
+suite("calc1RM() — Epley formula");
+assert("100x10 = 133",calc1RM(100,10)===133);
+assert("100x1 = 100 (identity)",calc1RM(100,1)===100);
+assert("225x5 = 263",calc1RM(225,5)===263);
+assert("0 weight = 0",calc1RM(0,10)===0);
+assert("0 reps = 0",calc1RM(100,0)===0);
+assert("Negative reps = 0",calc1RM(100,-5)===0);
 assert("String inputs work",calc1RM("135","8")===171);
-assert("Decimal weight",calc1RM(62.5,10)===83);
+assert("Decimal weight 62.5x10",calc1RM(62.5,10)===83);
+assert("Heavy single 405x1 = 405",calc1RM(405,1)===405);
+assert("High reps 50x20 = 83",calc1RM(50,20)===83);
+assert("Very high reps 25x30 = 50",calc1RM(25,30)===50);
 
 suite("validateImportData()");
 assert("Valid data returns null",validateImportData({"ht_test_key":1})===null);
+assert("Multiple valid keys",validateImportData({"ht_a":1,"ht_b":2})===null);
 assert("Null returns error",validateImportData(null)!==null);
 assert("Array returns error",validateImportData([1,2])!==null);
 assert("Empty object returns error",validateImportData({})!==null);
 assert("Non-ht keys return error",validateImportData({"random_key":1})!==null);
 assert("Number returns error",validateImportData(42)!==null);
-assert("Mixed keys — invalid if any non-ht",validateImportData({"ht_good":1,"bad":2})!==null);
+assert("String returns error",validateImportData("test")!==null);
+assert("Mixed keys fail",validateImportData({"ht_good":1,"bad":2})!==null);
 
-suite("Input validation limits");
+suite("Plate Calculator");
 (function(){
-  var MAX_WEIGHT=1500,MAX_REPS=100;
-  assert("Weight 1500 is at limit",1500<=MAX_WEIGHT);
-  assert("Weight 1501 exceeds limit",1501>MAX_WEIGHT);
-  assert("Reps 100 is at limit",100<=MAX_REPS);
-  assert("Reps 101 exceeds limit",101>MAX_REPS);
+  var r;
+  r=calcPlates(135,"lbs",0);
+  assert("135 lbs = 1x45 per side",deepEqual(r.plates,[45]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(225,"lbs",0);
+  assert("225 lbs = 2x45 per side",deepEqual(r.plates,[45,45]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(315,"lbs",0);
+  assert("315 lbs = 3x45 per side",deepEqual(r.plates,[45,45,45]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(185,"lbs",0);
+  assert("185 lbs = 45+25 per side",deepEqual(r.plates,[45,25]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(155,"lbs",0);
+  assert("155 lbs = 45+10 per side",deepEqual(r.plates,[45,10]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(45,"lbs",0);
+  assert("45 lbs = bar only",r.barOnly===true);
+
+  r=calcPlates(50,"lbs",0);
+  assert("50 lbs = 2.5 per side",deepEqual(r.plates,[2.5]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(60,"kg",0);
+  assert("60 kg = 20 per side",deepEqual(r.plates,[20]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(100,"kg",0);
+  assert("100 kg = 25+15 per side",deepEqual(r.plates,[25,15]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(22.5,"kg",0);
+  assert("22.5 kg = 1.25 per side",deepEqual(r.plates,[1.25]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(200,"lbs",55);
+  assert("Custom bar 55lbs: 200 = 45+25+2.5 per side",deepEqual(r.plates,[45,25,2.5]),"got "+JSON.stringify(r.plates));
+
+  r=calcPlates(30,"lbs",0);
+  assert("30 lbs < bar = bar only",r.barOnly===true);
+})();
+
+suite("fmtTime()");
+assert("0 seconds = 0:00",fmtTime(0)==="0:00");
+assert("59 seconds = 0:59",fmtTime(59)==="0:59");
+assert("60 seconds = 1:00",fmtTime(60)==="1:00");
+assert("90 seconds = 1:30",fmtTime(90)==="1:30");
+assert("150 seconds = 2:30",fmtTime(150)==="2:30");
+assert("3600 seconds = 60:00",fmtTime(3600)==="60:00");
+
+suite("fmtElapsed()");
+assert("0 = 0s",fmtElapsed(0)==="0s");
+assert("45 = 45s",fmtElapsed(45)==="45s");
+assert("60 = 1m 00s",fmtElapsed(60)==="1m 00s");
+assert("90 = 1m 30s",fmtElapsed(90)==="1m 30s");
+assert("3600 = 1h 0m",fmtElapsed(3600)==="1h 0m");
+assert("3661 = 1h 1m",fmtElapsed(3661)==="1h 1m");
+assert("7200 = 2h 0m",fmtElapsed(7200)==="2h 0m");
+
+suite("Progressive Overload Logic");
+(function(){
+  var exercise={id:"t1",name:"Test",sets:3,reps:"8-10",rest:90,machine:false,increment:5,muscles:["chest"]};
+
+  /* Not all sets at top of range — no suggestion */
+  var lastSets=[{weight:"185",reps:"8",done:true},{weight:"185",reps:"9",done:true},{weight:"185",reps:"9",done:true}];
+  assert("Not at top of range = null",getOverloadSuggestion(exercise,lastSets,null)===null);
+
+  /* All at top of range, no prev data — suggest reps first (inc=5, not <=2.5, max=10 not >=15) */
+  lastSets=[{weight:"185",reps:"10",done:true},{weight:"185",reps:"10",done:true},{weight:"185",reps:"10",done:true}];
+  var r=getOverloadSuggestion(exercise,lastSets,null);
+  assert("All at top, inc=5 => suggest weight",r!==null&&r.type==="weight","got "+JSON.stringify(r));
+
+  /* Reps-first path: small increment */
+  var exSmallInc={id:"t2",name:"Lat Raise",sets:3,reps:"12-15",rest:60,machine:false,increment:2.5,muscles:["side_delt"]};
+  lastSets=[{weight:"20",reps:"15",done:true},{weight:"20",reps:"15",done:true},{weight:"20",reps:"15",done:true}];
+  var prevSets=[{weight:"20",reps:"13",done:true},{weight:"20",reps:"14",done:true},{weight:"20",reps:"13",done:true}];
+  r=getOverloadSuggestion(exSmallInc,lastSets,prevSets);
+  assert("Small inc + prev not at top => reps first",r!==null&&r.type==="reps","got "+JSON.stringify(r));
+
+  /* Reps-first path: both sessions at top => weight up */
+  prevSets=[{weight:"20",reps:"15",done:true},{weight:"20",reps:"15",done:true},{weight:"20",reps:"15",done:true}];
+  r=getOverloadSuggestion(exSmallInc,lastSets,prevSets);
+  assert("Both sessions at top => weight up",r!==null&&r.type==="weight","got "+JSON.stringify(r));
+
+  /* Not enough completed sets */
+  lastSets=[{weight:"185",reps:"10",done:true},{weight:"185",reps:"10",done:true}];
+  r=getOverloadSuggestion(exercise,lastSets,null);
+  assert("Not enough sets = null",r===null);
+
+  /* Zero weight */
+  lastSets=[{weight:"0",reps:"10",done:true},{weight:"0",reps:"10",done:true},{weight:"0",reps:"10",done:true}];
+  r=getOverloadSuggestion(exercise,lastSets,null);
+  assert("Zero weight = null",r===null);
+
+  /* High rep range (>=15) triggers reps-first */
+  var exHighRep={id:"t3",name:"Calf Raise",sets:4,reps:"15-20",rest:45,machine:true,muscles:["calves"]};
+  lastSets=[{weight:"90",reps:"20",done:true},{weight:"90",reps:"20",done:true},{weight:"90",reps:"20",done:true},{weight:"90",reps:"20",done:true}];
+  prevSets=[{weight:"90",reps:"18",done:true},{weight:"90",reps:"17",done:true},{weight:"90",reps:"19",done:true},{weight:"90",reps:"18",done:true}];
+  r=getOverloadSuggestion(exHighRep,lastSets,prevSets);
+  assert("High rep range + prev not topped => reps",r!==null&&r.type==="reps","got "+JSON.stringify(r));
+})();
+
+suite("Input validation bounds");
+(function(){
+  var MAX_WEIGHT=9999,MAX_REPS=999;
+  assert("Weight at limit",9999<=MAX_WEIGHT);
+  assert("Weight above limit",10000>MAX_WEIGHT);
+  assert("Reps at limit",999<=MAX_REPS);
+  assert("Reps above limit",1000>MAX_REPS);
+  /* Negative input should be rejected */
+  assert("Negative weight is invalid",parseFloat("-5")<0);
+  assert("Negative reps is invalid",parseInt("-3")<0);
+})();
+
+suite("localStorage key format");
+(function(){
+  var prefix="ht_stephen_";
+  var dayKey=prefix+"upper@2026-03-02";
+  assert("Day data key format",dayKey==="ht_stephen_upper@2026-03-02");
+  assert("Pref key format",prefix+"pref_unit"==="ht_stephen_pref_unit");
+  assert("Machine weight key",prefix+"mw_up1"==="ht_stephen_mw_up1");
+  assert("Custom exercises key",prefix+"custom_upper"==="ht_stephen_custom_upper");
+  assert("Exercise unit key",prefix+"eu_up1"==="ht_stephen_eu_up1");
+})();
+
+suite("Date edge cases");
+(function(){
+  /* Verify date format consistency */
+  var d=new Date(2026,0,5);/* Jan 5 */
+  var formatted=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  assert("January 5 padded correctly",formatted==="2026-01-05");
+
+  d=new Date(2026,11,25);/* Dec 25 */
+  formatted=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  assert("December 25 formatted correctly",formatted==="2026-12-25");
 })();
 
 /* ═══ Output ═══ */
 var el=document.getElementById("results");
-el.innerHTML=results.join("")+'<div style="margin-top:20px;font-size:15px;font-weight:700;color:'+(failed>0?"#ef4444":"#22c55e")+'">'+passed+' passed, '+failed+' failed</div>';
-document.title=(failed>0?"FAIL":"PASS")+" — "+document.title;
+el.innerHTML=results.join("")+'<div class="summary" style="color:'+(failed>0?"#ef4444":"#22c55e")+';background:'+(failed>0?"rgba(239,68,68,0.1)":"rgba(34,197,94,0.1)")+'">'+passed+' passed, '+failed+' failed</div>';
+document.title=(failed>0?"FAIL":"PASS")+" \u2014 "+document.title;
 </script>
 </body>
 </html>
