@@ -199,8 +199,9 @@ function SetLogger(props){
   var unit=getUnit();
   var s=useState(function(){var saved=loadDayData(dayId);var ex=saved.exercises&&saved.exercises[exId];return Array.from({length:numSets},function(_,i){return ex&&ex[i]?{weight:ex[i].weight||"",reps:ex[i].reps||"",done:!!ex[i].done}:{weight:"",reps:"",done:false}})}),data=s[0],setData=s[1];
   var lastSession=useMemo(function(){var h=getHistory(dayId,exId,1);return h.length?h[0].sets:null},[dayId,exId]);
-  var persist=useCallback(function(d){var all=loadDayData(dayId);if(!all.exercises)all.exercises={};all.exercises[exId]=d;saveDayData(dayId,all);markSessionStart();if(onSetUpdate)onSetUpdate()},[dayId,exId,onSetUpdate]);
-  var update=function(idx,field,val){if(val!==""&&(isNaN(Number(val))||Number(val)<0))return;setData(function(prev){var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{[field]:val}):s});persist(next);return next})};
+  var save=useCallback(function(d){var all=loadDayData(dayId);if(!all.exercises)all.exercises={};all.exercises[exId]=d;saveDayData(dayId,all)},[dayId,exId]);
+  var persist=useCallback(function(d){save(d);markSessionStart();if(onSetUpdate)onSetUpdate()},[save,onSetUpdate]);
+  var update=function(idx,field,val){if(val!==""&&(isNaN(Number(val))||Number(val)<0))return;setData(function(prev){var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{[field]:val}):s});save(next);return next})};
   var toggle=function(idx){setData(function(prev){var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{done:!s.done}):s});persist(next);
     /* Auto-start timer if toggling ON and pref is enabled */
     if(!prev[idx].done&&getAutoTimer()&&exKey){triggerTimer(exKey,rest)}
