@@ -12,28 +12,44 @@ A mobile-first workout tracker built as a PWA (Progressive Web App). Designed to
 - Expandable exercise cards with weight/reps logging per set
 - One-tap quick log — copies last set's numbers, marks complete, and auto-starts rest timer
 - Rest timer with visual countdown, preset buttons (45s / 60s / 90s / 2m / 2:30), and vibration on completion
-- Warm-up set tracking (separate from working sets)
+- Warm-up set tracking (separate from working sets, hidden behind disclosure toggle)
 - Machine base weight memory (set once per machine, persists forever)
 - Session timer that starts automatically on your first logged set
+- Exercise substitution — swap exercises mid-session from config alternatives
+- Superset partner display for paired exercises
+- Tempo timer with phase-based countdown (eccentric / pause / concentric / pause)
 
 **Coaching intelligence**
 - Progressive overload prompts — when you hit the top of your rep range on all sets, the app tells you to add weight with exercise-specific increments
 - Previous session ghost values as input placeholders — tap to auto-fill
 - RPE rating (6-10) after completing each exercise with contextual feedback
+- Per-set RIR (Reps in Reserve) tracking with compact 0-4 buttons
+- Pre-session readiness check (sleep, soreness, energy, stress — rated 1-5)
+- Deload options with 4 strategies (intensity, volume, both, active recovery)
 - Full coaching tips for every exercise covering setup, execution, and common mistakes
+
+**Periodization**
+- Undulating periodization mode with mesocycle-aware rep targets
+- 4-week mesocycle blocks: Accumulation → Intensification → Peak → Deload
+- Automatic rep range shifting based on mesocycle week
 
 **Tracking**
 - Session completion summary with total volume, time, new PRs, and average RPE
-- Cardio logging (12-3-30 protocol with duration/incline/speed)
-- Body metrics (bodyweight and waist measurement with trend history)
+- Session comparison — side-by-side delta view between sessions
+- Training frequency analytics with compact tiles
+- Cardio logging (12-3-30 protocol with duration/incline/speed) with fatigue integration
+- Body metrics (bodyweight and waist measurement with trend history and SVG chart)
 - Exercise history showing your last 5 sessions per exercise
-- Data export/import as JSON for backups
+- Data export/import as JSON for backups with profile namespace validation
 
 **Technical**
 - Works offline after first load via service worker
 - Add to home screen on iOS/Android for full-screen native feel
-- All data stored locally on-device via localStorage
+- All data stored locally on-device via localStorage with quota warning
 - Multi-profile support — one app serves unlimited users via URL parameter
+- Session date locking prevents midnight boundary data splitting
+- SRI integrity hashes on CDN scripts
+- 60+ automated tests (tests.html)
 
 ---
 
@@ -102,6 +118,10 @@ Add a new JSON file in the `configs/` folder (e.g., `configs/mike.json`). Follow
 | `machine` | Yes | `true` shows the machine base weight option |
 | `increment` | No | Weight jump for overload prompts (default: 5 lbs) |
 | `tip` | No | Coaching notes shown when expanded |
+| `tempo` | No | Tempo string e.g. `"3-1-2-0"` (eccentric-pause-concentric-pause) |
+| `alternatives` | No | Array of substitute exercise names |
+| `supersetGroup` | No | Group ID to pair exercises as supersets |
+| `rir` | No | Target RIR for the exercise |
 
 **2. Register the profile**
 
@@ -130,13 +150,15 @@ No changes to `index.html` needed. Each profile's data is fully isolated in loca
 
 ```
 ├── index.html              ← App shell (shared across all profiles)
-├── app.js                  ← Application logic (React components)
+├── app.js                  ← Application logic (React components, ~1445 lines)
 ├── styles.css              ← Design system (CSS variables + component classes)
 ├── sw.js                   ← Service worker for offline caching
+├── tests.html              ← Automated test suite (60+ tests)
 ├── manifest.json           ← PWA manifest
 └── configs/
     ├── profiles.json       ← Registry of all available profiles
-    └── stephen.json        ← Individual workout config
+    ├── stephen.json        ← Individual workout config
+    └── james.json          ← Individual workout config
 ```
 
 ---
@@ -156,6 +178,40 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 ---
 
 ## Changelog
+
+### v16 — Phases 0-4: Training Intelligence & Periodization (2026-03-02)
+**Phase 0 — Foundation**
+- SRI integrity hashes on React CDN scripts
+- Expanded test suite to 60+ tests (plate calculator, overload logic, date edge cases)
+- localStorage quota detection with user warning
+- Minimal FOUC prevention in `index.html`
+
+**Phase 1 — Data Integrity & UX Fixes**
+- Midnight boundary fix: session date locking prevents data splitting across days
+- Import validation checks profile namespace to reject cross-profile imports
+- Card simplification: warmups & machine weight hidden behind disclosure toggle
+- Toast repositioned to avoid floating timer overlap
+
+**Phase 2 — UX Enhancements**
+- Exercise substitution system (session-scoped swaps from config alternatives)
+- Restructured "More" tab with quick-access grid (Body Metrics, Session History, Settings)
+- Enhanced onboarding with 4-step numbered guide
+- Improved empty states with icons and actionable suggestions
+
+**Phase 3 — Training Intelligence**
+- Pre-session readiness check (sleep, soreness, energy, stress — 1-5 scale)
+- Per-set RIR tracking with compact 0-4 buttons after set completion
+- Deload options with 4 strategies (intensity, volume, both, active recovery)
+- Superset partner display for paired exercises
+- Tempo timer with phase-based countdown
+- Enhanced fatigue scoring blending RPE + RIR + cardio data
+
+**Phase 4 — Periodization & Analytics**
+- Undulating periodization mode with mesocycle-aware rep targets
+- Training frequency analytics tiles in volume dashboard
+- Body composition trend chart (SVG line chart)
+- Session comparison with side-by-side delta view
+- Cardio fatigue integration (+0.15 per cardio session to fatigue score)
 
 ### v10 — Major Rewrite (2026-03-02)
 **Architecture & CSS**
