@@ -1,8 +1,9 @@
-var CACHE_NAME = 'hypertrophy-v9';
+var CACHE_NAME = 'hypertrophy-v10';
 var URLS_TO_CACHE = [
   './',
   './index.html',
   './app.js',
+  './styles.css',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js'
 ];
