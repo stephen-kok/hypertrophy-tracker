@@ -205,7 +205,7 @@ function Toggle(props){
 }
 
 /* ── Notification helper ── */
-function requestNotifPermission(){if("Notification"in window&&Notification.permission==="default"){Notification.requestPermission().then(function(p){notifPermission=p})}}
+function requestNotifPermission(){if("Notification"in window&&Notification.permission==="default"){Notification.requestPermission()}}
 function sendTimerNotification(){
   if(navigator.vibrate)navigator.vibrate([200,100,200]);
   if("Notification"in window&&Notification.permission==="granted"){try{new Notification("Rest Complete",{body:"Time to start your next set!",icon:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgcng9IjQwIiBmaWxsPSIjMGEwYTBmIi8+PHRleHQgeD0iOTAiIHk9IjEwNSIgZm9udC1mYW1pbHk9Ii1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNzAiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmNTllMGIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhUPC90ZXh0Pjwvc3ZnPg==",tag:"rest-timer"})}catch(e){}}
@@ -739,7 +739,7 @@ function App(){
   if(!profileId)return h(ProfileSelector,null);
   if(error)return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",padding:40,textAlign:"center"}},h("div",null,h("div",{style:{fontSize:40,marginBottom:16}},"⚠️"),h("h2",{style:{fontSize:18,fontWeight:700,color:"#f1f5f9",marginBottom:8}},"Profile Not Found"),h("p",{style:{fontSize:14,color:"#6b7280"}},error),h("a",{href:"?",style:{display:"inline-block",marginTop:16,padding:"10px 20px",borderRadius:10,background:"#f59e0b",color:"#000",fontWeight:700,fontSize:14,textDecoration:"none"}},"View All Profiles")));
   if(!config)return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"}},h("div",{style:{width:24,height:24,border:"3px solid rgba(245,158,11,0.3)",borderTopColor:"#f59e0b",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}));
-  return h(TimerProvider,null,h(DayDataProvider,{days:config.days},h(MainApp,{config:config})));
+  return h(TimerProvider,null,h(DayDataProvider,null,h(MainApp,{config:config})));
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(ErrorBoundary,null,h(App)));
