@@ -1,0 +1,60 @@
+{
+  "profile": "james",
+  "name": "James",
+  "program": "4-Day Push/Pull/Legs/Shoulders",
+  "subtitle": "Push / Pull / Legs / Shoulders & Abs",
+  "days": [
+    {
+      "id": "push", "label": "Push", "day": "Mon",
+      "title": "Push — Chest & Triceps",
+      "subtitle": "Flat and incline pressing. Cable flys for isolation. Tricep finishers.",
+      "exercises": [
+        {"id":"p1","name":"Flat Barbell Bench Press","sets":4,"reps":"6-8","rest":150,"machine":false,"notes":"Strength focus; add weight at 4×8","tip":"Eyes under bar, slight arch, shoulder blades pinched. Forearms vertical at the bottom. Elbows 45-75° from torso — not flared to 90°. Half-second pause at chest eliminates momentum and increases chest stimulus.","increment":5},
+        {"id":"p2","name":"Incline Dumbbell Press","sets":3,"reps":"8-10","rest":90,"machine":false,"notes":"30° incline; upper chest emphasis","tip":"Set bench to 30° (one notch up on most benches). Lower dumbbells as deep as your mobility allows — the stretch at the bottom is the primary growth driver with dumbbells vs barbell. Press up and slightly inward.","increment":5},
+        {"id":"p3","name":"Low-to-High Cable Fly","sets":3,"reps":"12-15","rest":60,"machine":true,"notes":"Upper/inner chest; constant tension","tip":"Pulleys at lowest position. Sweep arms up in an arc to chin height. Cables provide constant tension through the entire range — squeeze hard at peak contraction. Slight forward lean."},
+        {"id":"p4","name":"Lateral Raise","sets":3,"reps":"12-15","rest":60,"machine":false,"notes":"Lead with pinkies; strict form","tip":"Slight 5-10° forward lean to better isolate the lateral (side) delt. Stop at shoulder height — going higher recruits traps. Imagine pouring water from a pitcher. Strict form always beats heavy weight on this exercise.","increment":2.5},
+        {"id":"p5","name":"Cable Fly","sets":3,"reps":"12-15","rest":60,"machine":true,"notes":"Mid-chest; 1 sec squeeze at peak","tip":"Set pulleys at chest height. Lock your elbow angle throughout (slight bend). Try crossing hands slightly at peak for extra inner chest activation. Control the eccentric — don't let the cables yank your arms back."},
+        {"id":"p6","name":"Rope Tricep Pulldown","sets":3,"reps":"10-12","rest":60,"machine":true,"notes":"Spread rope at bottom","tip":"Split the rope apart at the bottom and hold for a beat — this targets the lateral head which gives arm width (the horseshoe shape). Lock elbows at your sides throughout. If your elbows drift forward, the weight is too heavy."},
+        {"id":"p7","name":"Overhead Tricep Extension","sets":3,"reps":"10-12","rest":60,"machine":true,"notes":"Full stretch behind head","tip":"The long head of the triceps only fully stretches when the arm is overhead — pulldowns alone won't fully develop your triceps. Get a deep stretch behind your head every rep. Use cable or dumbbell.","increment":5}
+      ]
+    },
+    {
+      "id": "pull", "label": "Pull", "day": "Tue",
+      "title": "Pull — Back & Biceps",
+      "subtitle": "Rowing and pulldown variations. Pull-ups. Triple bicep finisher.",
+      "exercises": [
+        {"id":"pl1","name":"Low Machine Row","sets":4,"reps":"8-10","rest":90,"machine":true,"notes":"Squeeze shoulder blades at peak","tip":"Pull with your elbows, not your hands — imagine hands are hooks. Let the weight stretch you forward slightly at the bottom (protract shoulders). Then squeeze shoulder blades together hard for a full second at peak contraction. This builds back thickness."},
+        {"id":"pl2","name":"Lat Pulldown","sets":4,"reps":"8-10","rest":90,"machine":true,"notes":"Full stretch at top; lean back 15°","tip":"Lean back 15-20°. Let your shoulders fully elevate at the top of each rep — the stretch is the most important part for lat growth. Many people cut this short and miss the best part. Pull to upper chest, not behind neck."},
+        {"id":"pl3","name":"Face Pull","sets":3,"reps":"15-20","rest":60,"machine":true,"notes":"External rotate at peak","tip":"Pull rope to face height, then split the rope and rotate knuckles toward the ceiling. The external rotation at the end is what makes this exercise special — it targets rear delts and rotator cuff muscles critical for shoulder health and the 3D shoulder look."},
+        {"id":"pl4","name":"Pull-Ups","sets":3,"reps":"6-10","rest":90,"machine":false,"notes":"Full dead hang between reps","tip":"Start from a full dead hang every rep (arms fully extended, shoulders elevated). This full range of motion is critical — partial pull-ups miss the stretched position where most growth happens. If you can't get 6 reps, use a band for assistance. Add weight with a belt once you hit 3×10.","increment":5},
+        {"id":"pl5","name":"Incline Dumbbell Curl","sets":3,"reps":"10-12","rest":60,"machine":false,"notes":"Long head stretch; arms behind torso","tip":"Set bench to 45-60°. Let arms hang behind your torso — keep elbows pinned behind your body throughout. This is one of the only exercises that targets the bicep long head (the peak) in its stretched position. Slow 3-second lowering.","increment":2.5},
+        {"id":"pl6","name":"Preacher Curl","sets":3,"reps":"10-12","rest":60,"machine":false,"notes":"Full extension at bottom","tip":"The preacher pad eliminates momentum and cheating. Lower all the way down to full extension — don't cut the bottom short. The short head of the bicep gets maximum stimulus at the bottom of this movement. Control the negative.","increment":5},
+        {"id":"pl7","name":"Hammer Curl","sets":3,"reps":"10-12","rest":60,"machine":false,"notes":"Brachialis emphasis; thumbs up","tip":"Keep a neutral grip throughout (thumbs pointing up). This targets the brachialis, which sits under the biceps and pushes it up when developed — it adds arm width visible from the front. Don't swing.","increment":5}
+      ]
+    },
+    {
+      "id": "legs", "label": "Legs", "day": "Thu",
+      "title": "Legs — Quads, Hamstrings & Glutes",
+      "subtitle": "Squat pattern. Unilateral work. Machine isolation. Hip thrust for glutes.",
+      "exercises": [
+        {"id":"l1","name":"Barbell Squat","sets":4,"reps":"6-8","rest":150,"machine":false,"notes":"Strength focus; full depth","tip":"Hip crease below knee every rep. Big belly breath into your belt (or brace hard), push knees out over toes. Full-depth squats recruit significantly more muscle fiber than partials. Film yourself from the side to check depth until it's automatic.","increment":5},
+        {"id":"l2","name":"Bulgarian Split Squat","sets":3,"reps":"10-12/leg","rest":90,"machine":false,"notes":"DB in each hand; front shin vertical","tip":"Step far enough forward that your front shin is vertical at the bottom. Rear foot is for balance only — don't push off it. Upright torso = more quad emphasis. Slight forward lean = more glute. This builds single-leg strength and fixes imbalances.","increment":5},
+        {"id":"l3","name":"Hamstring Leg Curl","sets":3,"reps":"12-15","rest":60,"machine":true,"notes":"Slow 3 sec eccentric; point toes away","tip":"Point toes away from you (plantarflexion) to reduce calf involvement and isolate hamstrings. The 3-second lowering phase is where the magic happens — hamstrings respond exceptionally well to slow eccentrics. Curl as close to your glutes as possible."},
+        {"id":"l4","name":"Leg Extension","sets":3,"reps":"12-15","rest":60,"machine":true,"notes":"Full lockout; squeeze 1 sec at top","tip":"Full lockout at the top, squeeze your quads hard for 1 second every rep — the peak contraction is uniquely valuable on this exercise. Align your knees with the machine's pivot point. Don't let the weight stack slam between reps."},
+        {"id":"l5","name":"Hip Thrust Machine","sets":3,"reps":"10-12","rest":90,"machine":true,"notes":"Full lockout; squeeze glutes at top","tip":"Drive through your heels. At the top, squeeze your glutes hard and hold for a beat — full hip extension is where glute activation peaks. Don't hyperextend your lower back; think about tucking your pelvis slightly at lockout. Posterior pelvic tilt at top."}
+      ]
+    },
+    {
+      "id": "shoulders", "label": "Shldr/Abs", "day": "Fri",
+      "title": "Shoulders & Abs",
+      "subtitle": "Overhead pressing. Lateral delts. Core-focused ab work.",
+      "exercises": [
+        {"id":"s1","name":"Shoulder Dumbbell Press","sets":4,"reps":"8-10","rest":90,"machine":false,"notes":"Full ROM; control the negative","tip":"Seated with bench at 80-85° (not fully vertical). Lower dumbbells to ear level minimum every rep — the stretched position at the bottom is where growth stimulus is highest. Press up and slightly inward. Don't bounce at the bottom.","increment":5},
+        {"id":"s2","name":"Lateral Raise","sets":4,"reps":"12-15","rest":60,"machine":false,"notes":"Lead with pinkies; second session for volume","tip":"This is your second lateral raise session of the week — side delts recover fast and respond well to high frequency. Same cues: slight lean, stop at shoulder height, lead with pinkies. Consider doing a drop set on the last set for extra stimulus.","increment":2.5},
+        {"id":"s3","name":"Dragon Flag","sets":3,"reps":"6-10","rest":90,"machine":false,"notes":"Advanced; regress to negatives if needed","tip":"Grip bench behind your head. Body stays rigid as a plank — lower your entire body as one unit. If you can't do full reps yet, do slow negatives only (lower over 5 seconds, reset at top). This is an advanced movement; there's no shame in partial range of motion while building strength."},
+        {"id":"s4","name":"Weighted Leg Raise","sets":3,"reps":"10-12","rest":60,"machine":false,"notes":"Curl pelvis up; ankle weight or DB","tip":"The key is pelvic tilt — curl your belt buckle toward your chin at the top. Without this, hip flexors do 80% of the work and abs barely engage. Add 2-5 lb ankle weights rather than doing higher reps; resistance drives ab hypertrophy more effectively than volume."},
+        {"id":"s5","name":"Cable Crunch","sets":3,"reps":"15-20","rest":60,"machine":true,"notes":"Exhale hard at bottom; hips locked","tip":"Hips stay locked in place — don't sit back onto your heels (that's a hip flexion, not a crunch). Forceful exhale at the bottom activates the transverse abdominis and increases contraction intensity. Think ribcage moving toward pelvis, not arms pulling the rope."}
+      ]
+    }
+  ]
+}
