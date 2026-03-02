@@ -129,7 +129,9 @@ No changes to `index.html` needed. Each profile's data is fully isolated in loca
 ## Repo Structure
 
 ```
-├── index.html              ← App (shared across all profiles)
+├── index.html              ← App shell (shared across all profiles)
+├── app.js                  ← Application logic (React components)
+├── styles.css              ← Design system (CSS variables + component classes)
 ├── sw.js                   ← Service worker for offline caching
 ├── manifest.json           ← PWA manifest
 └── configs/
@@ -149,4 +151,43 @@ Export your data regularly via **Settings → Export All Data** to guard against
 
 ## Tech Stack
 
-Vanilla JavaScript with React 18 (CDN), no build step. Single HTML file with inline styles. Service worker for offline caching. Designed to be maintainable without any tooling — edit the JSON configs and push to GitHub.
+Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design system (`styles.css`) with CSS variables. Service worker for offline caching. Designed to be maintainable without any tooling — edit the JSON configs and push to GitHub.
+
+---
+
+## Changelog
+
+### v10 — Major Rewrite (2026-03-02)
+**Architecture & CSS**
+- Extracted full design system to `styles.css` with CSS custom properties
+- Replaced inline styles throughout `app.js` with semantic CSS classes
+- Trimmed `index.html` inline CSS to critical-path only
+
+**UI Overhaul**
+- Tabbed exercise cards (Log | History | Coach) replacing single accordion view
+- Bottom navigation bar (Train | Volume | PRs | More) replacing header icon buttons
+- Grouped settings panel with Tools section for Body Metrics and Session History
+- Full-screen completion overlay with session stats
+
+**Accessibility**
+- ARIA labels, roles (`tablist`, `tab`, `tabpanel`, `dialog`), and `aria-selected`/`aria-modal` attributes on all interactive elements
+- Focus-visible outlines for keyboard navigation
+
+**Training Intelligence**
+- Fatigue score calculated from recent RPE history, displayed in header
+- Custom editable volume targets per muscle group
+- Mesocycle tracking (4-week blocks) with deload warnings
+- Shareable session summaries via Web Share API
+
+**Data & Performance**
+- Auto-save with debounce to reduce localStorage writes
+- Service worker cache bumped to v10 with `styles.css` included
+
+### v9 — Phases 11-14 (prior)
+- Data integrity, progress visualization, power features, code quality
+
+### v8 — Phases 7-10 (prior)
+- Training intelligence, data insights, code quality, session controls
+
+### v7 — Phase 6 (prior)
+- UX polish: stepper buttons, set animation, confirm dialog
