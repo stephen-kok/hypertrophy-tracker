@@ -122,6 +122,10 @@ Add a new JSON file in the `configs/` folder (e.g., `configs/mike.json`). Follow
 | `alternatives` | No | Array of substitute exercise names |
 | `supersetGroup` | No | Group ID to pair exercises as supersets |
 | `rir` | No | Target RIR for the exercise |
+| `bilateral` | No | `true` for exercises done per-side (e.g. split squats) |
+| `formTips` | No | Array of form cue strings shown in Coach tab |
+| `commonMistakes` | No | Array of common mistake strings shown in Coach tab |
+| `alternativeTips` | No | Object mapping alternative names to their coaching tips |
 
 **2. Register the profile**
 
@@ -150,7 +154,7 @@ No changes to `index.html` needed. Each profile's data is fully isolated in loca
 
 ```
 ├── index.html              ← App shell (shared across all profiles)
-├── app.js                  ← Application logic (React components, ~1445 lines)
+├── app.js                  ← Application logic (React components, ~1750 lines)
 ├── styles.css              ← Design system (CSS variables + component classes)
 ├── sw.js                   ← Service worker for offline caching
 ├── tests.html              ← Automated test suite (60+ tests)
@@ -178,6 +182,54 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 ---
 
 ## Changelog
+
+### v18 — UX Overhaul, Sound, Bilateral Tracking (2026-03-03)
+**Bug Fixes**
+- Weekly volume dashboard now correctly aggregates all days of the current week (Mon-Sun), not just today
+- Timer floating bar sits flush above bottom nav (removed gap from safe-area padding)
+
+**Sound & Notifications**
+- Two-tone audio chime (AudioContext) plays on rest timer completion
+- "REST COMPLETE" visual popup persists for 5 seconds instead of immediately vanishing
+- Timer sound toggle in Settings (on by default)
+
+**Settings & Toggles**
+- RIR tracking is now an optional setting (off by default) — toggle in Settings
+- Wellness check (readiness poll) is now an optional setting (off by default) — toggle in Settings
+
+**UX Improvements**
+- "UP NEXT" badge changes to "IN PROGRESS" once you start logging sets on an exercise
+- Exercise swap button moved from History tab to card header (⇄ icon) for quick access
+- Clickable RIR badge opens explanation modal (0=failure through 4=light effort)
+- Next undone set highlighted with yellow/accent background in set logger
+- Skip/Discard exercise button — marks exercise as skipped with dashed border and reduced opacity
+- Skipped exercises excluded from "next exercise" logic
+
+**Weight Conversion**
+- Auto-converts logged weights when toggling between kg and lbs (rounded to nearest 0.5kg or 5lbs)
+- Stores original values so converting back recovers exact numbers (no rounding drift)
+
+**Coach Tips**
+- Coach tab now shows categorized sections: Performance, Form Cues, Common Mistakes
+- Coach tips update when exercise is swapped (via `alternativeTips` in config)
+- Added `formTips` and `commonMistakes` to bench press, squat, and other key compounds
+
+**Exercise Config**
+- Added alternatives to 20+ exercises that were previously missing swap options
+- Cable fly alternatives: Pec Deck, Dumbbell Fly, Low-to-High Cable Fly
+- Hanging leg raise alternatives: Cable Crunch, Ab Wheel Rollout, Weighted Leg Raise, Dragon Flag
+- Added alternatives for curls, tricep extensions, lateral raises, rows, and more
+
+**Bilateral Tracking**
+- Exercises with `"bilateral": true` in config show Left/Right toggle tabs
+- Each side tracks sets independently with its own weight/reps/completion
+- Combined progress shown in card header (e.g., "4/6 sets")
+- Bulgarian Split Squat configured as bilateral in both profiles
+
+**Display**
+- E1RM badges now show units (e.g., "e1RM 185 lbs" instead of "e1RM 185")
+- Completed exercise cross-out uses green color at higher opacity with thicker line
+- Completed exercise cards get a green left border accent
 
 ### v17 — Phases 5-8: Close the Loop, UX, Reliability, Maturity (2026-03-02)
 **Phase 5 — Close the Loop**
