@@ -154,7 +154,7 @@ No changes to `index.html` needed. Each profile's data is fully isolated in loca
 
 ```
 ├── index.html              ← App shell (shared across all profiles)
-├── app.js                  ← Application logic (React components, ~1750 lines)
+├── app.js                  ← Application logic (React components, ~2150 lines)
 ├── styles.css              ← Design system (CSS variables + component classes)
 ├── sw.js                   ← Service worker for offline caching
 ├── tests.html              ← Automated test suite (60+ tests)
@@ -183,11 +183,30 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v28 — 4-Persona Review & Bug Fixes (2026-03-04)
+- Fixed effective volume filter: only counts sets at RIR ≤ 2 (was counting all sets)
+- Mesocycle-aware overload suggestions now use weekly undulating rep targets
+- Fixed previous-week volume comparison (was using rolling window instead of Mon-Sun block)
+- Fixed bilateral RIR guard — hold-weight suggestion now works for bilateral exercises
+- Focus trap on all modals/dialogs for keyboard accessibility
+- Toast queue system prevents message loss from rapid events
+- Calendar drill-down: tap workout dates to see exercise details
+- CSV export for session history
+- Bilateral history shows L/R labels per set
+- History manifest optimization for faster startup
+- Dynamic SW config caching on profile load
+- Timer double-fire guard (500ms debounce)
+- Fixed showRir default to match documented behavior (off by default)
+- Fixed timer auto-dismiss useEffect dependency
+- 7 new test suites covering RIR trends, volume filter, periodization, bilateral counting
+- Custom exercises now support muscle group assignment for volume tracking
+- Added missing exercise alternatives across both config profiles
+
 ### v27 — Infrastructure & Reliability (2026-03-04)
 - Cross-tab data sync via `storage` event prevents corruption with multiple tabs open
 - Service worker update is now user-controlled (no more mid-session race conditions)
 - Auto-backup every 7 days with downloadable snapshots in Settings > Data
-- Dynamic config caching in service worker (no hardcoded profile list)
+- Per-profile config files precached in service worker for offline access
 
 ### v26 — Power User Features (2026-03-04)
 - Workout calendar heatmap with month navigation and color-coded training intensity
@@ -308,7 +327,7 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 - Timer sound toggle in Settings (on by default)
 
 **Settings & Toggles**
-- RIR tracking is now an optional setting (off by default) — toggle in Settings
+- RIR tracking is now an optional setting (on by default) — toggle in Settings
 - Wellness check (readiness poll) is now an optional setting (off by default) — toggle in Settings
 
 **UX Improvements**

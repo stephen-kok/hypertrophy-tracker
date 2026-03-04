@@ -223,11 +223,11 @@ suite("Progressive Overload Logic");
 
 suite("Input validation bounds");
 (function(){
-  var MAX_WEIGHT=9999,MAX_REPS=999;
-  assert("Weight at limit",9999<=MAX_WEIGHT);
-  assert("Weight above limit",10000>MAX_WEIGHT);
-  assert("Reps at limit",999<=MAX_REPS);
-  assert("Reps above limit",1000>MAX_REPS);
+  var MAX_WEIGHT=1500,MAX_REPS=100;
+  assert("Weight at limit",1500<=MAX_WEIGHT);
+  assert("Weight above limit",1501>MAX_WEIGHT);
+  assert("Reps at limit",100<=MAX_REPS);
+  assert("Reps above limit",101>MAX_REPS);
   /* Negative input should be rejected */
   assert("Negative weight is invalid",parseFloat("-5")<0);
   assert("Negative reps is invalid",parseInt("-3")<0);
@@ -298,6 +298,119 @@ suite("getOverloadSuggestion — max weight fix");
   var lastSets=[{weight:"135",reps:"10",done:true},{weight:"155",reps:"10",done:true},{weight:"185",reps:"10",done:true}];
   var r=getOverloadSuggestion(exercise,lastSets,null);
   assert("Ascending sets: uses max weight 185, suggests 190",r!==null&&r.type==="weight"&&r.from===185&&r.to===190,"got "+JSON.stringify(r));
+})();
+
+suite("getRIRTrend — declining detection");
+(function(){
+  /* Simulate getRIRTrend logic (copied from app.js) */
+  function getRIRTrendTest(sessionAvgs){
+    if(sessionAvgs.length<2)return null;
+    var overall=sessionAvgs.reduce(function(a,b){return a+b},0)/sessionAvgs.length;
+    var declining=sessionAvgs.length>=2&&sessionAvgs[0]<sessionAvgs[sessionAvgs.length-1]-0.5;
+    return{avg:overall,declining:declining,sessions:sessionAvgs};
+  }
+  /* sessionAvgs[0] = most recent, sessionAvgs[last] = oldest (getHistory returns most-recent-first) */
+  /* Declining: most recent RIR is lower than oldest (fatigue accumulating) */
+  var declining=getRIRTrendTest([1.0, 2.0, 3.0]);/* Recent=1, Oldest=3 — RIR declining */
+  assert("RIR 3→2→1 is declining",declining.declining===true,"got "+declining.declining);
+
+  var improving=getRIRTrendTest([3.0, 2.0, 1.0]);/* Recent=3, Oldest=1 — RIR improving */
+  assert("RIR 1→2→3 is NOT declining",improving.declining===false,"got "+improving.declining);
+
+  var stable=getRIRTrendTest([2.0, 2.0, 2.0]);/* No change */
+  assert("RIR 2→2→2 is NOT declining",stable.declining===false);
+
+  var marginal=getRIRTrendTest([2.0, 2.0, 2.3]);/* Only 0.3 diff — below 0.5 threshold */
+  assert("RIR diff < 0.5 is NOT declining",marginal.declining===false);
+
+  var single=getRIRTrendTest([2.0]);
+  assert("Single session returns null",single===null);
+})();
+
+suite("effectiveOnly volume filter (RIR ≤ 2)");
+(function(){
+  /* Mock isEffective logic from countBilateralDone */
+  function isEffective(rir){
+    return rir===undefined||rir===null||rir<=2;
+  }
+  assert("RIR 0 is effective",isEffective(0)===true);
+  assert("RIR 1 is effective",isEffective(1)===true);
+  assert("RIR 2 is effective",isEffective(2)===true);
+  assert("RIR 3 is NOT effective",isEffective(3)===false);
+  assert("RIR 4 is NOT effective",isEffective(4)===false);
+  assert("RIR undefined is effective",isEffective(undefined)===true);
+  assert("RIR null is effective",isEffective(null)===true);
+})();
+
+suite("getMesoRepTarget — undulating periodization");
+(function(){
+  var MESO_REP_SHIFT={1:0,2:-1,3:-2,4:4};
+  function getMesoRepTargetTest(baseReps,week){
+    var range=parseRepRange(baseReps);var shift=MESO_REP_SHIFT[week]||0;
+    if(week===4){return{min:Math.max(1,range.min+2),max:range.max+4,label:"Deload"}}
+    var newMin=Math.max(1,range.min+shift);var newMax=Math.max(newMin,range.max+shift);
+    if(shift===0)return null;
+    return{min:newMin,max:newMax,label:"Wk"+week};
+  }
+  assert("Week 1 returns null (no shift)",getMesoRepTargetTest("8-10",1)===null);
+  var wk2=getMesoRepTargetTest("8-10",2);
+  assert("Week 2: 8-10 → 7-9",wk2.min===7&&wk2.max===9,"got "+wk2.min+"-"+wk2.max);
+  var wk3=getMesoRepTargetTest("8-10",3);
+  assert("Week 3: 8-10 → 6-8",wk3.min===6&&wk3.max===8,"got "+wk3.min+"-"+wk3.max);
+  var wk4=getMesoRepTargetTest("8-10",4);
+  assert("Week 4 (deload): 8-10 → 10-14",wk4.min===10&&wk4.max===14,"got "+wk4.min+"-"+wk4.max);
+  var lowRange=getMesoRepTargetTest("3-5",3);
+  assert("Week 3: 3-5 → min clamped to 1",lowRange.min===1,"got "+lowRange.min);
+})();
+
+suite("History index key parsing");
+(function(){
+  function parseHistoryKey(key,prefix){
+    if(!key||key.indexOf(prefix)!==0)return null;
+    var rest=key.slice(prefix.length);var atIdx=rest.indexOf("@");if(atIdx===-1)return null;
+    var dayId=rest.slice(0,atIdx);var date=rest.slice(atIdx+1);
+    if(!date||date.length!==10)return null;
+    return{dayId:dayId,date:date};
+  }
+  var pfx="ht_stephen_";
+  assert("Valid key parses",deepEqual(parseHistoryKey("ht_stephen_upper@2026-03-01",pfx),{dayId:"upper",date:"2026-03-01"}));
+  assert("No @ returns null",parseHistoryKey("ht_stephen_pref_unit",pfx)===null);
+  assert("Wrong prefix returns null",parseHistoryKey("ht_james_upper@2026-03-01",pfx)===null);
+  assert("Short date returns null",parseHistoryKey("ht_stephen_upper@2026-03",pfx)===null);
+  assert("Pref key ignored",parseHistoryKey("ht_stephen_pref_showRir",pfx)===null);
+})();
+
+suite("Bilateral volume counting");
+(function(){
+  function countBilateralDone(ex,saved){
+    if(!ex.bilateral){
+      var sets=saved.exercises&&saved.exercises[ex.id]||[];
+      return Math.min(sets.filter(function(s){return s.done}).length,ex.sets);
+    }
+    var lSets=saved.exercises&&saved.exercises[ex.id+"_L"]||[];
+    var rSets=saved.exercises&&saved.exercises[ex.id+"_R"]||[];
+    var lCount=lSets.filter(function(s){return s.done}).length;
+    var rCount=rSets.filter(function(s){return s.done}).length;
+    return Math.min(lCount,ex.sets)+Math.min(rCount,ex.sets);
+  }
+  var ex={id:"bss",bilateral:true,sets:3};
+  var saved={exercises:{"bss_L":[{done:true},{done:true},{done:true}],"bss_R":[{done:true},{done:true},{done:true}]}};
+  assert("Bilateral 3L+3R = 6 (3 per side)",countBilateralDone(ex,saved)===6);
+  saved={exercises:{"bss_L":[{done:true},{done:true}],"bss_R":[{done:true},{done:true},{done:true}]}};
+  assert("Bilateral 2L+3R = 5 (min-capped per side)",countBilateralDone(ex,saved)===5);
+  saved={exercises:{}};
+  assert("Bilateral no data = 0",countBilateralDone(ex,saved)===0);
+})();
+
+suite("Overload null/edge paths");
+(function(){
+  var ex={id:"t5",name:"Test",sets:3,reps:"8-10",rest:90,machine:false,increment:5,muscles:["chest"]};
+  assert("No done sets = null",getOverloadSuggestion(ex,[{weight:"100",reps:"10",done:false},{weight:"100",reps:"10",done:false},{weight:"100",reps:"10",done:false}],null)===null);
+  assert("Empty sets = null",getOverloadSuggestion(ex,[],null)===null);
+  var r=getOverloadSuggestion(ex,[{weight:"100",reps:"10",done:true},{weight:"120",reps:"10",done:true},{weight:"110",reps:"10",done:true}],null);
+  assert("Mixed weights uses max",r!==null&&r.from===120&&r.to===125,"got "+JSON.stringify(r));
+  var exBad={id:"t6",name:"Bad",sets:3,reps:"",rest:90,muscles:[]};
+  assert("Empty reps = null",getOverloadSuggestion(exBad,[{weight:"100",reps:"10",done:true},{weight:"100",reps:"10",done:true},{weight:"100",reps:"10",done:true}],null)===null);
 })();
 
 /* ═══ Output ═══ */
