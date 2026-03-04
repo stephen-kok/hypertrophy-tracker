@@ -2272,5 +2272,5 @@ if("serviceWorker"in navigator){window.addEventListener("load",function(){naviga
   }})}});
 }).catch(function(){})});
   navigator.serviceWorker.addEventListener("controllerchange",function(){window.location.reload()});
-})}
+}
 
