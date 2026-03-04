@@ -183,6 +183,13 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v32 — Infrastructure & Storage (2026-03-04)
+
+- PWA install prompt — "Install App" button in More menu (Chrome/Edge), iOS instructions for Safari
+- Storage cleanup tools — clear old workout data by age (3/6/12 months), preserves preferences and templates
+- IndexedDB dual-write backend — all data mirrored to IndexedDB for extra durability and larger capacity
+- "Mirror to IndexedDB" button in Settings for one-time migration of existing data
+
 ### v31 — Power User Features (2026-03-04)
 
 - Enhanced session comparison with per-exercise weight deltas (expand detail view)

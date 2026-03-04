@@ -37,12 +37,12 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=31;
+var APP_VERSION=32;
 var WHATS_NEW=[
-  "Enhanced session comparison with per-exercise weight deltas",
-  "Exercise search & swap from global library (any exercise, not just alternatives)",
-  "Workout templates: save & load exercise lineups",
-  "Custom rep schemes: pyramid, drop set, cluster set builders"
+  "PWA install prompt — install the app from the More menu",
+  "Storage cleanup tools — clear old workout data to free space",
+  "IndexedDB backup — mirror data for extra durability and larger capacity",
+  "iOS install instructions in More menu"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -85,12 +85,42 @@ function runMigrations(){
   if(cur<MIGRATIONS.length)lsSet("_schema_version",MIGRATIONS.length);
 }
 
+/* ═══ INDEXEDDB BACKEND ═══ */
+var _idb=null;var _idbReady=false;var _idbFailed=false;var _idbQueue=[];
+function openIDB(){
+  if(!window.indexedDB){_idbFailed=true;return}
+  var req=indexedDB.open("hypertrophy-tracker",1);
+  req.onupgradeneeded=function(e){e.target.result.createObjectStore("data")};
+  req.onsuccess=function(e){_idb=e.target.result;_idbReady=true;_idbQueue.forEach(function(fn){fn()});_idbQueue=[]};
+  req.onerror=function(){_idbFailed=true;_idbQueue=[]};
+}
+openIDB();
+function idbSet(k,v){
+  if(_idbFailed)return;
+  if(!_idbReady){_idbQueue.push(function(){idbSet(k,v)});return}
+  try{var tx=_idb.transaction("data","readwrite");tx.objectStore("data").put(v,k)}catch(e){console.warn("idbSet failed:",k,e)}
+}
+function idbGet(k,cb){
+  if(!_idbReady){cb(null);return}
+  try{var tx=_idb.transaction("data","readonly");var req=tx.objectStore("data").get(k);req.onsuccess=function(){cb(req.result!==undefined?req.result:null)};req.onerror=function(){cb(null)}}catch(e){cb(null)}
+}
+function idbDelete(k){
+  if(!_idbReady)return;
+  try{var tx=_idb.transaction("data","readwrite");tx.objectStore("data").delete(k)}catch(e){console.warn("idbDelete failed:",k,e)}
+}
+function migrateToIDB(cb){
+  if(!_idbReady){cb(0);return}
+  var count=0;var tx=_idb.transaction("data","readwrite");var store=tx.objectStore("data");
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){try{store.put(JSON.parse(localStorage.getItem(k)),k);count++}catch(e){store.put(localStorage.getItem(k),k);count++}}}
+  tx.oncomplete=function(){cb(count)};tx.onerror=function(){cb(count)};
+}
+
 /* ═══ STORAGE ═══ */
 function lsGet(k){try{var v=localStorage.getItem(LS+k);return v?JSON.parse(v):null}catch(e){return null}}
 var _storageWarningShown=false;
 var _storageFull=false;var _storageFullListeners=[];
 function onStorageFullChange(fn){_storageFullListeners.push(fn);return function(){_storageFullListeners=_storageFullListeners.filter(function(f){return f!==fn})}}
-function lsSet(k,v){try{localStorage.setItem(LS+k,JSON.stringify(v));if(_storageFull){_storageFull=false;_storageFullListeners.forEach(function(fn){fn(false)})}}catch(e){if(e.name==="QuotaExceededError"){if(!_storageFull){_storageFull=true;_storageFullListeners.forEach(function(fn){fn(true)})}if(!_storageWarningShown){_storageWarningShown=true;showUndoToast("Storage full! Export your data and clear old sessions.",null,10000)}}else{console.warn("localStorage write failed for "+k+":",e.message)}}}
+function lsSet(k,v){try{localStorage.setItem(LS+k,JSON.stringify(v));if(_storageFull){_storageFull=false;_storageFullListeners.forEach(function(fn){fn(false)})}idbSet(LS+k,v)}catch(e){if(e.name==="QuotaExceededError"){if(!_storageFull){_storageFull=true;_storageFullListeners.forEach(function(fn){fn(true)})}if(!_storageWarningShown){_storageWarningShown=true;showUndoToast("Storage full! Export your data and clear old sessions.",null,10000)}idbSet(LS+k,v)}else{console.warn("localStorage write failed for "+k+":",e.message)}}}
 var today=function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 /* Session date lock: once a session starts, the date is locked for that session to prevent midnight boundary issues */
 var _sessionDateLock=null;
@@ -189,6 +219,36 @@ function markSessionStart(){if(!getSessionStart()){lsSet("session_"+getSessionDa
 function endSession(){try{localStorage.removeItem(LS+"session_"+getSessionDate())}catch(e){};unlockSessionDate()}
 function getStorageUsage(){try{var used=0;for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){used+=localStorage.getItem(k).length}}return used}catch(e){return 0}}
 function restartSession(){lsSet("session_"+getSessionDate(),Date.now())}
+
+/* ═══ STORAGE CLEANUP ═══ */
+function getStorageStats(){
+  var keys=[];var totalBytes=0;var oldest=null;
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){var v=localStorage.getItem(k);totalBytes+=k.length+v.length;
+    var atIdx=k.indexOf("@");if(atIdx!==-1){var date=k.slice(atIdx+1);if(date.length===10&&(!oldest||date<oldest))oldest=date}
+    keys.push(k)}}
+  return{keys:keys,totalBytes:totalBytes,keyCount:keys.length,oldestSession:oldest}
+}
+function cleanOldData(monthsToKeep){
+  var cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-monthsToKeep);
+  var cutoffStr=cutoff.getFullYear()+"-"+String(cutoff.getMonth()+1).padStart(2,"0")+"-"+String(cutoff.getDate()).padStart(2,"0");
+  var preservePrefixes=["pref_","eu_","eu_source_","exo_","mw_","templates","perm_swaps_","custom_","_app_version","_schema_version","session_history","auto_backup_","_historyManifest"];
+  var removed=0;var freedBytes=0;
+  for(var i=localStorage.length-1;i>=0;i--){
+    var k=localStorage.key(i);if(!k||!k.startsWith(LS))continue;
+    var suffix=k.slice(LS.length);
+    /* Preserve preferences, overrides, templates, permanent swaps */
+    var keep=false;preservePrefixes.forEach(function(p){if(suffix.startsWith(p)||suffix===p)keep=true});
+    if(keep)continue;
+    /* Check date-keyed entries */
+    var atIdx=suffix.indexOf("@");if(atIdx!==-1){var date=suffix.slice(atIdx+1);if(date.length===10&&date<cutoffStr){freedBytes+=k.length+(localStorage.getItem(k)||"").length;localStorage.removeItem(k);idbDelete(k);removed++}continue}
+    /* Session RPE, cardio, swaps with dates embedded */
+    var dateMatch=suffix.match(/\d{4}-\d{2}-\d{2}/);
+    if(dateMatch&&dateMatch[0]<cutoffStr){freedBytes+=k.length+(localStorage.getItem(k)||"").length;localStorage.removeItem(k);idbDelete(k);removed++}
+  }
+  /* Rebuild history manifest */
+  _historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");
+  return{removed:removed,freedBytes:freedBytes}
+}
 
 /* ═══ PREFERENCES ═══ */
 function getPref(k,def){var v=lsGet("pref_"+k);return v!==null?v:def}
@@ -2052,6 +2112,8 @@ function SettingsPanel(props){
   var onClose=props.onClose,config=props.config,dayMap=props.dayMap,setDayMapState=props.setDayMapState;
   var s=useState(null),msg=s[0],setMsg=s[1];var fileRef=useRef(null);var sheetRef=useRef(null);useFocusTrap(sheetRef);
   var sq=useState(null),storageInfo=sq[0],setStorageInfo=sq[1];
+  var scl=useState(null),cleanupResult=scl[0],setCleanupResult=scl[1];
+  var sclm=useState(6),cleanupMonths=sclm[0],setCleanupMonths=sclm[1];
   useEffect(function(){if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(function(est){setStorageInfo({used:est.usage||0,quota:est.quota||0})})}},[]);
   var s2=useState(getUnit()),unit=s2[0],setUnitState=s2[1];
   var s3=useState(getAutoTimer()),autoTimer=s3[0],setAutoTimerState=s3[1];
@@ -2116,7 +2178,22 @@ function SettingsPanel(props){
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"Auto-Backups"),
           h("div",{style:{display:"flex",gap:6}},
             h("button",{onClick:function(){downloadAutoBackup(1)},className:"btn btn--ghost btn--xs"},"Download ("+b1.date+")"),
-            b2?h("button",{onClick:function(){downloadAutoBackup(2)},className:"btn btn--ghost btn--xs"},"Download ("+b2.date+")"):null))}())),
+            b2?h("button",{onClick:function(){downloadAutoBackup(2)},className:"btn btn--ghost btn--xs"},"Download ("+b2.date+")"):null))}(),
+        /* Storage Cleanup */
+        h("div",{style:{marginTop:8,padding:"10px 12px",background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid var(--border)"}},
+          h("div",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"Storage Cleanup"),
+          h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+            h("span",{style:{fontSize:11,color:"var(--text-secondary)"}},"Keep last"),
+            h("select",{value:cleanupMonths,onChange:function(e){setCleanupMonths(parseInt(e.target.value,10))},"aria-label":"Data retention period",style:{background:"var(--surface-alt)",color:"var(--text-bright)",border:"1px solid var(--border)",borderRadius:6,padding:"4px 8px",fontSize:11}},
+              h("option",{value:3},"3 months"),h("option",{value:6},"6 months"),h("option",{value:12},"12 months")),
+            h("button",{onClick:function(){performAutoBackup();showConfirm({title:"Clear Old Data",msg:"Delete workout data older than "+cleanupMonths+" months? Preferences, templates, and session summaries are preserved. A backup was saved automatically.",confirmLabel:"Clear",onConfirm:function(){var r=cleanOldData(cleanupMonths);setCleanupResult(r);if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(function(est){setStorageInfo({used:est.usage||0,quota:est.quota||0})})}showUndoToast("Removed "+r.removed+" old records ("+(r.freedBytes/1024).toFixed(1)+" KB freed)",null,5000)}})},className:"btn btn--ghost btn--xs"},"Clean up")),
+          cleanupResult?h("div",{style:{fontSize:10,color:"var(--success)"},role:"status","aria-live":"polite"},"\u2713 Removed "+cleanupResult.removed+" records, freed "+(cleanupResult.freedBytes/1024).toFixed(1)+" KB"):null,
+          h("div",{style:{fontSize:9,color:"var(--text-dim)",marginTop:4}},"Keeps: preferences, overrides, templates, session history")),
+        /* IndexedDB Migration */
+        _idbReady?h("div",{style:{marginTop:8,padding:"10px 12px",background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid var(--border)"}},
+          h("div",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"IndexedDB Backup"),
+          h("div",{style:{fontSize:9,color:"var(--text-dim)",marginBottom:6}},"Mirror all data to IndexedDB for extra durability and larger storage capacity."),
+          h("button",{onClick:function(){migrateToIDB(function(count){showUndoToast("Mirrored "+count+" records to IndexedDB",null,4000)})},className:"btn btn--ghost btn--xs"},"Mirror to IndexedDB")):null)),
     h(SettingsGroup,{title:"Tools",defaultOpen:false},
       h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
         h("button",{onClick:function(){if(props.onBodyMetrics)props.onBodyMetrics()},className:"btn btn--accent-ghost btn--full"},"\uD83D\uDCCF Body Metrics"),
@@ -2164,6 +2241,8 @@ function MainApp(props){
   var scal=useState(false),showCalendar=scal[0],setShowCalendar=scal[1];
   var sft=useState(false),showFatigueTrend=sft[0],setShowFatigueTrend=sft[1];
   var stpl=useState(false),showTemplates=stpl[0],setShowTemplates=stpl[1];
+  var sinst=useState(!!_deferredInstallPrompt),canInstall=sinst[0],setCanInstall=sinst[1];
+  useEffect(function(){return onInstallPromptChange(setCanInstall)},[]);
   var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0],setDayMapState=s7[1];
   var sm=useState(function(){return getMesocycle()}),meso=sm[0],setMeso=sm[1];
   var scrollRef=useRef(null);var refresh=useCallback(function(){setTick(function(t){return t+1})},[]);
@@ -2300,7 +2379,12 @@ function MainApp(props){
           h("button",{onClick:function(){setShowMore(false);setShowCalendar(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCC5 Workout Calendar"),
           h("button",{onClick:function(){setShowMore(false);setShowFatigueTrend(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCA Fatigue Trend"),
           h("button",{onClick:function(){setShowMore(false);setShowTemplates(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCB Templates"),
-          h("button",{onClick:function(){setShowMore(false);setShowSettings(true)},className:"btn btn--ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\u2699\uFE0F Settings")))):null,
+          h("button",{onClick:function(){setShowMore(false);setShowSettings(true)},className:"btn btn--ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\u2699\uFE0F Settings")),
+        /* PWA Install */
+        function(){if(isStandalone())return null;
+          if(canInstall)return h("button",{onClick:function(){triggerInstallPrompt();setShowMore(false)},className:"btn btn--accent btn--full",style:{marginTop:10,padding:"14px 12px",fontSize:13}},"\uD83D\uDCF2 Install App");
+          if(isIOS())return h("div",{style:{marginTop:10,padding:"10px 12px",background:"rgba(255,255,255,0.03)",borderRadius:10,fontSize:11,color:"var(--text-dim)",textAlign:"center",lineHeight:1.5}},"To install: tap ",h("span",{style:{fontWeight:700}},"Share \u2B06\uFE0F")," then ",h("span",{style:{fontWeight:700}},"Add to Home Screen"));
+          return null}())):null,
     /* Modals */
     showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,dayMap:dayMap,setDayMapState:setDayMapState,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)}}):null,
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
@@ -2543,6 +2627,17 @@ function App(){
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(ErrorBoundary,null,h(App)));
+
+/* ═══ PWA INSTALL PROMPT ═══ */
+var _deferredInstallPrompt=null;
+var _installPromptListeners=[];
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();_deferredInstallPrompt=e;_installPromptListeners.forEach(function(fn){fn(true)})});
+window.addEventListener("appinstalled",function(){_deferredInstallPrompt=null;_installPromptListeners.forEach(function(fn){fn(false)})});
+function onInstallPromptChange(fn){_installPromptListeners.push(fn);return function(){_installPromptListeners=_installPromptListeners.filter(function(f){return f!==fn})}}
+function triggerInstallPrompt(){if(_deferredInstallPrompt){_deferredInstallPrompt.prompt();_deferredInstallPrompt.userChoice.then(function(){_deferredInstallPrompt=null;_installPromptListeners.forEach(function(fn){fn(false)})}).catch(function(){_deferredInstallPrompt=null;_installPromptListeners.forEach(function(fn){fn(false)})})}}
+function isIOS(){return/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend"in document)}
+function isStandalone(){return window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
+
 if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(reg){
   reg.addEventListener("updatefound",function(){var nw=reg.installing;if(nw){nw.addEventListener("statechange",function(){if(nw.state==="installed"&&navigator.serviceWorker.controller){
     var toast=document.createElement("div");toast.textContent="Update available \u2014 tap to refresh";
