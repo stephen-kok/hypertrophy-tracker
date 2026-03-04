@@ -39,7 +39,7 @@ A mobile-first workout tracker built as a PWA (Progressive Web App). Designed to
 - Training frequency analytics with compact tiles
 - Cardio logging (12-3-30 protocol with duration/incline/speed) with fatigue integration
 - Body metrics (bodyweight and waist measurement with trend history and SVG chart)
-- Exercise history showing your last 5 sessions per exercise
+- Exercise history showing your last 30 sessions per exercise
 - Data export/import as JSON for backups with profile namespace validation
 
 **Technical**
@@ -182,6 +182,44 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 ---
 
 ## Changelog
+
+### v23 — Comprehensive Review Update (2026-03-03)
+**UX & Usability**
+- Auto-expand next exercise card for faster workout flow
+- Enlarged touch targets on timer presets, swap buttons, and stepper controls
+- Haptic feedback on weight/rep steppers
+- Better text contrast (--text-dim now WCAG AA compliant)
+- Pinch-to-zoom re-enabled (removed user-scalable=no)
+
+**Training Intelligence**
+- Effective volume filtering — only counts sets at RIR ≤ 4
+- Permanent exercise swaps (lock icon persists across sessions)
+- RPE/RIR trend mini-chart below strength chart
+- PR detection with celebration badge on new e1RM records
+- Workout streak counter in session completion summary
+- Exercise config overrides — customize sets/reps/rest per exercise
+- Overload uses max weight across all sets (not just first set)
+- Machine exercises default to 2.5 increment (was 5)
+- History expanded to 30 sessions (was 12)
+
+**Reliability**
+- Backup reminder every 14 days
+- Storage quota warning with extended toast duration
+- Export includes version metadata for safer imports
+- CDN failure fallback with reload prompt
+- Separated CDN caching in service worker for partial connectivity
+
+**Programming**
+- Tempo guidance added to all exercises in both configs
+- Standing calf raises added for gastrocnemius coverage (Stephen & James)
+- Romanian Deadlift added to James's Legs day for hip hinge coverage
+- Additional coaching cues: squat foot placement, bench wrist alignment, RDL spine cue
+- Removed side_delt from overhead presses (front_delt only)
+
+**Tests**
+- Added unit conversion test suite
+- Added volume counting and ascending overload tests
+- Fixed calc1RM test divergence (10-rep cap)
 
 ### v22 — Form Tips, Auto-End Session, Timer Toast (2026-03-03)
 - Added formTips and commonMistakes to all exercises in both config files (Coach tab now fully populated)

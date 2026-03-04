@@ -1,4 +1,4 @@
-var CACHE_NAME = 'hypertrophy-v28';
+var CACHE_NAME = 'hypertrophy-v29';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -12,9 +12,17 @@ var URLS_TO_CACHE = [
 ];
 
 self.addEventListener('install', function(event) {
+  var LOCAL_URLS = URLS_TO_CACHE.filter(function(u) { return u.indexOf('://') === -1; });
+  var CDN_URLS = URLS_TO_CACHE.filter(function(u) { return u.indexOf('://') !== -1; });
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(URLS_TO_CACHE);
+      /* Cache local assets atomically, CDN assets individually (partial connectivity safe) */
+      var cdnPromises = CDN_URLS.map(function(url) {
+        return cache.add(url).catch(function() { /* CDN unavailable — will use stale-while-revalidate */ });
+      });
+      return cache.addAll(LOCAL_URLS).then(function() {
+        return Promise.all(cdnPromises);
+      });
     }).then(function() {
       return self.skipWaiting();
     })
