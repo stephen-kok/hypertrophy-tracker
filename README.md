@@ -183,6 +183,19 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v20 — Bug Fixes: History, Hooks, Extra Sets (2026-03-03)
+**Bilateral History**
+- PR detection and personal records now query bilateral `_L`/`_R` history keys (fixes false PRs every session)
+- Previous week volume trend includes bilateral exercises
+- Added `getBilateralHistory()` helper for merged L/R history lookups
+
+**Stability**
+- TempoTimer hooks moved before early returns (fixes Rules of Hooks violation)
+- SetLogger preserves extra/drop sets on re-mount instead of truncating to prescribed count
+- `countBilateralDone` capped at prescribed sets (prevents progress exceeding 100%)
+- `workingWeight` memo now reacts to data changes (fixes stale warmup auto-ramp)
+- UndoToast hides Undo button when no undo action is provided
+
 ### v19 — Bug Fixes: Bilateral Aggregates, Timer, Settings (2026-03-03)
 **Bilateral Tracking Fixes**
 - Bilateral exercises (L/R) now correctly counted in weekly volume dashboard

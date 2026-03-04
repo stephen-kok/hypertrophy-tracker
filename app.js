@@ -37,7 +37,7 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=19;
+var APP_VERSION=20;
 var WHATS_NEW=[
   "Sound effect + visual popup on rest timer completion",
   "Weekly volume now tracks all days of the week (bug fix)",
@@ -149,6 +149,19 @@ function getHistory(dayId,exId,limit){
   for(var i=0;i<entries.length;i++){
     var e=entries[i];if(e.date===td)continue;
     if(e.data.exercises&&e.data.exercises[exId])results.push({date:e.date,sets:e.data.exercises[exId]});
+    if(results.length>=(limit||12))break;
+  }
+  return results;
+}
+function getBilateralHistory(dayId,ex,limit){
+  if(!ex.bilateral)return getHistory(dayId,ex.id,limit);
+  if(!_historyBuilt)buildHistoryIndex();
+  var entries=_historyIndex[dayId]||[];var results=[];var td=getSessionDate();
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i];if(e.date===td)continue;
+    var lSets=e.data.exercises&&e.data.exercises[ex.id+"_L"];
+    var rSets=e.data.exercises&&e.data.exercises[ex.id+"_R"];
+    if(lSets||rSets)results.push({date:e.date,sets:[].concat(lSets||[],rSets||[])});
     if(results.length>=(limit||12))break;
   }
   return results;
@@ -510,7 +523,7 @@ function UndoToast(){
   if(!_toastState.show)return null;
   return h("div",{className:"toast fade-in",role:"alert","aria-live":"polite"},
     h("span",{style:{fontSize:13,color:"var(--text-primary)",fontWeight:600,flex:1}},_toastState.msg),
-    h("button",{onClick:function(){if(_toastState.onUndo)_toastState.onUndo();dismissToast()},className:"btn btn--accent-ghost btn--sm","aria-label":"Undo action"},"Undo"));
+    _toastState.onUndo?h("button",{onClick:function(){_toastState.onUndo();dismissToast()},className:"btn btn--accent-ghost btn--sm","aria-label":"Undo action"},"Undo"):null);
 }
 
 /* ── Save Flash Indicator ── */
@@ -749,7 +762,7 @@ function WarmupSets(props){
     ramp=ramp.filter(function(r){return parseFloat(r.weight)>=bar});var seen={};ramp=ramp.filter(function(r){if(seen[r.weight])return false;seen[r.weight]=true;return true});
     setSets(ramp);persist(ramp);setShow(true);
   };
-  var workingWeight=useMemo(function(){var saved=dayData.getData(dayId);var exSets=saved.exercises&&saved.exercises[exId];var w=0;if(exSets)exSets.forEach(function(s){if(s.weight){var v=parseFloat(s.weight);if(v>w)w=v}});if(!w){var hist=getHistory(dayId,exId,1);if(hist.length)hist[0].sets.forEach(function(s){if(s.done&&s.weight){var v=parseFloat(s.weight);if(v>w)w=v}})}return w},[dayId,exId]);
+  var workingWeight=useMemo(function(){var saved=dayData.getData(dayId);var exSets=saved.exercises&&saved.exercises[exId];var w=0;if(exSets)exSets.forEach(function(s){if(s.weight){var v=parseFloat(s.weight);if(v>w)w=v}});if(!w){var hist=getHistory(dayId,exId,1);if(hist.length)hist[0].sets.forEach(function(s){if(s.done&&s.weight){var v=parseFloat(s.weight);if(v>w)w=v}})}return w},[dayId,exId,dayData.rev]);
   return h("div",{style:{marginBottom:6},"aria-label":"Warmup sets"},
     h("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:show&&sets.length?6:0}},
       h("button",{onClick:function(){setShow(!show)},className:"btn btn--xs",style:{color:"var(--warmup)",background:"none",border:"none"},"aria-expanded":show?"true":"false","aria-label":"Toggle warmup sets"},show?"\u25BE Warmup":"\u25B8 Warmup"),
@@ -785,7 +798,7 @@ function SetLogger(props){
       });save(converted);return converted});
     }
   };
-  var s=useState(function(){var saved=dayData.getData(dayId);var ex=saved.exercises&&saved.exercises[exId];return Array.from({length:numSets},function(_,i){return ex&&ex[i]?{weight:ex[i].weight||"",reps:ex[i].reps||"",done:!!ex[i].done}:{weight:"",reps:"",done:false}})}),data=s[0],setData=s[1];
+  var s=useState(function(){var saved=dayData.getData(dayId);var ex=saved.exercises&&saved.exercises[exId];var len=ex?Math.max(numSets,ex.length):numSets;return Array.from({length:len},function(_,i){return ex&&ex[i]?{weight:ex[i].weight||"",reps:ex[i].reps||"",done:!!ex[i].done,extra:i>=numSets||undefined}:{weight:"",reps:"",done:false}})}),data=s[0],setData=s[1];
   var lastSession=useMemo(function(){var h=getHistory(dayId,exId,1);return h.length?h[0].sets:null},[dayId,exId]);
   var save=useCallback(function(d){var all=dayData.getData(dayId);if(!all.exercises)all.exercises={};all.exercises[exId]=d;dayData.saveData(dayId,all)},[dayId,exId,dayData]);
   var persist=useCallback(function(d){save(d);markSessionStart()},[save]);
@@ -1059,8 +1072,8 @@ function CardioLog(props){
 
 /* ── Bilateral helper ── */
 function countBilateralDone(ex,saved){
-  if(ex.bilateral){var l=saved.exercises&&saved.exercises[ex.id+"_L"];var r=saved.exercises&&saved.exercises[ex.id+"_R"];return(l?l.filter(function(s){return s.done}).length:0)+(r?r.filter(function(s){return s.done}).length:0)}
-  var d=saved.exercises&&saved.exercises[ex.id];return d?d.filter(function(s){return s.done}).length:0;
+  if(ex.bilateral){var l=saved.exercises&&saved.exercises[ex.id+"_L"];var r=saved.exercises&&saved.exercises[ex.id+"_R"];return Math.min(l?l.filter(function(s){return s.done}).length:0,ex.sets)+Math.min(r?r.filter(function(s){return s.done}).length:0,ex.sets)}
+  var d=saved.exercises&&saved.exercises[ex.id];return d?Math.min(d.filter(function(s){return s.done}).length,ex.sets):0;
 }
 function getBilateralSets(ex,saved){
   if(ex.bilateral){return[].concat(saved.exercises&&saved.exercises[ex.id+"_L"]||[],saved.exercises&&saved.exercises[ex.id+"_R"]||[])}
@@ -1173,8 +1186,7 @@ function calcPreviousWeekVolume(config){
     entries.forEach(function(e){
       if(e.date>=wStart&&e.date<wEnd){
         allEx.forEach(function(ex){
-          var sets=e.data.exercises&&e.data.exercises[ex.id];
-          var doneSets=sets?sets.filter(function(s){return s.done}).length:0;
+          var doneSets=countBilateralDone(ex,e.data);
           if(doneSets>0){found=true;(ex.muscles||[]).forEach(function(m){if(!vol[m])vol[m]=0;vol[m]+=doneSets})}
         });
       }
@@ -1257,7 +1269,7 @@ function BodyMetrics(props){
 /* ── Completion Summary ── */
 function calcSessionStats(day,customs){
   var allEx=day.exercises.concat(customs||[]);var saved=loadDayData(day.id);var totalVolume=0,totalSets=0,prs=[],rpeValues=[];
-  allEx.forEach(function(ex){var sets=getBilateralSets(ex,saved);if(!sets.length)return;sets.forEach(function(s){if(s.done&&s.weight&&s.reps){totalVolume+=parseFloat(s.weight)*parseInt(s.reps);totalSets++}});if(saved.rpe&&saved.rpe[ex.id])rpeValues.push(saved.rpe[ex.id]);var maxW=0;sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>maxW)maxW=w}});if(maxW>0){var hist=getHistory(day.id,ex.id,10);var hMax=0;hist.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>hMax)hMax=w}})});if(maxW>hMax&&hMax>0)prs.push({name:ex.name,weight:maxW,prev:hMax})}});
+  allEx.forEach(function(ex){var sets=getBilateralSets(ex,saved);if(!sets.length)return;sets.forEach(function(s){if(s.done&&s.weight&&s.reps){totalVolume+=parseFloat(s.weight)*parseInt(s.reps);totalSets++}});if(saved.rpe&&saved.rpe[ex.id])rpeValues.push(saved.rpe[ex.id]);var maxW=0;sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>maxW)maxW=w}});if(maxW>0){var hist=getBilateralHistory(day.id,ex,10);var hMax=0;hist.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>hMax)hMax=w}})});if(maxW>hMax&&hMax>0)prs.push({name:ex.name,weight:maxW,prev:hMax})}});
   var dur=getSessionStart()?Math.floor((Date.now()-getSessionStart())/1000):0;var avgRpe=rpeValues.length>0?rpeValues.reduce(function(a,b){return a+b},0)/rpeValues.length:null;var cardio=lsGet("cardio_"+day.id+"_"+getSessionDate());
   return{totalVolume:totalVolume,totalSets:totalSets,prs:prs,duration:dur,avgRpe:avgRpe,cardio:cardio&&cardio.done};
 }
@@ -1369,7 +1381,7 @@ function PersonalRecords(props){
     config.days.forEach(function(day){
       var allEx=day.exercises.concat(getCustomExercises(day.id));
       allEx.forEach(function(ex){
-        var exUnit=getExUnit(ex.id);var hist=getHistory(day.id,ex.id,50);var bestW=0,bestReps=0,bestDate="",bestE1rm=0;
+        var exUnit=getExUnit(ex.id);var hist=getBilateralHistory(day.id,ex,50);var bestW=0,bestReps=0,bestDate="",bestE1rm=0;
         var todayData=loadDayData(day.id);var todaySets=getBilateralSets(ex,todayData);if(!todaySets.length)todaySets=null;
         var allSessions=hist.slice();if(todaySets)allSessions.unshift({date:today(),sets:todaySets});
         allSessions.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps),e=calc1RM(w,r);if(e>bestE1rm){bestE1rm=e;bestW=w;bestReps=r;bestDate=entry.date}}})});
@@ -1512,14 +1524,15 @@ function DeloadOptions(props){
 /* ── Tempo Timer ── */
 function TempoTimer(props){
   var tempo=props.tempo;
-  if(!tempo)return null;
-  var parts=tempo.split("-").map(function(p){return parseInt(p)||0});
-  if(parts.length<3)return null;
+  var parts=tempo?tempo.split("-").map(function(p){return parseInt(p)||0}):[];
+  var valid=parts.length>=3;
   var labels=["Eccentric","Pause","Concentric"];
   var s=useState(false),running=s[0],setRunning=s[1];
   var sp=useState(0),phase=sp[0],setPhase=sp[1];
-  var sc=useState(parts[0]),count=sc[0],setCount=sc[1];
+  var sc=useState(valid?parts[0]:0),count=sc[0],setCount=sc[1];
   var intervalRef=useRef(null);
+  useEffect(function(){return function(){if(intervalRef.current)clearInterval(intervalRef.current)}},[]);
+  if(!valid)return null;
   var stop=function(){if(intervalRef.current)clearInterval(intervalRef.current);setRunning(false);setPhase(0);setCount(parts[0])};
   var start=function(){
     setRunning(true);setPhase(0);setCount(parts[0]);
@@ -1536,7 +1549,6 @@ function TempoTimer(props){
       setCount(ct);
     },1000);
   };
-  useEffect(function(){return function(){if(intervalRef.current)clearInterval(intervalRef.current)}},[]);
   var phaseColors=["var(--danger)","var(--accent)","var(--success)"];
   return h("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"6px 0"}},
     h("span",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)"}},"Tempo "+tempo),
