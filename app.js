@@ -1720,6 +1720,8 @@ function MainApp(props){
   /* ── Auto-end session after 30 min inactivity ── */
   useEffect(function(){
     var INACTIVITY_MS=30*60*1000;
+    var onInteract=function(){_lastActivity=Date.now()};
+    document.addEventListener("pointerdown",onInteract);
     function checkAutoEnd(){
       var started=getSessionStart();if(!started)return;
       /* Stale session from a different day */
@@ -1731,7 +1733,7 @@ function MainApp(props){
     var onVis=function(){if(!document.hidden)checkAutoEnd()};
     document.addEventListener("visibilitychange",onVis);
     checkAutoEnd();
-    return function(){clearInterval(id);document.removeEventListener("visibilitychange",onVis)};
+    return function(){clearInterval(id);document.removeEventListener("visibilitychange",onVis);document.removeEventListener("pointerdown",onInteract)};
   },[]);
 
   return h("div",{style:{display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
