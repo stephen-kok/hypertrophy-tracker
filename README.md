@@ -183,6 +183,24 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v30 — Training Intelligence, UX Polish & Fatigue Insights (2026-03-04)
+
+**Phase 2 — Training Intelligence**
+- RPE autoregulation: RIR 0 suggests -5% weight for remaining sets
+- Rest time analysis in History tab with drift detection (>15s threshold)
+- 4-week fatigue trend chart (RPE+RIR blend) in More menu
+- Per-muscle selective deload control in week 4
+
+**Phase 3 — UX Polish**
+- Badge overflow: collapsed cards show 2 badges max with +N indicator
+- Swipe dot indicators below day tabs
+- Stepped onboarding (3-step overlay for new users)
+- Weekly calendar strip showing training activity
+- Collapsible settings sections
+
+**Tests**
+- RPE weight reduction calc, rest time drift detection, fatigue score thresholds
+
 ### v29 — 4-Persona Review: Accessibility, Training Intelligence, Performance, Tests (2026-03-04)
 
 **Phase 1 — Accessibility & Quick Wins**

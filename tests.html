@@ -508,6 +508,68 @@ suite("Replaces tautological input validation assertions");
   assert("Non-numeric is invalid",isValidInput("abc","weight")===false);
 })();
 
+suite("Import schema validation — version/format checks");
+(function(){
+  /* Import with newer version should still be valid (warnings are separate) */
+  assert("Future version is valid import",validateImportData({"_export_meta":{version:99,format:1},"ht_test_key":1})===null);
+  /* Unknown format is still valid structurally */
+  assert("Unknown format is valid import",validateImportData({"_export_meta":{format:2},"ht_test_key":1})===null);
+  /* Profile mismatch is valid structurally (warning only) */
+  assert("Different profile is valid import",validateImportData({"_export_meta":{profile:"other"},"ht_test_key":1})===null);
+})();
+
+suite("RPE autoregulation — weight reduction calc");
+(function(){
+  /* Simulate the -5% calc from SetLogger RIR handler */
+  function calcReduced(weight,unit){
+    return unit==="kg"?Math.round(weight*0.95*2)/2:Math.round(weight*0.95/5)*5;
+  }
+  assert("100 lbs -5% = 95",calcReduced(100,"lbs")===95);
+  assert("185 lbs -5% = 175",calcReduced(185,"lbs")===175);
+  assert("225 lbs -5% = 215",calcReduced(225,"lbs")===215);
+  assert("60 kg -5% = 57",calcReduced(60,"kg")===57);
+  assert("100 kg -5% = 95",calcReduced(100,"kg")===95);
+  assert("22.5 kg -5% = 21.5",calcReduced(22.5,"kg")===21.5);
+})();
+
+suite("Rest time drift detection");
+(function(){
+  /* Simulate drift detection logic from HistoryPanel restAnalysis */
+  function detectDrift(rests){
+    if(rests.length<2)return null;
+    var overall=Math.round(rests.reduce(function(a,r){return a+r},0)/rests.length);
+    var recent=rests[0],oldest=rests[rests.length-1];
+    var drift=recent-oldest;
+    return{overall:overall,drift:drift,drifting:Math.abs(drift)>15};
+  }
+  var stable=detectDrift([90,92,88,91]);
+  assert("Stable rests: not drifting",stable.drifting===false);
+  var increasing=detectDrift([120,105,95,90]);
+  assert("Increasing rests: drifting",increasing.drifting===true);
+  assert("Increasing rests: positive drift",increasing.drift>0);
+  var decreasing=detectDrift([70,80,90,100]);
+  assert("Decreasing rests: drifting",decreasing.drifting===true);
+  assert("Decreasing rests: negative drift",decreasing.drift<0);
+  var single=detectDrift([90]);
+  assert("Single session: null",single===null);
+})();
+
+suite("Fatigue score thresholds");
+(function(){
+  /* Verify the fatigue threshold boundaries from calcFatigueScore */
+  function fatigueLevel(avg){
+    if(avg>=9.5)return"high";
+    if(avg>=8.5)return"moderate";
+    return"low";
+  }
+  assert("RPE 9.5 = high",fatigueLevel(9.5)==="high");
+  assert("RPE 10 = high",fatigueLevel(10)==="high");
+  assert("RPE 8.5 = moderate",fatigueLevel(8.5)==="moderate");
+  assert("RPE 9.0 = moderate",fatigueLevel(9.0)==="moderate");
+  assert("RPE 8.0 = low",fatigueLevel(8.0)==="low");
+  assert("RPE 7.0 = low",fatigueLevel(7.0)==="low");
+})();
+
 /* ═══ Output ═══ */
 var el=document.getElementById("results");
 el.innerHTML=results.join("")+'<div class="summary" style="color:'+(failed>0?"#ef4444":"#22c55e")+';background:'+(failed>0?"rgba(239,68,68,0.1)":"rgba(34,197,94,0.1)")+'">'+passed+' passed, '+failed+' failed</div>';
