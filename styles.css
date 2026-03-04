@@ -1,6 +1,6 @@
 /* ═══ RESET & BASE ═══ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body,#root{height:100%;width:100%;overflow:hidden}
+html,body,#root{height:100%;width:100%;overflow:hidden;scrollbar-width:none;-ms-overflow-style:none}
 body{background:var(--bg);color:var(--text-primary);font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type="number"]{-moz-appearance:textfield}
@@ -16,8 +16,8 @@ input[type="number"]{-moz-appearance:textfield}
   --border-light:rgba(255,255,255,0.1);
   --text-primary:#e5e7eb;
   --text-secondary:#9ca3af;
-  --text-muted:#6b7280;
-  --text-dim:#5f6776;
+  --text-muted:#8e95a3;
+  --text-dim:#8b8fa8;
   --text-bright:#f1f5f9;
   --accent:#f59e0b;
   --accent-bg:rgba(245,158,11,0.1);
@@ -209,10 +209,13 @@ input[type="number"]{-moz-appearance:textfield}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 [role="tablist"]{display:flex;gap:3px}
 [role="tab"]{cursor:pointer}
-[role="tabpanel"]:focus{outline:none}
+[role="tabpanel"]:focus-visible{outline:none}
 
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:500px){
   .sheet{border-radius:var(--radius-xl);margin-bottom:20px}
   .completion__stats{grid-template-columns:repeat(4,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
 }

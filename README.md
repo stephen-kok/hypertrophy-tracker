@@ -183,6 +183,39 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v29 — 4-Persona Review: Accessibility, Training Intelligence, Performance, Tests (2026-03-04)
+
+**Phase 1 — Accessibility & Quick Wins**
+- WCAG AA contrast: raised `--text-muted` to #8e95a3, `--text-dim` to #8b8fa8 (~5.7:1 ratio)
+- Added `@media (prefers-reduced-motion: reduce)` to disable all animations
+- Fixed `[role="tabpanel"]:focus` to `:focus-visible` for keyboard visibility
+- Added `scrollbar-width:none` for Firefox scrollbar hiding
+- Added `defer` to React/ReactDOM/app.js script tags for non-blocking load
+- Added `<noscript>` fallback for JS-disabled browsers
+- Added `useFocusTrap` to More menu overlay
+- Added `role="button"`, `tabIndex`, and keyboard handler to calendar day cells
+- Added `aria-describedby` to ConfirmDialog for screen reader descriptions
+- Removed unconditional `self.skipWaiting()` from SW install (use message-based activation)
+
+**Phase 2 — Training Intelligence**
+- Overload: 80% set completion threshold (`Math.floor(sets*0.8)`) replaces strict 100%
+- Added "hold" suggestion for struggling users (RIR ≤ 1 but not hitting target reps)
+- Machine `repsFirst` now requires `effectiveRange.max >= 12` (was always-on for increment ≤ 2.5)
+- Capped `targetReps` at 30 to prevent absurd high-rep suggestions
+- Added "Active Recovery" badge on exercise cards during deload skip weeks
+- Fatigue thresholds adjusted (high ≥ 9.5, moderate ≥ 8.5) for hypertrophy training
+- Body composition chart: independent Y-axis normalization per metric (weight vs waist)
+- Readiness adjustments now auto-modify SetLogger: volumeMult reduces sets, intensityMult adjusts ghost weights
+
+**Phase 3 — Performance**
+- Debounced `calcFatigueScore` (500ms) — eliminates 40+ localStorage reads per keystroke
+- Added `console.warn` for non-QuotaExceeded localStorage errors
+
+**Phase 4 — Tests & Infrastructure**
+- New test suites: 80% threshold, repsFirst machine logic, targetReps cap, session date locking, unit conversion round-trip, input validation boundaries
+- Updated test-local `getOverloadSuggestion` to match production logic
+- Replaced tautological input validation assertions with meaningful boundary tests
+
 ### v28 — 4-Persona Review & Bug Fixes (2026-03-04)
 - Fixed effective volume filter: only counts sets at RIR ≤ 2 (was counting all sets)
 - Mesocycle-aware overload suggestions now use weekly undulating rep targets

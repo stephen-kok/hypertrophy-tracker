@@ -1,4 +1,4 @@
-var CACHE_NAME = 'hypertrophy-v37';
+var CACHE_NAME = 'hypertrophy-v38';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -12,7 +12,7 @@ var URLS_TO_CACHE = [
 ];
 
 self.addEventListener('install', function(event) {
-  self.skipWaiting(); /* Force activate immediately — critical for deploying bug fixes */
+  /* skipWaiting() is triggered via SKIP_WAITING message to avoid mid-session race conditions */
   var LOCAL_URLS = URLS_TO_CACHE.filter(function(u) { return u.indexOf('://') === -1; });
   var CDN_URLS = URLS_TO_CACHE.filter(function(u) { return u.indexOf('://') !== -1; });
   event.waitUntil(
