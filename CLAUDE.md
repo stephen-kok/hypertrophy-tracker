@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-**Zero-build PWA**: React 18 via CDN (`h = React.createElement` shorthand), single `app.js` file (~1750 lines), `styles.css` design system, `sw.js` service worker. No Node.js, no bundler, no transpiler.
+**Zero-build PWA**: React 18 via CDN (`h = React.createElement` shorthand), single `app.js` file (~2150 lines), `styles.css` design system, `sw.js` service worker. No Node.js, no bundler, no transpiler.
 
 **Files:**
 - `index.html` — App shell with inline critical CSS, React 18 CDN scripts (SRI hashes)

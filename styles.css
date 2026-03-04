@@ -84,8 +84,9 @@ input[type="number"]{-moz-appearance:textfield}
 .btn--dashed{border-style:dashed}
 
 /* ═══ INPUTS ═══ */
-.input{background:rgba(255,255,255,0.06);border:1px solid var(--border-light);border-radius:7px;padding:9px 8px;color:var(--text-primary);font-size:14px;font-weight:600;text-align:center;outline:none;width:100%;font-variant-numeric:tabular-nums}
-.input--warmup{color:var(--warmup);background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);font-size:13px;padding:7px 4px}
+.input{background:rgba(255,255,255,0.06);border:1px solid var(--border-light);border-radius:7px;padding:10px 8px;color:var(--text-primary);font-size:16px;font-weight:600;text-align:center;outline:none;width:100%;font-variant-numeric:tabular-nums;min-height:44px;box-sizing:border-box}
+.input--warmup{color:var(--warmup);background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);font-size:13px;padding:7px 4px;min-height:0}
+.input--sm{font-size:11px;padding:4px 6px;min-height:0}
 .input--text{text-align:left;font-weight:400;font-style:italic}
 .input--lg{font-size:15px;padding:10px 8px;border-radius:8px}
 

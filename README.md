@@ -183,6 +183,34 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v27 — Infrastructure & Reliability (2026-03-04)
+- Cross-tab data sync via `storage` event prevents corruption with multiple tabs open
+- Service worker update is now user-controlled (no more mid-session race conditions)
+- Auto-backup every 7 days with downloadable snapshots in Settings > Data
+- Dynamic config caching in service worker (no hardcoded profile list)
+
+### v26 — Power User Features (2026-03-04)
+- Workout calendar heatmap with month navigation and color-coded training intensity
+- Rep-range PRs: filter personal records by e1RM, 1RM, 3RM, 5RM, 8RM, or 10RM
+- In-app profile switcher button in Settings
+
+### v25 — Training Intelligence (2026-03-04)
+- Readiness check now suppresses overload suggestions when fatigue is detected
+- RIR trend analysis across 3 sessions detects approaching overreach
+- High fatigue score triggers deload suggestion with one-tap activation
+- Volume targets auto-scale by mesocycle week (W1: 85%, W2: 100%, W3: 110%, W4: 50%)
+- Rest periods tracked per set with average displayed in exercise history
+- Auto-advance mesocycle when all training days complete for the week
+
+### v24 — Quick Wins: Defaults, UX, Reliability (2026-03-04)
+- RIR tracking now enabled by default for better auto-regulation feedback
+- Offline indicator banner when internet connection is lost
+- "Apply to all sets" button copies weight from first set to remaining empty sets
+- Custom rest timer presets (configurable in Settings)
+- Larger weight/reps input fields (16px font, 44px min-height) for easier gym use
+- Persistent storage-full warning banner (replaces dismissable toast)
+- Volume Dashboard empty state with guidance message
+
 ### v23 — Comprehensive Review Update (2026-03-03)
 **UX & Usability**
 - Auto-expand next exercise card for faster workout flow

@@ -1,12 +1,10 @@
-var CACHE_NAME = 'hypertrophy-v29';
+var CACHE_NAME = 'hypertrophy-v33';
 var URLS_TO_CACHE = [
   './',
   './index.html',
   './app.js',
   './styles.css',
   './configs/profiles.json',
-  './configs/stephen.json',
-  './configs/james.json',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js'
 ];
@@ -23,10 +21,15 @@ self.addEventListener('install', function(event) {
       return cache.addAll(LOCAL_URLS).then(function() {
         return Promise.all(cdnPromises);
       });
-    }).then(function() {
-      return self.skipWaiting();
     })
   );
+});
+
+/* Skip waiting on user request (avoids mid-session race condition) */
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', function(event) {
