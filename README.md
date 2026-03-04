@@ -183,6 +183,14 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v31 — Power User Features (2026-03-04)
+
+- Enhanced session comparison with per-exercise weight deltas (expand detail view)
+- Exercise search & swap from global library — swap to any exercise, not just config alternatives
+- Workout templates: save current workout lineup, load it later (up to 20 templates)
+- Custom rep schemes: pyramid, drop set, cluster set builders with per-set rep previews
+- Swap button now available on all exercises (not just those with pre-configured alternatives)
+
 ### v30 — Training Intelligence, UX Polish & Fatigue Insights (2026-03-04)
 
 **Phase 2 — Training Intelligence**
