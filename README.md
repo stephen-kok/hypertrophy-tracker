@@ -183,6 +183,12 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v22 — Form Tips, Auto-End Session, Timer Toast (2026-03-03)
+- Added formTips and commonMistakes to all exercises in both config files (Coach tab now fully populated)
+- Session auto-ends after 30 minutes of inactivity (also detects stale sessions from previous days)
+- Toast notification shown on rest timer completion for better visibility
+- Browser notifications already work when on a different screen (existing feature)
+
 ### v21 — Fix Bilateral History in Overload, Deload, and History Panel (2026-03-03)
 - Overload suggestions now work for bilateral exercises (was silently skipping them)
 - Deload weight targets use bilateral history (was showing 0 weight)

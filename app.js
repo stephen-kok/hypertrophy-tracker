@@ -37,8 +37,11 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=21;
+var APP_VERSION=22;
 var WHATS_NEW=[
+  "Form cues & common mistakes added to all exercises in Coach tab",
+  "Session auto-ends after 30 minutes of inactivity",
+  "Toast notification on rest timer completion",
   "Sound effect + visual popup on rest timer completion",
   "Weekly volume now tracks all days of the week (bug fix)",
   "Auto-convert weights when switching between kg and lbs",
@@ -113,7 +116,9 @@ function loadDayData(dayId,date){return lsGet(dataKey(dayId,date||getSessionDate
 
 /* ── Auto-save debounce ── */
 var _saveTimers={};
+var _lastActivity=Date.now();
 function saveDayData(dayId,data,immediate){
+  _lastActivity=Date.now();
   var key=dayId;
   if(_saveTimers[key])clearTimeout(_saveTimers[key]);
   var d=getSessionDate();
@@ -585,6 +590,7 @@ function playTimerSound(){
 function sendTimerNotification(){
   if(navigator.vibrate)navigator.vibrate([200,100,200]);
   playTimerSound();
+  showUndoToast("Rest complete — time for your next set!",null,4000);
   if("Notification"in window&&Notification.permission==="granted"){try{new Notification("Rest Complete",{body:"Time to start your next set!",tag:"rest-timer"})}catch(e){}}
 }
 
@@ -1710,6 +1716,23 @@ function MainApp(props){
   var onTouchEnd=useCallback(function(e){var t=e.changedTouches[0];var dx=t.clientX-touchRef.current.startX;var dy=t.clientY-touchRef.current.startY;/* Increased threshold (80px) and stricter angle (2x) to avoid scroll conflicts */if(Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*2){if(dx<0){setActiveDay(function(d){return Math.min(d+1,DAYS.length-1)})}else{setActiveDay(function(d){return Math.max(d-1,0)})}}},[DAYS.length]);
   useEffect(function(){var dow=new Date().getDay();var dayToNum={"Mon":1,"Tue":2,"Wed":3,"Thu":4,"Fri":5,"Sat":6,"Sun":0};var best=-1;DAYS.forEach(function(d,i){if(dayToNum[dayMap[d.id]]===dow)best=i});if(best>=0)setActiveDay(best)},[dayMap]);
   useEffect(function(){if(scrollRef.current)scrollRef.current.scrollTop=0},[activeDay]);
+
+  /* ── Auto-end session after 30 min inactivity ── */
+  useEffect(function(){
+    var INACTIVITY_MS=30*60*1000;
+    function checkAutoEnd(){
+      var started=getSessionStart();if(!started)return;
+      /* Stale session from a different day */
+      if(_sessionDateLock&&_sessionDateLock!==today()){endSession();showUndoToast("Previous session ended automatically",null,5000);refresh();return}
+      /* 30 min inactivity */
+      if(Date.now()-_lastActivity>INACTIVITY_MS){endSession();showUndoToast("Session auto-ended after 30 min inactivity",null,5000);refresh()}
+    }
+    var id=setInterval(checkAutoEnd,60000);
+    var onVis=function(){if(!document.hidden)checkAutoEnd()};
+    document.addEventListener("visibilitychange",onVis);
+    checkAutoEnd();
+    return function(){clearInterval(id);document.removeEventListener("visibilitychange",onVis)};
+  },[]);
 
   return h("div",{style:{display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     /* Header */
