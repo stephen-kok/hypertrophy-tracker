@@ -37,7 +37,7 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=18;
+var APP_VERSION=19;
 var WHATS_NEW=[
   "Sound effect + visual popup on rest timer completion",
   "Weekly volume now tracks all days of the week (bug fix)",
@@ -589,7 +589,7 @@ function FloatingTimer(){
       if(active){
         var left=Math.max(0,active.timer.total-Math.floor((Date.now()-active.timer.startedAt)/1000));
         setDisplay({key:active.key,remaining:left,total:active.timer.total});
-        if(left===0){active.timer.running=false;active.timer.done=true;timers.setTimer(active.key,active.timer);sendTimerNotification()}
+        if(left===0&&active.timer.running){active.timer.running=false;active.timer.done=true;timers.setTimer(active.key,active.timer);sendTimerNotification()}
       }else{setDisplay(null)}
     };
     tick();intervalRef.current=setInterval(tick,1000);
@@ -778,8 +778,7 @@ function SetLogger(props){
       try{localStorage.removeItem(LS+sourceKey)}catch(e){}
     }else{
       /* First conversion — save originals and convert */
-      lsSet(sourceKey,{unit:prev,sets:data.map(function(s){return{weight:s.weight}})});
-      setData(function(cur){var converted=cur.map(function(s){
+      setData(function(cur){lsSet(sourceKey,{unit:prev,sets:cur.map(function(s){return{weight:s.weight}})});var converted=cur.map(function(s){
         if(!s.weight)return s;var w=parseFloat(s.weight);if(!w)return s;
         var cw=prev==="lbs"?Math.round(w/2.20462*2)/2:Math.round(w*2.20462/5)*5;
         return Object.assign({},s,{weight:String(cw)});
@@ -927,7 +926,7 @@ function ExerciseCard(props){
     if(deloadMod&&deloadMod.weight)return deloadMod.weight;
     if(!isDeloadWeek)return null;var hist=getHistory(dayId,exercise.id,1);if(!hist.length)return null;var comp=hist[0].sets.filter(function(s){return s.done&&s.weight});if(!comp.length)return null;var w=parseFloat(comp[0].weight)||0;return w>0?Math.round(w*0.55):null;
   },[dayId,exercise,isDeloadWeek,deloadMod]);
-  var e1rm=useMemo(function(){var best=0;var checkData=isBilateral?[].concat(saved.exercises&&saved.exercises[exercise.id+"_L"]||[],saved.exercises&&saved.exercises[exercise.id+"_R"]||[]):[exData||[]].flat();checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[exData,isBilateral?saved:null]);
+  var e1rm=useMemo(function(){var best=0;var checkData=isBilateral?[].concat(saved.exercises&&saved.exercises[exercise.id+"_L"]||[],saved.exercises&&saved.exercises[exercise.id+"_R"]||[]):[exData||[]].flat();checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[exData,isBilateral?dayData.rev:null]);
   var restLabel=exercise.rest<60?exercise.rest+"s":(exercise.rest/60|0)+(exercise.rest%60?":"+(exercise.rest%60+"").padStart(2,"0"):"m");
   var onToggleDone=useCallback(function(){
     if(getAutoTimer()){
@@ -976,7 +975,7 @@ function ExerciseCard(props){
     showSwapMenu&&exercise.alternatives?h("div",{className:"fade-in",style:{display:"flex",gap:4,flexWrap:"wrap",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
       exercise._swappedFrom?h("span",{style:{fontSize:10,color:"var(--info)",marginRight:4}},"\u21C4 from "+exercise._swappedFrom):null,
       exercise.alternatives.map(function(alt){return h("button",{key:alt,onClick:function(){if(onSwap)onSwap(exercise.id,alt);setShowSwapMenu(false)},className:"btn btn--info btn--xs"},alt)})):null,
-    !expanded&&isNext&&!allDone?h(QuickLogBtn,{exId:exercise.id,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}):null,
+    !expanded&&isNext&&!allDone?h(QuickLogBtn,{exId:bilateralExId,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}):null,
     expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
       h("div",{className:"ex-tabs",role:"tablist"},
         h("button",{onClick:function(){setActiveTab("log")},className:"ex-tab"+(activeTab==="log"?" ex-tab--active":""),role:"tab","aria-selected":activeTab==="log"?"true":"false"},"Log"),
@@ -999,7 +998,7 @@ function ExerciseCard(props){
           h("button",{onClick:function(){setActiveSide("L")},style:{flex:1,padding:"6px 0",borderRadius:6,border:activeSide==="L"?"1px solid var(--accent-border)":"1px solid rgba(255,255,255,0.08)",background:activeSide==="L"?"var(--accent-bg)":"transparent",color:activeSide==="L"?"var(--accent)":"var(--text-dim)",fontSize:12,fontWeight:700,cursor:"pointer"}},"Left"),
           h("button",{onClick:function(){setActiveSide("R")},style:{flex:1,padding:"6px 0",borderRadius:6,border:activeSide==="R"?"1px solid var(--accent-border)":"1px solid rgba(255,255,255,0.08)",background:activeSide==="R"?"var(--accent-bg)":"transparent",color:activeSide==="R"?"var(--accent)":"var(--text-dim)",fontSize:12,fontWeight:700,cursor:"pointer"}},"Right")):null,
         h(SetLogger,{key:bilateralExId+"_"+dataRev,exId:bilateralExId,numSets:exercise.sets,dayId:dayId,onSetUpdate:onSetUpdate,onSetDone:onToggleDone,exKey:exKey,rest:exercise.rest,isMachine:!!exercise.machine,increment:exercise.increment||5}),
-        h(QuickLogBtn,{exId:exercise.id,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}),
+        h(QuickLogBtn,{exId:bilateralExId,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}),
         h(RestTimer,{exKey:exKey,defaultSeconds:exercise.rest}),
         exercise.tempo?h(TempoTimer,{tempo:exercise.tempo}):null,
         supersetPartner?h("div",{style:{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",background:"var(--info-bg)",border:"1px solid var(--info-border)",borderRadius:8,marginTop:4}},
@@ -1058,6 +1057,17 @@ function CardioLog(props){
       h("button",{onClick:toggleDone,className:data.done?"btn btn--success-ghost btn--full":"btn btn--ghost btn--full"},data.done?"\u2713 Completed":"Mark Complete")));
 }
 
+/* ── Bilateral helper ── */
+function countBilateralDone(ex,saved){
+  if(ex.bilateral){var l=saved.exercises&&saved.exercises[ex.id+"_L"];var r=saved.exercises&&saved.exercises[ex.id+"_R"];return(l?l.filter(function(s){return s.done}).length:0)+(r?r.filter(function(s){return s.done}).length:0)}
+  var d=saved.exercises&&saved.exercises[ex.id];return d?d.filter(function(s){return s.done}).length:0;
+}
+function getBilateralSets(ex,saved){
+  if(ex.bilateral){return[].concat(saved.exercises&&saved.exercises[ex.id+"_L"]||[],saved.exercises&&saved.exercises[ex.id+"_R"]||[])}
+  return saved.exercises&&saved.exercises[ex.id]||[];
+}
+function totalSetsFor(ex){return ex.bilateral?ex.sets*2:ex.sets}
+
 /* ── Weekly Volume ── */
 var MUSCLE_LABELS={chest:"Chest",back:"Back",quads:"Quads",hamstrings:"Hams",glutes:"Glutes",front_delt:"Front Delt",side_delt:"Side Delt",rear_delt:"Rear Delt",biceps:"Biceps",triceps:"Triceps",calves:"Calves",abs:"Abs"};
 
@@ -1074,7 +1084,7 @@ function calcWeeklyVolume(config,dayData){
       var dateStr=fmtD(check);
       /* Use context data for today, localStorage for other days */
       var saved=dateStr===getSessionDate()&&dayData?dayData.getData(day.id):loadDayData(day.id,dateStr);
-      allEx.forEach(function(ex){var muscles=ex.muscles||[];var sets=saved.exercises&&saved.exercises[ex.id];var doneSets=sets?sets.filter(function(s){return s.done}).length:0;if(doneSets>0){muscles.forEach(function(m){if(!vol[m])vol[m]=0;vol[m]+=doneSets})}});
+      allEx.forEach(function(ex){var muscles=ex.muscles||[];var doneSets=countBilateralDone(ex,saved);if(doneSets>0){muscles.forEach(function(m){if(!vol[m])vol[m]=0;vol[m]+=doneSets})}});
     }
   });
   return vol;
@@ -1247,7 +1257,7 @@ function BodyMetrics(props){
 /* ── Completion Summary ── */
 function calcSessionStats(day,customs){
   var allEx=day.exercises.concat(customs||[]);var saved=loadDayData(day.id);var totalVolume=0,totalSets=0,prs=[],rpeValues=[];
-  allEx.forEach(function(ex){var sets=saved.exercises&&saved.exercises[ex.id];if(!sets)return;sets.forEach(function(s){if(s.done&&s.weight&&s.reps){totalVolume+=parseFloat(s.weight)*parseInt(s.reps);totalSets++}});if(saved.rpe&&saved.rpe[ex.id])rpeValues.push(saved.rpe[ex.id]);var maxW=0;if(sets)sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>maxW)maxW=w}});if(maxW>0){var hist=getHistory(day.id,ex.id,10);var hMax=0;hist.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>hMax)hMax=w}})});if(maxW>hMax&&hMax>0)prs.push({name:ex.name,weight:maxW,prev:hMax})}});
+  allEx.forEach(function(ex){var sets=getBilateralSets(ex,saved);if(!sets.length)return;sets.forEach(function(s){if(s.done&&s.weight&&s.reps){totalVolume+=parseFloat(s.weight)*parseInt(s.reps);totalSets++}});if(saved.rpe&&saved.rpe[ex.id])rpeValues.push(saved.rpe[ex.id]);var maxW=0;sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>maxW)maxW=w}});if(maxW>0){var hist=getHistory(day.id,ex.id,10);var hMax=0;hist.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight){var w=parseFloat(s.weight);if(w>hMax)hMax=w}})});if(maxW>hMax&&hMax>0)prs.push({name:ex.name,weight:maxW,prev:hMax})}});
   var dur=getSessionStart()?Math.floor((Date.now()-getSessionStart())/1000):0;var avgRpe=rpeValues.length>0?rpeValues.reduce(function(a,b){return a+b},0)/rpeValues.length:null;var cardio=lsGet("cardio_"+day.id+"_"+getSessionDate());
   return{totalVolume:totalVolume,totalSets:totalSets,prs:prs,duration:dur,avgRpe:avgRpe,cardio:cardio&&cardio.done};
 }
@@ -1360,7 +1370,7 @@ function PersonalRecords(props){
       var allEx=day.exercises.concat(getCustomExercises(day.id));
       allEx.forEach(function(ex){
         var exUnit=getExUnit(ex.id);var hist=getHistory(day.id,ex.id,50);var bestW=0,bestReps=0,bestDate="",bestE1rm=0;
-        var todayData=loadDayData(day.id);var todaySets=todayData.exercises&&todayData.exercises[ex.id];
+        var todayData=loadDayData(day.id);var todaySets=getBilateralSets(ex,todayData);if(!todaySets.length)todaySets=null;
         var allSessions=hist.slice();if(todaySets)allSessions.unshift({date:today(),sets:todaySets});
         allSessions.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps),e=calc1RM(w,r);if(e>bestE1rm){bestE1rm=e;bestW=w;bestReps=r;bestDate=entry.date}}})});
         if(bestW>0)recs.push({name:ex.name,weight:bestW,reps:bestReps,date:bestDate,e1rm:bestE1rm,unit:exUnit,muscles:ex.muscles||[]});
@@ -1550,11 +1560,11 @@ function DayView(props){
   var handleSwap=useCallback(function(origId,altName){
     showConfirm({title:"Swap Exercise",msg:"Replace with "+altName+" for this session? Your logged sets will stay.",confirmLabel:"Swap",onConfirm:function(){saveSwap(day.id,origId,altName);bumpSwapRev(function(r){return r+1});refresh()}});
   },[day.id,refresh]);
-  var saved=dayData.getData(day.id);var totalSets=allExercises.reduce(function(a,e){return a+e.sets},0);
-  var doneSets=allExercises.reduce(function(a,e){var d=saved.exercises&&saved.exercises[e.id];return a+(d?d.filter(function(s){return s.done}).length:0)},0);
+  var saved=dayData.getData(day.id);var totalSets=allExercises.reduce(function(a,e){return a+totalSetsFor(e)},0);
+  var doneSets=allExercises.reduce(function(a,e){return a+countBilateralDone(e,saved)},0);
   var pct=totalSets>0?doneSets/totalSets:0;var allComplete=doneSets===totalSets&&totalSets>0;
   var nextExIdx=-1;
-  for(var ni=0;ni<allExercises.length;ni++){var exSkip=saved._skipped&&saved._skipped[allExercises[ni].id];if(exSkip)continue;var exD=saved.exercises&&saved.exercises[allExercises[ni].id];var exDone=exD?exD.filter(function(s){return s.done}).length:0;if(exDone<allExercises[ni].sets){nextExIdx=ni;break}}
+  for(var ni=0;ni<allExercises.length;ni++){var exSkip=saved._skipped&&saved._skipped[allExercises[ni].id];if(exSkip)continue;var exDone=countBilateralDone(allExercises[ni],saved);if(exDone<totalSetsFor(allExercises[ni])){nextExIdx=ni;break}}
   var removeCustom=function(exId){var next=removeCustomExercise(day.id,exId);setCustoms(next);refresh()};
   var deloadWarnings=useMemo(function(){return config?getDeloadWarning(config):null},[config]);
   var meso=getMesocycle();var isDeloadWeek=meso.week===4;
@@ -1604,6 +1614,9 @@ function SettingsPanel(props){
   useEffect(function(){if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(function(est){setStorageInfo({used:est.usage||0,quota:est.quota||0})})}},[]);
   var s2=useState(getUnit()),unit=s2[0],setUnitState=s2[1];
   var s3=useState(getAutoTimer()),autoTimer=s3[0],setAutoTimerState=s3[1];
+  var s4=useState(function(){return getPref("timerSound",true)}),timerSound=s4[0],setTimerSound=s4[1];
+  var s5r=useState(function(){return getPref("showRir",false)}),showRir=s5r[0],setShowRir=s5r[1];
+  var s6w=useState(function(){return getPref("showWellness",false)}),showWellness=s6w[0],setShowWellness=s6w[1];
   var DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   var handleImport=function(e){var file=e.target.files&&e.target.files[0];if(!file)return;importData(file,function(count,err){if(err)setMsg("Import failed: "+(err.message||"Unknown error"));else{setMsg("Imported "+count+" records.");setTimeout(function(){window.location.reload()},1500)}})};
   var toggleUnit=function(){var next=unit==="lbs"?"kg":"lbs";setUnitState(next);setUnit(next)};
@@ -1617,9 +1630,9 @@ function SettingsPanel(props){
       h("div",{className:"settings-group__title"},"Preferences"),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Default Unit"),h("div",{className:"settings-row__desc"},"Per-exercise override via LBS/KG toggle")),h("button",{onClick:toggleUnit,className:"btn btn--accent-ghost btn--sm"},unit==="lbs"?"Switch to KG":"Switch to LBS")),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Auto-Start Timer"),h("div",{className:"settings-row__desc"},"Start rest timer on set check-off")),h(Toggle,{on:autoTimer,onToggle:toggleAutoTimer,label:"Auto-start timer"})),
-      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Timer Sound"),h("div",{className:"settings-row__desc"},"Play sound when rest timer completes")),h(Toggle,{on:getPref("timerSound",true),onToggle:function(){setPref("timerSound",!getPref("timerSound",true))},label:"Timer sound"})),
-      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"RIR Tracking"),h("div",{className:"settings-row__desc"},"Rate reps-in-reserve after each set")),h(Toggle,{on:getPref("showRir",false),onToggle:function(){setPref("showRir",!getPref("showRir",false))},label:"Show RIR"})),
-      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Wellness Check"),h("div",{className:"settings-row__desc"},"Pre-session readiness poll (sleep, energy, etc.)")),h(Toggle,{on:getPref("showWellness",false),onToggle:function(){setPref("showWellness",!getPref("showWellness",false))},label:"Show wellness"}))),
+      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Timer Sound"),h("div",{className:"settings-row__desc"},"Play sound when rest timer completes")),h(Toggle,{on:timerSound,onToggle:function(){var next=!timerSound;setTimerSound(next);setPref("timerSound",next)},label:"Timer sound"})),
+      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"RIR Tracking"),h("div",{className:"settings-row__desc"},"Rate reps-in-reserve after each set")),h(Toggle,{on:showRir,onToggle:function(){var next=!showRir;setShowRir(next);setPref("showRir",next)},label:"Show RIR"})),
+      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Wellness Check"),h("div",{className:"settings-row__desc"},"Pre-session readiness poll (sleep, energy, etc.)")),h(Toggle,{on:showWellness,onToggle:function(){var next=!showWellness;setShowWellness(next);setPref("showWellness",next)},label:"Show wellness"}))),
     h("div",{className:"settings-group"},
       h("div",{className:"settings-group__title"},"Schedule"),
       h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:10}},"Tap a day to cycle through the week"),
@@ -1705,8 +1718,8 @@ function MainApp(props){
       /* Day tabs */
       h("div",{style:{display:"flex",gap:3},role:"tablist","aria-label":"Training days"},DAYS.map(function(day,i){
         var saved=dayData.getData(day.id);var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);
-        var doneSets=allEx.reduce(function(a,e){var d=saved.exercises&&saved.exercises[e.id];return a+(d?d.filter(function(s){return s.done}).length:0)},0);
-        var totalSets=allEx.reduce(function(a,e){return a+e.sets},0);var hasProg=doneSets>0,complete=doneSets===totalSets&&totalSets>0;
+        var doneSets=allEx.reduce(function(a,e){return a+countBilateralDone(e,saved)},0);
+        var totalSets=allEx.reduce(function(a,e){return a+totalSetsFor(e)},0);var hasProg=doneSets>0,complete=doneSets===totalSets&&totalSets>0;
         return h("button",{key:day.id,onClick:function(){setActiveDay(i);setNavTab(0)},className:"tab"+(activeDay===i?" tab--active":"")+(complete?" tab--complete":""),role:"tab","aria-selected":activeDay===i?"true":"false"},
           h("div",{style:{fontSize:11,fontWeight:700,color:activeDay===i?"var(--accent)":complete?"var(--success)":"var(--text-dim)",letterSpacing:.4}},dayMap[day.id]),
           h("div",{style:{fontSize:13,fontWeight:700,color:activeDay===i?"var(--text-bright)":complete?"var(--text-dim)":"var(--text-dim)",marginTop:1}},day.label),

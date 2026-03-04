@@ -183,6 +183,28 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v19 — Bug Fixes: Bilateral Aggregates, Timer, Settings (2026-03-03)
+**Bilateral Tracking Fixes**
+- Bilateral exercises (L/R) now correctly counted in weekly volume dashboard
+- Progress bar and day tab completion include bilateral sets
+- Session completion summary includes bilateral volume and PRs
+- Personal Records page detects bilateral exercise data
+- Next-exercise detection handles bilateral completion correctly
+- QuickLogBtn writes to correct bilateral-suffixed key (no more data split)
+
+**Timer & Settings**
+- Fixed double notification (vibration + sound) on timer completion
+- Settings toggles (RIR, Wellness, Timer Sound) now visually update immediately on tap
+- Fixed unit conversion stale closure — saves source weights from current state
+
+**Service Worker**
+- Config JSON files (profiles, stephen, james) added to precache for full offline support
+- Fixed unhandled promise rejection on background revalidation when offline
+
+**Data**
+- Added missing `focus` field to james.json config
+- Fixed unstable e1RM memo dependency for bilateral exercises
+
 ### v18 — UX Overhaul, Sound, Bilateral Tracking (2026-03-03)
 **Bug Fixes**
 - Weekly volume dashboard now correctly aggregates all days of the current week (Mon-Sun), not just today
