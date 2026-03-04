@@ -640,6 +640,7 @@ var CardErrorBoundary=function(){
 /* ── Focus Trap Hook ── */
 function useFocusTrap(ref){
   useEffect(function(){
+    if(!ref)return;
     var el=ref.current;if(!el)return;
     var prev=document.activeElement;
     var focusable=el.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),a[href]');
@@ -726,7 +727,8 @@ function dismissConfirm(){
 function ConfirmDialog(){
   var s=useState(0),bump=s[1];var dialogRef=useRef(null);
   useEffect(function(){var fn=function(){bump(function(r){return r+1})};_confirmListeners.push(fn);return function(){_confirmListeners=_confirmListeners.filter(function(f){return f!==fn})}},[]);
-  useFocusTrap(_confirmState.show?dialogRef:{current:null});
+  var trapRef=_confirmState.show?dialogRef:null;
+  useFocusTrap(trapRef);
   if(!_confirmState.show)return null;
   var danger=_confirmState.danger;
   return h("div",{className:"overlay overlay--center",onClick:function(e){if(e.target===e.currentTarget){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()}},role:"dialog","aria-modal":"true","aria-label":_confirmState.title},
