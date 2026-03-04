@@ -183,6 +183,13 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v21 — Fix Bilateral History in Overload, Deload, and History Panel (2026-03-03)
+- Overload suggestions now work for bilateral exercises (was silently skipping them)
+- Deload weight targets use bilateral history (was showing 0 weight)
+- Deload suggestion fallback uses bilateral history
+- History tab shows bilateral exercise history (was always empty)
+- Deload warnings detect bilateral exercise RPE trends
+
 ### v20 — Bug Fixes: History, Hooks, Extra Sets (2026-03-03)
 **Bilateral History**
 - PR detection and personal records now query bilateral `_L`/`_R` history keys (fixes false PRs every session)

@@ -37,7 +37,7 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=20;
+var APP_VERSION=21;
 var WHATS_NEW=[
   "Sound effect + visual popup on rest timer completion",
   "Weekly volume now tracks all days of the week (bug fix)",
@@ -227,7 +227,7 @@ function getLastSessionRIR(dayId,exId){
   return vals.reduce(function(a,b){return a+b},0)/vals.length;
 }
 function getOverloadSuggestion(dayId,exercise){
-  var hist=getHistory(dayId,exercise.id,1);if(!hist.length)return null;var lastSets=hist[0].sets;if(!lastSets||!lastSets.length)return null;
+  var hist=getBilateralHistory(dayId,exercise,1);if(!hist.length)return null;var lastSets=hist[0].sets;if(!lastSets||!lastSets.length)return null;
   var range=parseRepRange(exercise.reps);if(range.max===0)return null;
   var comp=lastSets.filter(function(s){return s.done&&s.weight&&s.reps});if(comp.length<exercise.sets)return null;
   var allTop=comp.every(function(s){return parseInt(s.reps)>=range.max});
@@ -241,7 +241,7 @@ function getOverloadSuggestion(dayId,exercise){
   var repsFirst=inc<=2.5||range.max>=15;
   if(!allTop){
     /* Volume progression: if stuck at same weight for 3+ sessions, suggest adding a set */
-    var hist3=getHistory(dayId,exercise.id,3);
+    var hist3=getBilateralHistory(dayId,exercise,3);
     if(hist3.length>=3){
       var sameWeight=hist3.every(function(h){return h.sets.filter(function(s){return s.done&&s.weight}).some(function(s){return parseFloat(s.weight)===lw})});
       if(sameWeight&&comp.length===exercise.sets){
@@ -251,7 +251,7 @@ function getOverloadSuggestion(dayId,exercise){
     return null;
   }
   if(repsFirst){
-    var hist2=getHistory(dayId,exercise.id,2);
+    var hist2=getBilateralHistory(dayId,exercise,2);
     var prevAlsoTop=hist2.length>=2&&hist2[1].sets.filter(function(s){return s.done&&s.weight&&s.reps}).every(function(s){return parseInt(s.reps)>=range.max});
     if(!prevAlsoTop){
       var targetReps=range.max+2;
@@ -335,7 +335,7 @@ function getDeloadModifiers(dayId,exercise){
   var strat=getActiveDeload();if(!strat)return null;
   var s=DELOAD_STRATEGIES.find(function(d){return d.id===strat});if(!s)return null;
   if(s.skipWeights)return{skip:true,label:"Active Recovery \u2014 skip weights today"};
-  var hist=getHistory(dayId,exercise.id,1);var lastWeight=0;
+  var hist=getBilateralHistory(dayId,exercise,1);var lastWeight=0;
   if(hist.length)hist[0].sets.forEach(function(se){if(se.done&&se.weight){var w=parseFloat(se.weight);if(w>lastWeight)lastWeight=w}});
   var targetWeight=lastWeight>0?Math.round(lastWeight*s.factor):0;
   var targetSets=exercise.sets;
@@ -697,7 +697,7 @@ function StrengthChart(props){
 
 /* ── History Panel ── */
 function HistoryPanel(props){
-  var hist=useMemo(function(){return getHistory(props.dayId,props.exId,12)},[props.dayId,props.exId]);
+  var hist=useMemo(function(){return props.exercise&&props.exercise.bilateral?getBilateralHistory(props.dayId,props.exercise,12):getHistory(props.dayId,props.exId,12)},[props.dayId,props.exId,props.exercise]);
   if(!hist.length)return h("div",{style:{fontSize:11,color:"var(--text-dim)",padding:"10px 0",textAlign:"center"}},
     h("div",{style:{fontSize:20,marginBottom:4},"aria-hidden":"true"},"\uD83D\uDCCA"),
     h("div",{style:{fontStyle:"italic"}},"No history yet"),
@@ -937,7 +937,7 @@ function ExerciseCard(props){
   var readinessAdj=useMemo(function(){return getReadinessAdj(dayId)},[dayId]);
   var deloadSuggestion=useMemo(function(){
     if(deloadMod&&deloadMod.weight)return deloadMod.weight;
-    if(!isDeloadWeek)return null;var hist=getHistory(dayId,exercise.id,1);if(!hist.length)return null;var comp=hist[0].sets.filter(function(s){return s.done&&s.weight});if(!comp.length)return null;var w=parseFloat(comp[0].weight)||0;return w>0?Math.round(w*0.55):null;
+    if(!isDeloadWeek)return null;var hist=getBilateralHistory(dayId,exercise,1);if(!hist.length)return null;var comp=hist[0].sets.filter(function(s){return s.done&&s.weight});if(!comp.length)return null;var w=parseFloat(comp[0].weight)||0;return w>0?Math.round(w*0.55):null;
   },[dayId,exercise,isDeloadWeek,deloadMod]);
   var e1rm=useMemo(function(){var best=0;var checkData=isBilateral?[].concat(saved.exercises&&saved.exercises[exercise.id+"_L"]||[],saved.exercises&&saved.exercises[exercise.id+"_R"]||[]):[exData||[]].flat();checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[exData,isBilateral?dayData.rev:null]);
   var restLabel=exercise.rest<60?exercise.rest+"s":(exercise.rest/60|0)+(exercise.rest%60?":"+(exercise.rest%60+"").padStart(2,"0"):"m");
@@ -1025,7 +1025,7 @@ function ExerciseCard(props){
         !allDone?h("button",{onClick:toggleSkip,className:skipped?"btn btn--ghost btn--sm":"btn btn--ghost btn--sm",style:{marginTop:8,opacity:0.6}},skipped?"\u21A9 Undo Skip":"\u23ED Skip Exercise"):null),
       activeTab==="history"&&h("div",{role:"tabpanel"},
         exercise._swappedFrom?h("div",{style:{fontSize:11,color:"var(--info)",marginBottom:6}},"\u21C4 Swapped from ",h("strong",null,exercise._swappedFrom)," for this session"):null,
-        h(HistoryPanel,{dayId:dayId,exId:exercise.id})),
+        h(HistoryPanel,{dayId:dayId,exId:exercise.id,exercise:exercise})),
       activeTab==="coach"&&h("div",{role:"tabpanel"},
         exercise.tip?h("div",{style:{padding:10,borderRadius:10,background:"var(--accent-bg)",border:"1px solid rgba(245,158,11,0.1)",fontSize:12,color:"var(--text-primary)",lineHeight:1.6,marginBottom:8}},
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--accent)",marginBottom:4}},"PERFORMANCE"),
@@ -1199,7 +1199,7 @@ function calcPreviousWeekVolume(config){
 function getDeloadWarning(config){
   var warnings=[];
   config.days.forEach(function(day){day.exercises.forEach(function(ex){
-    var hist=getHistory(day.id,ex.id,10);var recentRpe=[];
+    var hist=getBilateralHistory(day.id,ex,10);var recentRpe=[];
     hist.slice(0,3).forEach(function(entry){var dd=loadDayData(day.id,entry.date);if(dd.rpe&&dd.rpe[ex.id])recentRpe.push(dd.rpe[ex.id])});
     if(recentRpe.length>=2){var avg=recentRpe.reduce(function(a,b){return a+b},0)/recentRpe.length;if(avg>=9&&warnings.indexOf(ex.name)===-1)warnings.push(ex.name)}
   })});
