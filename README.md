@@ -183,6 +183,17 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v43 — Critical Bug Fixes & Data Safety (2026-03-04)
+
+- **Bug fix**: `getDeloadWarning` was crashing silently for all users with workout history — deload warnings now work correctly
+- **Bug fix**: History index now stores defensive clones — live edits can no longer corrupt historical data seen by overload/volume/fatigue calculations
+- **Bug fix**: Session date lock is now profile-scoped — multiple profiles no longer share a single lock key
+- **Bug fix**: `endSession()` now flushes pending debounced saves before unlocking — no data loss at session end
+- **Bug fix**: `initProfile()` clears the history index on profile switch — prevents cross-profile data contamination
+- **Bug fix**: Readiness-adjusted ghost weights round to nearest 5 lbs (was nearest 1 lb)
+- **Bug fix**: `useFocusTrap` now tracks the latest `onClose` callback — Escape key reliably calls the correct handler
+- **Bug fix**: Importing data now routes through `lsSet` — storage quota warnings work during import
+
 ### v42 — Maintainability & CSS Cleanup (2026-03-04)
 
 - **Maintainability**: Extracted `formatDate(dateStr)` and `formatDateFull(dateStr)` helpers — replaces 8 duplicate inline date formatters across the codebase
