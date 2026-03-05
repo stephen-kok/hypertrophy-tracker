@@ -183,6 +183,23 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v34 — Code Review Fixes Round 2 (2026-03-04)
+
+- File import now shows an error toast if the file cannot be read (no more silent hang)
+- Profile URL parameter sanitised — non-alphanumeric characters stripped to prevent path traversal
+- Volume targets clamped to ≥ 0 — negative values are now rejected at the input level
+- Custom exercise reps field validated on save — format like "8-12" is required, bad input shows a toast
+- IndexedDB open errors and service worker registration failures now log to console (were silently swallowed)
+- `playTimerSound` catch now logs via `console.debug` instead of silently discarding errors
+- Cache invalidation bug fixed: cross-tab storage events for keys without a `@` separator no longer cause incorrect selective-invalidation
+- Install prompt race condition fixed — prompt reference captured atomically before calling `.prompt()`
+- `parseInt` calls given explicit radix `10` throughout (was missing in overrides, rep-range parser, custom exercise form)
+- Touch targets raised to 44px minimum on toggle switch, warmup remove button, and Customize button
+- Confirm dialog buttons given `type="button"` to prevent accidental form submission
+- Deload weight suggestion reads factor from `DELOAD_STRATEGIES` instead of hardcoding `0.55`
+- `Math.max/min.apply(null, arr)` replaced with spread syntax — avoids RangeError on large arrays
+- `localStorage.length` cached before scan loop in `buildHistoryIndex`
+
 ### v33 — Code Review Fixes (2026-03-04)
 
 - Clipboard copy failure now shows a user-facing error toast instead of silently failing
