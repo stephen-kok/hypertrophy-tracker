@@ -183,6 +183,16 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v33 — Code Review Fixes (2026-03-04)
+
+- Clipboard copy failure now shows a user-facing error toast instead of silently failing
+- Import rejects files over 50 MB to prevent out-of-memory crashes
+- Cardio type selector uses correct `radiogroup`/`radio`/`aria-checked` semantics for screen readers
+- Floating rest timer `aria-label` updates with live remaining time for screen reader users
+- Error boundary now calls `console.error` in `componentDidCatch` for easier debugging
+- `lsGet` logs a `console.warn` when JSON parsing fails, exposing corrupted storage keys
+- Export logic decomposed into `buildExportData()` + `downloadJSON()` helpers (no behaviour change)
+
 ### v32 — Infrastructure & Storage (2026-03-04)
 
 - PWA install prompt — "Install App" button in More menu (Chrome/Edge), iOS instructions for Safari

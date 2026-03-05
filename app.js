@@ -37,12 +37,14 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=32;
+var APP_VERSION=33;
 var WHATS_NEW=[
-  "PWA install prompt — install the app from the More menu",
-  "Storage cleanup tools — clear old workout data to free space",
-  "IndexedDB backup — mirror data for extra durability and larger capacity",
-  "iOS install instructions in More menu"
+  "Clipboard copy now shows an error message if permission is denied",
+  "Import rejects files over 50 MB to prevent browser crashes",
+  "Cardio type selector is now screen-reader friendly (radiogroup)",
+  "Floating rest timer aria-label updates with live remaining time",
+  "Error boundary now logs to console for easier debugging",
+  "Export refactored into reusable helpers (no behaviour change)"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -116,7 +118,7 @@ function migrateToIDB(cb){
 }
 
 /* ═══ STORAGE ═══ */
-function lsGet(k){try{var v=localStorage.getItem(LS+k);return v?JSON.parse(v):null}catch(e){return null}}
+function lsGet(k){try{var v=localStorage.getItem(LS+k);return v?JSON.parse(v):null}catch(e){console.warn("[lsGet] Failed to parse key '"+k+"':",e.message);return null}}
 var _storageWarningShown=false;
 var _storageFull=false;var _storageFullListeners=[];
 function onStorageFullChange(fn){_storageFullListeners.push(fn);return function(){_storageFullListeners=_storageFullListeners.filter(function(f){return f!==fn})}}
@@ -546,15 +548,19 @@ function performAutoBackup(){
 }
 function downloadAutoBackup(slot){
   var backup=lsGet("auto_backup_"+slot);if(!backup||!backup.data)return;
-  var blob=new Blob([JSON.stringify(backup.data,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="hypertrophy_"+PROFILE+"_auto_"+backup.date+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  downloadJSON(backup.data,"hypertrophy_"+PROFILE+"_auto_"+backup.date+".json");
 }
 
 /* ═══ EXPORT / IMPORT ═══ */
-function exportData(){
-  var data={"_export_meta":{version:APP_VERSION,profile:PROFILE,date:today(),format:1}};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){try{data[k]=JSON.parse(localStorage.getItem(k))}catch(e){data[k]=localStorage.getItem(k)}}}
-  var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="hypertrophy_"+PROFILE+"_"+today()+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  markBackupDone();
+function buildExportData(){
+  var data={"_export_meta":{version:APP_VERSION,profile:PROFILE,date:today(),format:1}};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){try{data[k]=JSON.parse(localStorage.getItem(k))}catch(e){data[k]=localStorage.getItem(k)}}}
+  return data;
 }
+function downloadJSON(data,filename){
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function exportData(){downloadJSON(buildExportData(),"hypertrophy_"+PROFILE+"_"+today()+".json");markBackupDone()}
 function validateImportData(data){
   if(!data||typeof data!=="object"||Array.isArray(data))return"Import file must be a JSON object.";
   var keys=Object.keys(data);if(keys.length===0)return"Import file is empty.";
@@ -567,7 +573,7 @@ function validateImportData(data){
   if(matchingKeys===0&&foreignKeys>0)return"This export is from a different profile. Expected keys starting with '"+LS+"'.";
   return null;
 }
-function importData(file,cb){var r=new FileReader();r.onload=function(e){try{var data=JSON.parse(e.target.result);var err=validateImportData(data);if(err){cb(0,new Error(err));return}var meta=data._export_meta;var warnings=[];if(meta){if(meta.format&&meta.format!==1)warnings.push("Unknown export format (v"+meta.format+").");if(meta.version&&meta.version>APP_VERSION)warnings.push("Export from newer app (v"+meta.version+" vs v"+APP_VERSION+").");if(meta.profile&&meta.profile!==PROFILE)warnings.push("Profile mismatch: export is '"+meta.profile+"', current is '"+PROFILE+"'.")}var c=0;Object.keys(data).forEach(function(k){if(k==="_export_meta")return;localStorage.setItem(k,typeof data[k]==="string"?data[k]:JSON.stringify(data[k]));c++});_historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");cb(c,null,warnings.length?warnings:null)}catch(err){cb(0,err,null)}};r.readAsText(file)}
+function importData(file,cb){if(file.size>50*1024*1024){cb(0,new Error("File too large (max 50 MB). Export a smaller dataset."));return}var r=new FileReader();r.onload=function(e){try{var data=JSON.parse(e.target.result);var err=validateImportData(data);if(err){cb(0,new Error(err));return}var meta=data._export_meta;var warnings=[];if(meta){if(meta.format&&meta.format!==1)warnings.push("Unknown export format (v"+meta.format+").");if(meta.version&&meta.version>APP_VERSION)warnings.push("Export from newer app (v"+meta.version+" vs v"+APP_VERSION+").");if(meta.profile&&meta.profile!==PROFILE)warnings.push("Profile mismatch: export is '"+meta.profile+"', current is '"+PROFILE+"'.")}var c=0;Object.keys(data).forEach(function(k){if(k==="_export_meta")return;localStorage.setItem(k,typeof data[k]==="string"?data[k]:JSON.stringify(data[k]));c++});_historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");cb(c,null,warnings.length?warnings:null)}catch(err){cb(0,err,null)}};r.readAsText(file)}
 
 /* ═══ SHAREABLE SESSION SUMMARY ═══ */
 function generateShareText(day,stats,unit){
@@ -679,6 +685,7 @@ var ErrorBoundary=function(){
   EB.prototype=Object.create(React.Component.prototype);
   EB.prototype.constructor=EB;
   EB.getDerivedStateFromError=function(error){return{hasError:true,error:error}};
+  EB.prototype.componentDidCatch=function(error,info){console.error("[ErrorBoundary] Uncaught error:",error,info)};
   EB.prototype.render=function(){
     if(this.state.hasError){
       return h("div",{className:"empty-state",style:{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}},
@@ -878,14 +885,14 @@ function FloatingTimer(){
 
   if(!display)return null;
   var isDone=display.remaining===0;
-  return h("div",{style:{position:"fixed",bottom:56,left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between"},role:"timer","aria-live":"off","aria-label":"Rest timer"},
+  return h("div",{style:{position:"fixed",bottom:56,left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between"},role:"timer","aria-live":"off","aria-label":isDone?"Rest complete":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
     isDone?h("span",{role:"status","aria-live":"assertive",className:"sr-only"},"Rest complete, time to start your next set"):null,
     h("div",{style:{display:"flex",alignItems:"center",gap:10}},
       isDone?h("span",{style:{fontSize:14,fontWeight:800,color:"var(--success)"}},"\u2705 REST COMPLETE"):
       h(React.Fragment,null,
         h("div",{className:"timer-active",style:{width:8,height:8,borderRadius:4,background:"var(--accent)"}}),
         h("span",{style:{fontSize:12,color:"var(--text-secondary)",fontWeight:600}},"Rest"),
-        h("span",{style:{fontSize:18,fontWeight:800,color:"var(--accent)",fontVariantNumeric:"tabular-nums"}},fmtTime(display.remaining)))),
+        h("span",{style:{fontSize:18,fontWeight:800,color:"var(--accent)",fontVariantNumeric:"tabular-nums"},"aria-hidden":"true"},fmtTime(display.remaining)))),
     h("button",{onClick:function(){timers.setTimer(display.key,{total:display.total,startedAt:null,running:false,done:false});setDisplay(null);doneRef.current=null},className:"btn btn--ghost btn--sm","aria-label":"Dismiss rest timer"},"Dismiss"));
 }
 
@@ -1426,7 +1433,7 @@ function CardioLog(props){
         data.done?h("span",{className:"badge badge--success"},"Done"):null),
       h("span",{style:{fontSize:16,color:"var(--text-dim)",transform:expanded?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"},"aria-hidden":"true"},"\u25BE")),
     expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
-      h("div",{style:{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"},role:"group"},CARDIO_TYPES.map(function(ct){var active=ct.id===(data.type||"treadmill");return h("button",{key:ct.id,onClick:function(){switchType(ct.id)},style:{padding:"4px 10px",borderRadius:6,border:active?"1px solid var(--accent-border)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",fontSize:10,fontWeight:600,cursor:"pointer"},"aria-pressed":active?"true":"false"},ct.icon+" "+ct.label)})),
+      h("div",{style:{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"},role:"radiogroup","aria-label":"Cardio type"},CARDIO_TYPES.map(function(ct){var active=ct.id===(data.type||"treadmill");return h("button",{key:ct.id,onClick:function(){switchType(ct.id)},style:{padding:"4px 10px",borderRadius:6,border:active?"1px solid var(--accent-border)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",fontSize:10,fontWeight:600,cursor:"pointer"},role:"radio","aria-checked":active?"true":"false"},ct.icon+" "+ct.label)})),
       h("div",{style:{display:"grid",gridTemplateColumns:"repeat("+Math.min(cardioType.fields.length,3)+", 1fr)",gap:8,marginBottom:10}},cardioType.fields.map(function(f){var fieldLabel=f.key==="speed"?speedLabel.toUpperCase():f.label;return h("div",{key:f.key},h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:4}},fieldLabel),f.type==="text"?h("input",{type:"text",value:data[f.key]||"",onChange:function(e){update(f.key,e.target.value)},placeholder:"...",className:"input input--text","aria-label":fieldLabel}):h("input",{type:"number",inputMode:f.type==="decimal"?"decimal":"numeric",value:data[f.key]||"",onChange:function(e){update(f.key,e.target.value)},className:"input","aria-label":fieldLabel}))})),
       h("button",{onClick:toggleDone,className:data.done?"btn btn--success-ghost btn--full":"btn btn--ghost btn--full"},data.done?"\u2713 Completed":"Mark Complete")));
 }
@@ -1668,7 +1675,7 @@ function CompletionSummary(props){
   var streak=useMemo(function(){return calcWorkoutStreak()},[]);
   useEffect(function(){saveSessionSummary(day,customs)},[]);
   var shareText=useMemo(function(){return generateShareText(day,stats,unit)},[day,stats,unit]);
-  var handleShare=function(){if(navigator.share){navigator.share({text:shareText}).catch(function(){})}else{navigator.clipboard.writeText(shareText).then(function(){showUndoToast("Copied to clipboard!",null,2000)})}};
+  var handleShare=function(){if(navigator.share){navigator.share({text:shareText}).catch(function(){})}else{navigator.clipboard.writeText(shareText).then(function(){showUndoToast("Copied to clipboard!",null,2000)}).catch(function(){showUndoToast("Failed to copy \u2014 try long-pressing the text",null,3000)})}};
   return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true"},
     h("div",{className:"sheet celebrate",ref:sheetRef},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
