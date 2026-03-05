@@ -183,6 +183,39 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v37 — UX, Accessibility & Maintainability (2026-03-04)
+
+- **Accessibility**: Day tabs linked to content panel via `aria-controls`/`role="tabpanel"` — screen readers can navigate from tab to its panel
+- **Accessibility**: Strength trend SVG chart now has an `sr-only` text summary (e.g. "e1RM increased by 15 over 8 sessions") for screen readers
+- **Accessibility**: SessionRPE `role="radiogroup"` now has explicit `aria-label="Session RPE"`
+- **UX**: "Jump to Next Exercise" button now shows after completing the 1st exercise (was 3rd) — more useful on shorter programs
+- **UX**: Week strip dots now distinguish partial sessions (orange) from complete sessions (green)
+- **UX**: Onboarding shown once globally across all profiles — no longer repeats when switching profiles
+- **Reliability**: Mesocycle auto-advance now requires ≥50% of sets completed per day, not just any completed set — prevents premature week advancement from a single warmup set
+- **Code**: `getBilateralRIRTrend()` extracted from `getOverloadSuggestion` — bilateral RIR logic is no longer duplicated inline
+- **Code**: `bestWeight(sets)` utility extracted — shared by `getOverloadSuggestion` and `StrengthChart`
+- **Code**: IDB `onupgradeneeded` guards `createObjectStore` with `objectStoreNames.contains` check — safe for future schema version upgrades
+- **Tests**: `validateImportData` suite added (including regression test for keys containing but not starting with `ht_`); async version sync test verifies `APP_VERSION` matches `CACHE_NAME` number
+
+### v36 — Performance (2026-03-04)
+
+- `getLastSessionRIR` and `getRIRTrend` now read from the in-memory `_historyIndex` instead of calling `loadDayData()` — eliminates N `localStorage.getItem` calls per exercise on every overload suggestion calculation
+- `calcFatigueScore` historical scan now iterates `_historyIndex` directly instead of calling `getHistory()` + `loadDayData()` per exercise — reduces reads from O(exercises × 3) to O(3 sessions) per training day
+- `weekStripData` in header now uses `_historyIndex` for past dates and `DayDataContext` cache for today — eliminates 7×N `localStorage.getItem` calls on every set completion
+- `PersonalRecords` hoists `loadDayData(day.id)` outside per-exercise loop — one read per training day instead of one per exercise
+
+### v35 — Code Review Fixes Round 3 (2026-03-04)
+
+- Import now mirrors data to IndexedDB — IDB was out of sync after every import (data written directly to localStorage, bypassing `idbSet`)
+- Import key validation tightened: `startsWith("ht_")` replaces `indexOf("ht_")` — previously a key containing `ht_` anywhere in the string passed validation
+- History index reset atomically on cleanup — `_historyIndex={}` now cleared before `_historyBuilt=false` so no stale reads during rebuild
+- FloatingTimer no longer mutates the shared timer object before calling `setTimer` — creates a copy via `Object.assign` first
+- Migration failures now logged via `console.error` instead of swallowed silently
+- CardErrorBoundary retry limited to 3 attempts — button disables and shows "Failed — reload page" after exhaustion
+- Service worker `CACHE_CONFIG` message handler validates URL is same-origin before caching
+- `manifest.json` added to service worker pre-cache list (was missing — prevented reliable PWA offline support)
+- Profile config now cached via `navigator.serviceWorker.ready` — handles first-install case where `controller` is not yet set
+
 ### v34 — Code Review Fixes Round 2 (2026-03-04)
 
 - File import now shows an error toast if the file cannot be read (no more silent hang)

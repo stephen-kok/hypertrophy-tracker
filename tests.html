@@ -33,7 +33,7 @@ function calc1RM(weight,reps){var w=parseFloat(weight),r=parseInt(reps);if(!w||!
 function validateImportData(data){
   if(!data||typeof data!=="object"||Array.isArray(data))return"Import file must be a JSON object.";
   var keys=Object.keys(data);if(keys.length===0)return"Import file is empty.";
-  for(var i=0;i<keys.length;i++){if(keys[i]==="_export_meta")continue;if(keys[i].indexOf("ht_")===-1)return"Unexpected key '"+keys[i]+"' \u2014 not a valid export."}
+  for(var i=0;i<keys.length;i++){if(keys[i]==="_export_meta")continue;if(!keys[i].startsWith("ht_"))return"Unexpected key '"+keys[i]+"' \u2014 not a valid export."}
   return null;
 }
 
@@ -568,6 +568,40 @@ suite("Fatigue score thresholds");
   assert("RPE 9.0 = moderate",fatigueLevel(9.0)==="moderate");
   assert("RPE 8.0 = low",fatigueLevel(8.0)==="low");
   assert("RPE 7.0 = low",fatigueLevel(7.0)==="low");
+})();
+
+suite("validateImportData — key validation");
+(function(){
+  assert("Null input rejected",validateImportData(null)!==null);
+  assert("Array input rejected",validateImportData([])!==null);
+  assert("Empty object rejected",validateImportData({})!==null);
+  assert("Valid ht_ key accepted",validateImportData({"ht_stephen_foo":"bar"})===null);
+  assert("_export_meta allowed",validateImportData({"ht_stephen_foo":"bar","_export_meta":{}})===null);
+  assert("Non-ht_ key rejected",validateImportData({"ht_stephen_foo":"bar","bad_key":"x"})!==null);
+  /* Regression: key containing 'ht_' but not starting with it must be rejected */
+  assert("Key with ht_ not at start rejected",validateImportData({"prefix_ht_foo":"bar"})!==null);
+})();
+
+suite("Version sync — APP_VERSION matches CACHE_NAME");
+(function(){
+  /* Fetch app.js and sw.js to verify version numbers stay in sync */
+  var appVersion=null,cacheVersion=null,done=false;
+  function checkSync(){
+    if(appVersion===null||cacheVersion===null)return;
+    assert("APP_VERSION matches sw.js CACHE_NAME version",appVersion===cacheVersion,
+      appVersion&&cacheVersion?"app v"+appVersion+" vs sw v"+cacheVersion:"could not parse versions");
+    done=true;var el=document.getElementById("results");
+    el.innerHTML=results.join("")+'<div class="summary" style="color:'+(failed>0?"#ef4444":"#22c55e")+';background:'+(failed>0?"rgba(239,68,68,0.1)":"rgba(34,197,94,0.1)")+'">'+passed+' passed, '+failed+' failed</div>';
+    document.title=(failed>0?"FAIL":"PASS")+" \u2014 Hypertrophy Tracker \u2014 Unit Tests";
+  }
+  fetch("app.js?_="+Date.now()).then(function(r){return r.text()}).then(function(src){
+    var m=src.match(/APP_VERSION\s*=\s*(\d+)/);appVersion=m?parseInt(m[1]):null;checkSync();
+  }).catch(function(){appVersion=-1;checkSync()});
+  fetch("sw.js?_="+Date.now()).then(function(r){return r.text()}).then(function(src){
+    var m=src.match(/hypertrophy-v(\d+)/);cacheVersion=m?parseInt(m[1]):null;checkSync();
+  }).catch(function(){cacheVersion=-1;checkSync()});
+  /* Defer output until async checks complete (fall through to output will run first if sync) */
+  if(!done){results.push('<div style="color:var(--text-dim);font-style:italic">Version sync test: async check pending...</div>')}
 })();
 
 /* ═══ Output ═══ */

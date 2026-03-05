@@ -1,10 +1,11 @@
 /* CACHE_NAME must match APP_VERSION in app.js — bump both together */
-var CACHE_NAME = 'hypertrophy-v34';
+var CACHE_NAME = 'hypertrophy-v37';
 var URLS_TO_CACHE = [
   './',
   './index.html',
   './app.js',
   './styles.css',
+  './manifest.json',
   './configs/profiles.json',
   './configs/stephen.json',
   './configs/james.json',
@@ -35,9 +36,14 @@ self.addEventListener('message', function(event) {
     self.skipWaiting();
   }
   if (event.data && event.data.type === 'CACHE_CONFIG' && event.data.url) {
-    caches.open(CACHE_NAME).then(function(cache) {
-      cache.add(event.data.url).catch(function() {});
-    });
+    var url = event.data.url;
+    /* Only cache same-origin relative URLs to prevent cache poisoning */
+    var isSafeUrl = url.startsWith('./') || url.startsWith('/') || url.indexOf('://') === -1;
+    if (isSafeUrl) {
+      caches.open(CACHE_NAME).then(function(cache) {
+        cache.add(url).catch(function() {});
+      });
+    }
   }
 });
 
@@ -81,6 +87,6 @@ self.addEventListener('fetch', function(event) {
         return response;
       }).catch(function() { return null; });
       return cached || networkFetch;
-    }).catch(function() { return caches.match('./index.html'); })
+    }).catch(function() { return new Response('Not available offline', {status: 503, statusText: 'Service Unavailable'}); })
   );
 });

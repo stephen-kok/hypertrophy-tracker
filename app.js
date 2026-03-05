@@ -37,16 +37,18 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=34;
+var APP_VERSION=37;
 var WHATS_NEW=[
-  "File import now shows an error if the file cannot be read (no more silent hang)",
-  "Profile URL parameter is sanitised to prevent path traversal",
-  "Volume targets clamped to zero — negative values no longer accepted",
-  "Custom exercise reps field validates format before saving",
-  "IndexedDB and service worker errors are now logged to console",
-  "Touch targets on toggle switch, warmup remove, and Customize button meet 44px minimum",
-  "Confirm dialog buttons have explicit type=button to prevent accidental form submission",
-  "Progressive overload deload factor reads from DELOAD_STRATEGIES — no more magic number"
+  "Accessibility: day tabs now linked to their panel via aria-controls/role=tabpanel",
+  "Accessibility: strength trend chart has sr-only text summary for screen readers",
+  "Accessibility: Session RPE radiogroup has explicit aria-label",
+  "UX: Jump to Next Exercise button appears after the first exercise (was after the 3rd)",
+  "UX: Week strip dots now distinguish partial sessions (orange) from complete ones (green)",
+  "UX: Onboarding shown once globally across profiles, not per-profile",
+  "Reliability: Mesocycle auto-advance requires ≥50% of sets completed, not just any sets",
+  "Code: getBilateralRIRTrend() helper extracted; bestWeight() utility extracted",
+  "Code: IndexedDB onupgradeneeded guards createObjectStore with objectStoreNames.contains check",
+  "Tests: validateImportData test added; version sync test added"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -85,7 +87,7 @@ function initProfile(p){PROFILE=p;LS="ht_"+p+"_";runMigrations();/* Set version 
 var MIGRATIONS=[];
 function runMigrations(){
   var cur=lsGet("_schema_version")||0;
-  for(var i=cur;i<MIGRATIONS.length;i++){try{MIGRATIONS[i]()}catch(e){}}
+  for(var i=cur;i<MIGRATIONS.length;i++){try{MIGRATIONS[i]()}catch(e){console.error("[Migration] Failed at step "+(i+1)+":",e)}}
   if(cur<MIGRATIONS.length)lsSet("_schema_version",MIGRATIONS.length);
 }
 
@@ -94,7 +96,7 @@ var _idb=null;var _idbReady=false;var _idbFailed=false;var _idbQueue=[];
 function openIDB(){
   if(!window.indexedDB){_idbFailed=true;return}
   var req=indexedDB.open("hypertrophy-tracker",1);
-  req.onupgradeneeded=function(e){e.target.result.createObjectStore("data")};
+  req.onupgradeneeded=function(e){var db=e.target.result;if(!db.objectStoreNames.contains("data"))db.createObjectStore("data")};
   req.onsuccess=function(e){_idb=e.target.result;_idbReady=true;_idbQueue.forEach(function(fn){fn()});_idbQueue=[]};
   req.onerror=function(){console.warn("IndexedDB failed to open:",req.error);_idbFailed=true;_idbQueue=[]};
 }
@@ -249,8 +251,8 @@ function cleanOldData(monthsToKeep){
     var dateMatch=suffix.match(/\d{4}-\d{2}-\d{2}/);
     if(dateMatch&&dateMatch[0]<cutoffStr){freedBytes+=k.length+(localStorage.getItem(k)||"").length;localStorage.removeItem(k);idbDelete(k);removed++}
   }
-  /* Rebuild history manifest */
-  _historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");
+  /* Rebuild history manifest — reset index first to prevent stale reads during rebuild */
+  _historyIndex={};_historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");
   return{removed:removed,freedBytes:freedBytes}
 }
 
@@ -321,29 +323,44 @@ function setVolumeTargets(t){lsSet("pref_vol_targets",t)}
 /* ═══ PROGRESSIVE OVERLOAD ═══ */
 function parseRepRange(reps){var str=String(reps).replace(/\/leg/i,"");var parts=str.split("-");if(parts.length===2)return{min:parseInt(parts[0],10)||0,max:parseInt(parts[1],10)||0};var n=parseInt(str,10)||0;return{min:n,max:n}}
 function getLastSessionRIR(dayId,exId){
-  var hist=getHistory(dayId,exId,1);if(!hist.length)return null;
-  var dd=loadDayData(dayId,hist[0].date);
-  if(!dd.setRir||!dd.setRir[exId])return null;
-  var rir=dd.setRir[exId];var vals=[];
-  Object.keys(rir).forEach(function(k){if(typeof rir[k]==="number")vals.push(rir[k])});
-  if(!vals.length)return null;
-  return vals.reduce(function(a,b){return a+b},0)/vals.length;
+  /* Read from in-memory index to avoid a loadDayData call */
+  if(!_historyBuilt)buildHistoryIndex();
+  var entries=_historyIndex[dayId]||[];var td=getSessionDate();
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i];if(e.date===td)continue;
+    if(!e.data.exercises||!e.data.exercises[exId])continue;
+    if(!e.data.setRir||!e.data.setRir[exId])return null;
+    var rir=e.data.setRir[exId];var vals=[];
+    Object.keys(rir).forEach(function(k){if(typeof rir[k]==="number")vals.push(rir[k])});
+    if(!vals.length)return null;
+    return vals.reduce(function(a,b){return a+b},0)/vals.length;
+  }
+  return null;
 }
-/* RIR trend across multiple sessions */
+/* RIR trend across multiple sessions — reads from in-memory index to avoid N loadDayData calls */
 function getRIRTrend(dayId,exId,n){
-  var hist=getHistory(dayId,exId,n||3);if(!hist.length)return null;
+  if(!_historyBuilt)buildHistoryIndex();
+  var entries=_historyIndex[dayId]||[];var td=getSessionDate();var limit=n||3;
   var sessionAvgs=[];
-  hist.forEach(function(entry){
-    var dd=loadDayData(dayId,entry.date);
-    if(!dd.setRir||!dd.setRir[exId])return;
-    var rir=dd.setRir[exId];var vals=[];
+  for(var i=0;i<entries.length&&sessionAvgs.length<limit;i++){
+    var e=entries[i];if(e.date===td)continue;
+    if(!e.data.exercises||!e.data.exercises[exId])continue;
+    if(!e.data.setRir||!e.data.setRir[exId])continue;
+    var rir=e.data.setRir[exId];var vals=[];
     Object.keys(rir).forEach(function(k){if(typeof rir[k]==="number")vals.push(rir[k])});
     if(vals.length)sessionAvgs.push(vals.reduce(function(a,b){return a+b},0)/vals.length);
-  });
+  }
   if(sessionAvgs.length<2)return null;
   var overall=sessionAvgs.reduce(function(a,b){return a+b},0)/sessionAvgs.length;
   var declining=sessionAvgs.length>=2&&sessionAvgs[0]<sessionAvgs[sessionAvgs.length-1]-0.5;
   return{avg:overall,declining:declining,sessions:sessionAvgs};
+}
+function bestWeight(sets){var w=0;(sets||[]).forEach(function(s){var v=parseFloat(s.weight)||0;if(v>w)w=v});return w}
+function getBilateralRIRTrend(dayId,exercise,n){
+  if(!exercise.bilateral)return getRIRTrend(dayId,exercise.id,n);
+  var trendL=getRIRTrend(dayId,exercise.id+"_L",n);var trendR=getRIRTrend(dayId,exercise.id+"_R",n);
+  if(trendL&&trendR)return{avg:(trendL.avg+trendR.avg)/2,declining:trendL.declining||trendR.declining,sessions:trendL.sessions};
+  return trendL||trendR||null;
 }
 function getOverloadSuggestion(dayId,exercise){
   var hist=getBilateralHistory(dayId,exercise,1);if(!hist.length)return null;var lastSets=hist[0].sets;if(!lastSets||!lastSets.length)return null;
@@ -353,7 +370,7 @@ function getOverloadSuggestion(dayId,exercise){
   var effectiveRange=mesoTarget?{min:mesoTarget.min,max:mesoTarget.max}:range;
   var comp=lastSets.filter(function(s){return s.done&&s.weight&&s.reps});if(comp.length<Math.max(1,Math.floor(exercise.sets*0.8)))return null;
   var allTop=comp.every(function(s){return parseInt(s.reps)>=effectiveRange.max});
-  var lw=0;comp.forEach(function(s){var w=parseFloat(s.weight)||0;if(w>lw)lw=w});if(lw===0)return null;
+  var lw=bestWeight(comp);if(lw===0)return null;
   var inc=exercise.increment||(exercise.machine?2.5:5);
   /* RIR guard: if average RIR was 0-1 last session, don't suggest weight increase */
   var avgRir=exercise.bilateral?function(){var l=getLastSessionRIR(dayId,exercise.id+"_L");var r=getLastSessionRIR(dayId,exercise.id+"_R");if(l!==null&&r!==null)return(l+r)/2;return l!==null?l:r}():getLastSessionRIR(dayId,exercise.id);
@@ -361,12 +378,7 @@ function getOverloadSuggestion(dayId,exercise){
     return{type:"hold",from:lw,to:lw,msg:"RIR was "+avgRir.toFixed(1)+" last session \u2014 repeat weight, focus on form"};
   }
   /* RIR trend guard: declining RIR across sessions suggests approaching overreach */
-  var rirTrend=exercise.bilateral?null:getRIRTrend(dayId,exercise.id,3);
-  if(!rirTrend&&exercise.bilateral){
-    var trendL=getRIRTrend(dayId,exercise.id+"_L",3);var trendR=getRIRTrend(dayId,exercise.id+"_R",3);
-    if(trendL&&trendR)rirTrend={avg:(trendL.avg+trendR.avg)/2,declining:trendL.declining||trendR.declining,sessions:trendL.sessions};
-    else if(trendL)rirTrend=trendL;else if(trendR)rirTrend=trendR;
-  }
+  var rirTrend=getBilateralRIRTrend(dayId,exercise,3);
   if(rirTrend&&rirTrend.declining&&allTop){
     return{type:"hold",from:lw,to:lw,msg:"RIR trending down ("+rirTrend.sessions.slice().reverse().map(function(v){return v.toFixed(1)}).join("\u2192")+") \u2014 consolidate before adding weight"};
   }
@@ -424,19 +436,21 @@ function calcFatigueScore(config,dayData){
         });
       }
     }
-    day.exercises.forEach(function(ex){
-      var hist=getHistory(day.id,ex.id,3);
-      hist.forEach(function(entry){
-        if(entry.date===todayDate)return;/* Skip today — already counted from live context */
-        var dd=loadDayData(day.id,entry.date);
-        if(dd.rpe&&dd.rpe[ex.id]){rpeScore+=dd.rpe[ex.id];rpeCount++}
-        /* Factor in per-set RIR data */
-        if(dd.setRir&&dd.setRir[ex.id]){
-          var rir=dd.setRir[ex.id];
+    /* Use in-memory history index — avoids N×3 loadDayData calls per fatigue recalc */
+    if(!_historyBuilt)buildHistoryIndex();
+    var dayEntries=_historyIndex[day.id]||[];var histCount=0;
+    for(var hi=0;hi<dayEntries.length&&histCount<3;hi++){
+      var hEntry=dayEntries[hi];if(hEntry.date===todayDate)continue;
+      if(!hEntry.data.exercises||!Object.keys(hEntry.data.exercises).length)continue;
+      histCount++;
+      day.exercises.forEach(function(ex){
+        if(hEntry.data.rpe&&hEntry.data.rpe[ex.id]){rpeScore+=hEntry.data.rpe[ex.id];rpeCount++}
+        if(hEntry.data.setRir&&hEntry.data.setRir[ex.id]){
+          var rir=hEntry.data.setRir[ex.id];
           Object.keys(rir).forEach(function(k){if(typeof rir[k]==="number"){rirScore+=rir[k];rirCount++}});
         }
       });
-    });
+    }
   });
   /* Factor in recent cardio as mild fatigue contributor */
   var cardioCount=0;
@@ -569,13 +583,13 @@ function validateImportData(data){
   var foreignKeys=0,matchingKeys=0;
   for(var i=0;i<keys.length;i++){
     if(keys[i]==="_export_meta")continue;/* skip versioning metadata */
-    if(keys[i].indexOf("ht_")===-1)return"Unexpected key '"+keys[i]+"' — not a valid export.";
+    if(!keys[i].startsWith("ht_"))return"Unexpected key '"+keys[i]+"' — not a valid export.";
     if(keys[i].startsWith(LS))matchingKeys++;else foreignKeys++;
   }
   if(matchingKeys===0&&foreignKeys>0)return"This export is from a different profile. Expected keys starting with '"+LS+"'.";
   return null;
 }
-function importData(file,cb){if(file.size>50*1024*1024){cb(0,new Error("File too large (max 50 MB). Export a smaller dataset."));return}var r=new FileReader();r.onload=function(e){try{var data=JSON.parse(e.target.result);var err=validateImportData(data);if(err){cb(0,new Error(err));return}var meta=data._export_meta;var warnings=[];if(meta){if(meta.format&&meta.format!==1)warnings.push("Unknown export format (v"+meta.format+").");if(meta.version&&meta.version>APP_VERSION)warnings.push("Export from newer app (v"+meta.version+" vs v"+APP_VERSION+").");if(meta.profile&&meta.profile!==PROFILE)warnings.push("Profile mismatch: export is '"+meta.profile+"', current is '"+PROFILE+"'.")}var c=0;Object.keys(data).forEach(function(k){if(k==="_export_meta")return;localStorage.setItem(k,typeof data[k]==="string"?data[k]:JSON.stringify(data[k]));c++});_historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");cb(c,null,warnings.length?warnings:null)}catch(err){cb(0,err,null)}};r.onerror=function(){cb(0,new Error("File could not be read"),null)};r.readAsText(file)}
+function importData(file,cb){if(file.size>50*1024*1024){cb(0,new Error("File too large (max 50 MB). Export a smaller dataset."));return}var r=new FileReader();r.onload=function(e){try{var data=JSON.parse(e.target.result);var err=validateImportData(data);if(err){cb(0,new Error(err));return}var meta=data._export_meta;var warnings=[];if(meta){if(meta.format&&meta.format!==1)warnings.push("Unknown export format (v"+meta.format+").");if(meta.version&&meta.version>APP_VERSION)warnings.push("Export from newer app (v"+meta.version+" vs v"+APP_VERSION+").");if(meta.profile&&meta.profile!==PROFILE)warnings.push("Profile mismatch: export is '"+meta.profile+"', current is '"+PROFILE+"'.")}var c=0;Object.keys(data).forEach(function(k){if(k==="_export_meta")return;var rawVal=typeof data[k]==="string"?data[k]:JSON.stringify(data[k]);localStorage.setItem(k,rawVal);idbSet(k,data[k]);c++});_historyBuilt=false;localStorage.removeItem(LS+"_historyManifest");cb(c,null,warnings.length?warnings:null)}catch(err){cb(0,err,null)}};r.onerror=function(){cb(0,new Error("File could not be read"),null)};r.readAsText(file)}
 
 /* ═══ SHAREABLE SESSION SUMMARY ═══ */
 function generateShareText(day,stats,unit){
@@ -705,17 +719,17 @@ var ErrorBoundary=function(){
 /* ── Card-level Error Boundary ── */
 var CardErrorBoundary=function(){
   function CEB(props){
-    React.Component.call(this,props);this.state={hasError:false};
+    React.Component.call(this,props);this.state={hasError:false,retries:0};
   }
   CEB.prototype=Object.create(React.Component.prototype);
   CEB.prototype.constructor=CEB;
   CEB.getDerivedStateFromError=function(){return{hasError:true}};
   CEB.prototype.render=function(){
     if(this.state.hasError){
-      var self=this;
+      var self=this;var maxRetries=3;var exhausted=self.state.retries>=maxRetries;
       return h("div",{className:"card",style:{padding:"12px 14px",background:"var(--danger-bg)",border:"1px solid var(--danger-border)"}},
         h("div",{style:{fontSize:13,fontWeight:700,color:"var(--danger)",marginBottom:4}},"\u26A0 Error loading "+(this.props.name||"component")),
-        h("button",{onClick:function(){self.setState({hasError:false})},className:"btn btn--ghost btn--sm"},"Retry"));
+        h("button",{onClick:function(){if(!exhausted)self.setState(function(s){return{hasError:false,retries:s.retries+1}})},disabled:exhausted,className:"btn btn--ghost btn--sm"},exhausted?"Failed — reload page":"Retry"));
     }
     return this.props.children;
   };
@@ -869,7 +883,7 @@ function FloatingTimer(){
       if(active){
         var left=Math.max(0,active.timer.total-Math.floor((Date.now()-active.timer.startedAt)/1000));
         setDisplay({key:active.key,remaining:left,total:active.timer.total});
-        if(left===0&&active.timer.running){active.timer.running=false;active.timer.done=true;timers.setTimer(active.key,active.timer);sendTimerNotification()}
+        if(left===0&&active.timer.running){var updated=Object.assign({},active.timer,{running:false,done:true});timers.setTimer(active.key,updated);sendTimerNotification()}
       }else{setDisplay(null)}
     };
     tick();intervalRef.current=setInterval(tick,1000);
@@ -937,8 +951,8 @@ function StrengthChart(props){
   var hist=props.hist;
   if(hist.length<2)return null;
   var points=hist.slice().reverse().map(function(entry){
-    var bestW=0,bestE1rm=0;
-    entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps);if(w>bestW)bestW=w;var e=calc1RM(w,r);if(e>bestE1rm)bestE1rm=e}});
+    var bestW=bestWeight(entry.sets.filter(function(s){return s.done&&s.weight&&s.reps}));var bestE1rm=0;
+    entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var e=calc1RM(parseFloat(s.weight),parseInt(s.reps));if(e>bestE1rm)bestE1rm=e}});
     return{date:entry.date,weight:bestW,e1rm:bestE1rm};
   }).filter(function(p){return p.weight>0});
   if(points.length<2)return null;
@@ -955,6 +969,7 @@ function StrengthChart(props){
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},
       h("span",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)"}},"Strength Trend"),
       h("span",{style:{fontSize:11,fontWeight:700,color:color}},arrow+" e1RM "+(delta>0?"+":"")+delta)),
+    h("span",{className:"sr-only"},"Strength trend: e1RM "+(delta>0?"increased by ":delta<0?"decreased by ":"unchanged at ")+Math.abs(delta)+" over "+points.length+" sessions"),
     h("svg",{width:"100%",height:H,viewBox:"0 0 "+W+" "+H,preserveAspectRatio:"none","aria-hidden":"true"},
       h("polyline",{points:wPath,fill:"none",stroke:"rgba(245,158,11,0.4)",strokeWidth:1.5,strokeLinecap:"round",strokeLinejoin:"round"}),
       h("polyline",{points:e1rmPath,fill:"none",stroke:"var(--info)",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"})),
@@ -1816,9 +1831,10 @@ function PersonalRecords(props){
     var recs=[];
     config.days.forEach(function(day){
       var allEx=day.exercises.concat(getCustomExercises(day.id));
+      var todayData=loadDayData(day.id);/* hoisted — one read per day, not per exercise */
       allEx.forEach(function(ex){
         var exUnit=getExUnit(ex.id);var hist=getBilateralHistory(day.id,ex,50);
-        var todayData=loadDayData(day.id);var todaySets=getBilateralSets(ex,todayData);if(!todaySets.length)todaySets=null;
+        var todaySets=getBilateralSets(ex,todayData);if(!todaySets.length)todaySets=null;
         var allSessions=hist.slice();if(todaySets)allSessions.unshift({date:today(),sets:todaySets});
         if(repFilter===0){
           /* e1RM mode — original behavior */
@@ -1888,7 +1904,7 @@ function SessionRPE(props){
   var labels={6:"Easy",7:"Moderate",8:"Hard",9:"Very Hard",10:"Max"};var colors={6:"var(--success)",7:"#84cc16",8:"var(--accent)",9:"#f97316",10:"var(--danger)"};
   return h("div",{className:"fade-in",style:{background:"var(--success-bg)",border:"1px solid var(--success-border)",borderRadius:12,padding:"14px 16px",marginTop:12},"aria-label":"Session RPE rating"},
     h("div",{style:{fontSize:13,fontWeight:700,color:"var(--success)",marginBottom:8}},"Session RPE \u2014 How was the overall workout?"),
-    h("div",{style:{display:"flex",gap:4},role:"radiogroup"},[6,7,8,9,10].map(function(val){var active=rpe===val;return h("button",{key:val,onClick:function(){save(val)},className:"rpe-btn",style:{border:active?"2px solid "+colors[val]:"1px solid rgba(255,255,255,0.08)",background:active?"rgba(255,255,255,0.06)":"transparent"},role:"radio","aria-checked":active?"true":"false"},h("div",{style:{fontSize:16,fontWeight:800,color:active?colors[val]:"var(--text-dim)"}},val),h("div",{style:{fontSize:8,fontWeight:600,color:active?"var(--text-secondary)":"var(--text-dim)",marginTop:1}},labels[val]))})),
+    h("div",{style:{display:"flex",gap:4},role:"radiogroup","aria-label":"Session RPE"},[6,7,8,9,10].map(function(val){var active=rpe===val;return h("button",{key:val,onClick:function(){save(val)},className:"rpe-btn",style:{border:active?"2px solid "+colors[val]:"1px solid rgba(255,255,255,0.08)",background:active?"rgba(255,255,255,0.06)":"transparent"},role:"radio","aria-checked":active?"true":"false"},h("div",{style:{fontSize:16,fontWeight:800,color:active?colors[val]:"var(--text-dim)"}},val),h("div",{style:{fontSize:8,fontWeight:600,color:active?"var(--text-secondary)":"var(--text-dim)",marginTop:1}},labels[val]))})),
     rpe?h("div",{style:{fontSize:11,color:"var(--text-secondary)",marginTop:6,fontStyle:"italic"},"aria-live":"polite"},rpe<=7?"Recovered well \u2014 room to push harder.":rpe===8?"Solid session \u2014 sustainable load.":rpe===9?"High fatigue \u2014 watch recovery.":"Maximum effort \u2014 consider lighter session next."):null);
 }
 
@@ -2084,7 +2100,7 @@ function DayView(props){
         allComplete?h("button",{onClick:function(){setShowComplete(true)},className:"btn btn--success btn--sm",style:{animation:"celebrate 0.4s ease"}},"View Summary"):null)),
     /* Readiness check - show before first set */
     doneSets===0&&!readinessDone&&getPref("showWellness",false)?h(ReadinessCheck,{dayId:day.id,onDismiss:function(){setReadinessDone(true)}}):null,
-    doneSets===0&&!lsGet("onboarded")?h(OnboardingSteps,{onDone:function(){lsSet("onboarded",true);refresh()}}):null,
+    doneSets===0&&!localStorage.getItem("ht_onboarded")?h(OnboardingSteps,{onDone:function(){localStorage.setItem("ht_onboarded","1");refresh()}}):null,
     isDeloadWeek?h(DeloadOptions,{onSelect:refresh}):
     props.fatigue&&props.fatigue.level==="high"&&!isDeloadWeek?h("div",{style:{background:"var(--danger-bg)",border:"1px solid var(--danger-border)",borderRadius:10,padding:"10px 12px",marginBottom:10},role:"alert"},
       h("div",{style:{fontSize:12,fontWeight:700,color:"var(--danger)",marginBottom:4}},"\u26A0 High Fatigue Detected"),
@@ -2093,7 +2109,7 @@ function DayView(props){
     deloadWarnings?h("div",{style:{background:"var(--danger-bg)",border:"1px solid var(--danger-border)",borderRadius:10,padding:"10px 12px",marginBottom:10},role:"alert"},
       h("div",{style:{fontSize:12,fontWeight:700,color:"var(--danger)",marginBottom:4}},"\u26A0 Consider a Deload"),
       h("div",{style:{fontSize:11,color:"var(--text-secondary)",lineHeight:1.5}},"High RPE (9+) for 2+ sessions on: ",deloadWarnings.join(", "),". Consider reducing weight 40-50%.")):null,
-    nextExIdx>=3&&!allComplete?h("button",{onClick:function(){var cards=document.querySelectorAll(".card--next");if(cards.length)cards[0].scrollIntoView({behavior:"smooth",block:"center"})},className:"btn btn--accent-ghost btn--sm",style:{marginBottom:8,width:"100%"}},"Jump to Next: "+allExercises[nextExIdx].name):null,
+    nextExIdx>=1&&!allComplete?h("button",{onClick:function(){var cards=document.querySelectorAll(".card--next");if(cards.length)cards[0].scrollIntoView({behavior:"smooth",block:"center"})},className:"btn btn--accent-ghost btn--sm",style:{marginBottom:8,width:"100%"}},"Jump to Next: "+allExercises[nextExIdx].name):null,
     swappedExercises.map(function(ex,i){
       var ssPartner=null,ssPartnerExId=null;
       if(ex.supersetGroup){for(var si=0;si<swappedExercises.length;si++){if(si!==i&&swappedExercises[si].supersetGroup===ex.supersetGroup){ssPartner=swappedExercises[si].name;ssPartnerExId=swappedExercises[si].id;break}}}
@@ -2261,8 +2277,15 @@ function MainApp(props){
   var weekStripData=useMemo(function(){var now=new Date();var dayOfWeek=now.getDay()||7;var result=[];
     for(var wi=1;wi<=7;wi++){var d=new Date(now);d.setDate(d.getDate()+(wi-dayOfWeek));
       var dateStr=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-      var hasSets=false;config.days.forEach(function(day){var dd=loadDayData(day.id,dateStr);if(dd.exercises){Object.keys(dd.exercises).forEach(function(k){if(dd.exercises[k].some(function(s){return s.done}))hasSets=true})}});
-      result.push({dow:wi,hasSets:hasSets})}return result},[config,dayData.rev]);
+      var doneSets=0,totalSets=0;
+      /* Use context cache for today; history index for past dates — avoids 7×N loadDayData calls */
+      if(dateStr===getSessionDate()){
+        config.days.forEach(function(day){var live=dayData.getData(day.id);var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);allEx.forEach(function(e){totalSets+=totalSetsFor(e);doneSets+=countBilateralDone(e,live)})});
+      }else{
+        if(!_historyBuilt)buildHistoryIndex();
+        config.days.forEach(function(day){var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);allEx.forEach(function(e){totalSets+=totalSetsFor(e)});var entries=_historyIndex[day.id]||[];for(var ei=0;ei<entries.length;ei++){if(entries[ei].date===dateStr){allEx.forEach(function(e){doneSets+=countBilateralDone(e,entries[ei].data)});break}}});
+      }
+      result.push({dow:wi,hasSets:doneSets>0,complete:totalSets>0&&doneSets>=totalSets})}return result},[config,dayData.rev]);
   /* Debounce fatigue calculation — only recompute 500ms after last data change to avoid 40+ localStorage reads per keystroke */
   var sfat=useState(null),fatigue=sfat[0],setFatigue=sfat[1];
   useEffect(function(){var id=setTimeout(function(){setFatigue(calcFatigueScore(config,dayData))},500);return function(){clearTimeout(id)}},[config,dayData.rev]);
@@ -2289,8 +2312,9 @@ function MainApp(props){
         var dateStr=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
         var dd=loadDayData(day.id,dateStr);
         var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);
+        var total=allEx.reduce(function(a,e){return a+totalSetsFor(e)},0);
         var done=allEx.reduce(function(a,e){return a+countBilateralDone(e,dd)},0);
-        if(done>0)return true;
+        if(done>=Math.ceil(total*0.5))return true;
       }
       return false;
     });
@@ -2344,7 +2368,7 @@ function MainApp(props){
         var saved=dayData.getData(day.id);var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);
         var doneSets=allEx.reduce(function(a,e){return a+countBilateralDone(e,saved)},0);
         var totalSets=allEx.reduce(function(a,e){return a+totalSetsFor(e)},0);var hasProg=doneSets>0,complete=doneSets===totalSets&&totalSets>0;
-        return h("button",{key:day.id,onClick:function(){setActiveDay(i);setNavTab(0)},className:"tab"+(activeDay===i?" tab--active":"")+(complete?" tab--complete":""),role:"tab","aria-selected":activeDay===i?"true":"false"},
+        return h("button",{key:day.id,onClick:function(){setActiveDay(i);setNavTab(0)},className:"tab"+(activeDay===i?" tab--active":"")+(complete?" tab--complete":""),role:"tab","aria-selected":activeDay===i?"true":"false","aria-controls":"day-panel-"+day.id},
           h("div",{style:{fontSize:11,fontWeight:700,color:activeDay===i?"var(--accent)":complete?"var(--success)":"var(--text-dim)",letterSpacing:.4}},dayMap[day.id]),
           h("div",{style:{fontSize:13,fontWeight:700,color:activeDay===i?"var(--text-bright)":complete?"var(--text-dim)":"var(--text-dim)",marginTop:1}},day.label),
           (hasProg||complete)?h("div",{style:{width:4,height:4,borderRadius:2,background:complete?"var(--success)":"var(--accent)",margin:"3px auto 0"},"aria-hidden":"true"}):null)})),
@@ -2354,7 +2378,7 @@ function MainApp(props){
     h("div",{style:{display:"flex",justifyContent:"center",gap:3,padding:"4px 16px 6px",background:"var(--bg)"},"aria-label":"This week"},
       weekStripData.map(function(wd){var isToday=wd.dow===(new Date().getDay()||7);return h("div",{key:wd.dow,style:{flex:1,textAlign:"center",padding:"3px 0",borderRadius:6,background:isToday?"rgba(245,158,11,0.1)":"transparent",border:isToday?"1px solid var(--accent-border)":"1px solid transparent"}},
         h("div",{style:{fontSize:9,fontWeight:700,color:isToday?"var(--accent)":"var(--text-dim)"}},["M","T","W","T","F","S","S"][wd.dow-1]),
-        h("div",{style:{width:5,height:5,borderRadius:3,margin:"2px auto 0",background:wd.hasSets?"var(--success)":"rgba(255,255,255,0.06)"}}))})),
+        h("div",{style:{width:5,height:5,borderRadius:3,margin:"2px auto 0",background:wd.complete?"var(--success)":wd.hasSets?"var(--accent)":"rgba(255,255,255,0.06)"}}))})),
     /* Content */
     h("div",{ref:scrollRef,onTouchStart:onTouchStart,onTouchEnd:onTouchEnd,className:"content"},
       showMesoAdvance?h("div",{style:{background:"var(--info-bg)",border:"1px solid var(--info-border)",borderRadius:10,padding:"10px 12px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}},
@@ -2362,7 +2386,8 @@ function MainApp(props){
         h("div",{style:{display:"flex",gap:6}},
           h("button",{onClick:function(){var m=advanceMesoWeek();setMeso(m);lsSet("meso_advanced_wk"+(m.week-1>0?m.week-1:4),true);setShowMesoAdvance(false);refresh()},className:"btn btn--info btn--sm"},"Advance"),
           h("button",{onClick:function(){lsSet("meso_advanced_wk"+meso.week,true);setShowMesoAdvance(false)},className:"btn btn--ghost btn--sm"},"Dismiss"))):null,
-      h(DayView,{key:activeDay,day:DAYS[activeDay],refresh:refresh,config:config,fatigue:fatigue,onMesoChange:function(m){setMeso(m)}})),
+      h("div",{id:"day-panel-"+DAYS[activeDay].id,role:"tabpanel","aria-label":DAYS[activeDay].label},
+        h(DayView,{key:activeDay,day:DAYS[activeDay],refresh:refresh,config:config,fatigue:fatigue,onMesoChange:function(m){setMeso(m)}}))),
     /* Save flash + Floating timer */
     h(SaveFlash,null),
     h(FloatingTimer,null),
@@ -2627,8 +2652,8 @@ function App(){
     fetch(configUrl).then(function(r){if(!r.ok)throw new Error("Profile not found: "+profileId);return r.json()}).then(function(data){
       var err=validateConfig(data);if(err){setError("Config error: "+err);return}
       setConfig(data);
-      /* Cache config in SW for offline access */
-      if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.controller.postMessage({type:"CACHE_CONFIG",url:"./"+configUrl})}
+      /* Cache config in SW for offline access — use ready to handle first-install case where controller isn't set yet */
+      if(navigator.serviceWorker){navigator.serviceWorker.ready.then(function(){if(navigator.serviceWorker.controller){navigator.serviceWorker.controller.postMessage({type:"CACHE_CONFIG",url:"./"+configUrl})}}).catch(function(){})}
     }).catch(function(err){setError(err.message)});
   },[profileId]);
   if(!profileId)return h(ProfileSelector,null);
