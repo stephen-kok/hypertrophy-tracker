@@ -183,6 +183,10 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v38 — Defaults (2026-03-04)
+
+- RIR tracking and Wellness Check now default to **on** — new users see both features immediately, can disable in Settings
+
 ### v37 — UX, Accessibility & Maintainability (2026-03-04)
 
 - **Accessibility**: Day tabs linked to content panel via `aria-controls`/`role="tabpanel"` — screen readers can navigate from tab to its panel

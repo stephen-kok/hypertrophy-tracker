@@ -146,8 +146,8 @@ App
 | `unit` | `"lbs"` | Global default weight unit |
 | `autotimer` | `true` | Auto-start rest timer on set completion |
 | `timerSound` | `true` | Play audio on timer completion |
-| `showRir` | `false` | Show RIR buttons after set completion |
-| `showWellness` | `false` | Show pre-session readiness check |
+| `showRir` | `true` | Show RIR buttons after set completion |
+| `showWellness` | `true` | Show pre-session readiness check |
 
 ### CSS Design System
 - Dark theme: `--bg: #0a0a0f`, `--surface: #141419`

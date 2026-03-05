@@ -37,18 +37,15 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=37;
+var APP_VERSION=38;
 var WHATS_NEW=[
+  "RIR tracking and Wellness Check are now on by default — turn them off in Settings if you prefer",
   "Accessibility: day tabs now linked to their panel via aria-controls/role=tabpanel",
   "Accessibility: strength trend chart has sr-only text summary for screen readers",
-  "Accessibility: Session RPE radiogroup has explicit aria-label",
   "UX: Jump to Next Exercise button appears after the first exercise (was after the 3rd)",
   "UX: Week strip dots now distinguish partial sessions (orange) from complete ones (green)",
   "UX: Onboarding shown once globally across profiles, not per-profile",
-  "Reliability: Mesocycle auto-advance requires ≥50% of sets completed, not just any sets",
-  "Code: getBilateralRIRTrend() helper extracted; bestWeight() utility extracted",
-  "Code: IndexedDB onupgradeneeded guards createObjectStore with objectStoreNames.contains check",
-  "Tests: validateImportData test added; version sync test added"
+  "Reliability: Mesocycle auto-advance requires ≥50% of sets completed, not just any sets"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -1161,7 +1158,7 @@ function SetLogger(props){
         h("div",{style:{display:"flex",alignItems:"center",gap:2}},
           h("button",{onClick:function(){toggle(i)},className:set.done?"set-check set-check--done set-done-pop":"set-check","aria-label":"Mark set "+(i+1)+(set.done?" incomplete":" complete"),"aria-pressed":set.done?"true":"false"},set.done?"\u2713":""),
           i>=numSets?h("button",{onClick:function(){removeExtraSet(i)},style:{width:28,height:28,borderRadius:6,border:"1px solid var(--danger-border)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"var(--danger)",padding:0},"aria-label":"Remove extra set"},"\u2715"):null),
-        set.done&&getPref("showRir",false)?h("div",{style:{gridColumn:"1 / -1",display:"flex",alignItems:"center",gap:4,marginBottom:2,marginTop:-2}},
+        set.done&&getPref("showRir",true)?h("div",{style:{gridColumn:"1 / -1",display:"flex",alignItems:"center",gap:4,marginBottom:2,marginTop:-2}},
           h("span",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:600,width:28,textAlign:"center"}},"RIR"),
           [0,1,2,3,4].map(function(r){var active=rirData[i]===r;var color=r===0?"var(--danger)":r<=1?"#f97316":r<=2?"var(--accent)":"var(--success)";return h("button",{key:r,onClick:function(){saveRir(i,r)},style:{padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:700,border:active?"1px solid "+color:"1px solid rgba(255,255,255,0.06)",background:active?"rgba(255,255,255,0.06)":"transparent",color:active?color:"var(--text-dim)",cursor:"pointer"},"aria-label":r+" reps in reserve"},r)})):null)}),
     data.length<numSets+4?h("button",{onClick:addExtraSet,className:"btn btn--accent-ghost btn--sm btn--full btn--dashed",style:{marginTop:2,opacity:0.7},"aria-label":"Add extra set"},"+1 Set (drop set / extra)"):null,
@@ -2099,7 +2096,7 @@ function DayView(props){
         h("span",{style:{fontSize:11,fontWeight:700,color:pct>=1?"var(--success)":"var(--text-secondary)",fontVariantNumeric:"tabular-nums",flexShrink:0}},doneSets+"/"+totalSets+" sets"),
         allComplete?h("button",{onClick:function(){setShowComplete(true)},className:"btn btn--success btn--sm",style:{animation:"celebrate 0.4s ease"}},"View Summary"):null)),
     /* Readiness check - show before first set */
-    doneSets===0&&!readinessDone&&getPref("showWellness",false)?h(ReadinessCheck,{dayId:day.id,onDismiss:function(){setReadinessDone(true)}}):null,
+    doneSets===0&&!readinessDone&&getPref("showWellness",true)?h(ReadinessCheck,{dayId:day.id,onDismiss:function(){setReadinessDone(true)}}):null,
     doneSets===0&&!localStorage.getItem("ht_onboarded")?h(OnboardingSteps,{onDone:function(){localStorage.setItem("ht_onboarded","1");refresh()}}):null,
     isDeloadWeek?h(DeloadOptions,{onSelect:refresh}):
     props.fatigue&&props.fatigue.level==="high"&&!isDeloadWeek?h("div",{style:{background:"var(--danger-bg)",border:"1px solid var(--danger-border)",borderRadius:10,padding:"10px 12px",marginBottom:10},role:"alert"},
@@ -2147,8 +2144,8 @@ function SettingsPanel(props){
   var stp=useState(function(){return getPref("timerPresets",[45,60,90,120,150])}),timerPresets=stp[0],setTimerPresetsState=stp[1];
   var stpe=useState(false),editingPresets=stpe[0],setEditingPresets=stpe[1];
   var stpi=useState(""),presetInput=stpi[0],setPresetInput=stpi[1];
-  var s5r=useState(function(){return getPref("showRir",false)}),showRir=s5r[0],setShowRir=s5r[1];
-  var s6w=useState(function(){return getPref("showWellness",false)}),showWellness=s6w[0],setShowWellness=s6w[1];
+  var s5r=useState(function(){return getPref("showRir",true)}),showRir=s5r[0],setShowRir=s5r[1];
+  var s6w=useState(function(){return getPref("showWellness",true)}),showWellness=s6w[0],setShowWellness=s6w[1];
   var DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   var handleImport=function(e){var file=e.target.files&&e.target.files[0];if(!file)return;importData(file,function(count,err,warnings){if(err)setMsg("Import failed: "+(err.message||"Unknown error"));else{var wmsg=warnings?" ("+warnings.join(" ")+")":"";setMsg("Imported "+count+" records."+wmsg);setTimeout(function(){window.location.reload()},warnings?4000:1500)}})};
   var toggleUnit=function(){var next=unit==="lbs"?"kg":"lbs";setUnitState(next);setUnit(next)};
