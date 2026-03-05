@@ -11,6 +11,7 @@ input[type="number"]{-moz-appearance:textfield}
 :root{
   --bg:#0a0a0f;
   --surface:#141419;
+  --surface-alt:#1a1a22;
   --surface-hover:#1e1e24;
   --border:rgba(255,255,255,0.06);
   --border-light:rgba(255,255,255,0.1);
@@ -34,6 +35,10 @@ input[type="number"]{-moz-appearance:textfield}
   --warmup:#a78bfa;
   --warmup-bg:rgba(167,139,250,0.08);
   --warmup-border:rgba(167,139,250,0.2);
+  --warning:#f97316;
+  --warning-bg:rgba(249,115,22,0.1);
+  --warning-border:rgba(249,115,22,0.25);
+  --lime:#84cc16;
   --radius-sm:6px;
   --radius-md:10px;
   --radius-lg:14px;
@@ -105,7 +110,7 @@ input[type="number"]{-moz-appearance:textfield}
 .input--lg{font-size:15px;padding:10px 8px;border-radius:8px}
 
 /* ═══ CARDS ═══ */
-.card{background:rgba(255,255,255,0.025);border-radius:var(--radius-lg);border:1px solid rgba(255,255,255,0.055);padding:12px 14px;margin-bottom:8px;transition:all 0.2s}
+.card{background:rgba(255,255,255,0.025);border-radius:var(--radius-lg);border:1px solid rgba(255,255,255,0.055);padding:12px 14px;margin-bottom:8px;transition:border-color 0.2s,box-shadow 0.2s}
 .card--done{background:rgba(34,197,94,0.03);border-color:rgba(34,197,94,0.12);border-left:3px solid var(--success)}
 .card--next{background:rgba(245,158,11,0.04);border-color:rgba(245,158,11,0.2);border-left:3px solid var(--accent)}
 .card--skipped{opacity:0.45;border-style:dashed}
@@ -119,13 +124,13 @@ input[type="number"]{-moz-appearance:textfield}
 .badge--warmup{color:var(--warmup);background:var(--warmup-bg)}
 
 /* ═══ TAB BAR ═══ */
-.tab{flex:1;padding:8px 2px 6px;min-height:44px;border-radius:9px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);cursor:pointer;text-align:center;transition:all 0.15s}
+.tab{flex:1;padding:8px 2px 6px;min-height:44px;border-radius:9px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);cursor:pointer;text-align:center;transition:background 0.15s,border-color 0.15s,color 0.15s}
 .tab--active{border-color:var(--accent-border);background:var(--accent-bg)}
 .tab--complete{border-color:rgba(34,197,94,0.15);background:rgba(34,197,94,0.04)}
 
 /* ═══ EXERCISE CARD TABS ═══ */
 .ex-tabs{display:flex;gap:2px;margin-bottom:10px;background:rgba(255,255,255,0.03);border-radius:8px;padding:2px}
-.ex-tab{flex:1;padding:6px 4px;border-radius:6px;border:none;background:transparent;color:var(--text-muted);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s}
+.ex-tab{flex:1;padding:6px 4px;border-radius:6px;border:none;background:transparent;color:var(--text-muted);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:background .15s,color .15s}
 .ex-tab--active{background:rgba(245,158,11,0.12);color:var(--accent)}
 
 /* ═══ STEPPER ═══ */
@@ -134,11 +139,11 @@ input[type="number"]{-moz-appearance:textfield}
 .stepper-btn:active{background:rgba(255,255,255,0.1)}
 
 /* ═══ SET CHECK ═══ */
-.set-check{width:44px;height:44px;border-radius:9px;border:2px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-dim);transition:all .15s}
+.set-check{width:44px;height:44px;border-radius:9px;border:2px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-dim);transition:border-color .15s,background .15s,color .15s}
 .set-check--done{border-color:var(--success);background:rgba(34,197,94,0.15);color:var(--success)}
 
 /* ═══ RPE BUTTONS ═══ */
-.rpe-btn{flex:1;padding:10px 2px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;text-align:center;transition:all .15s;min-height:44px}
+.rpe-btn{flex:1;padding:10px 2px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;min-height:44px}
 
 /* ═══ SAVE INDICATOR ═══ */
 @keyframes saveFlash{0%{opacity:1}100%{opacity:0}}
@@ -165,8 +170,11 @@ input[type="number"]{-moz-appearance:textfield}
 /* ═══ HEADER ═══ */
 .header{padding-top:max(env(safe-area-inset-top,0px),12px);padding-left:16px;padding-right:16px;padding-bottom:10px;border-bottom:1px solid var(--border);background:rgba(10,10,15,0.97);flex-shrink:0;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
 
+/* ═══ APP ROOT (dvh for mobile browsers with dynamic toolbars) ═══ */
+.app-root{height:100vh;height:100dvh}
+
 /* ═══ CONTENT AREA ═══ */
-.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:max(env(safe-area-inset-bottom,0px),20px)}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:max(env(safe-area-inset-bottom,0px),20px);overscroll-behavior-y:contain}
 
 /* ═══ SUPERSET INDICATOR ═══ */
 .superset-line{position:absolute;left:6px;top:0;bottom:0;width:2px;background:var(--info);border-radius:1px;opacity:0.5}

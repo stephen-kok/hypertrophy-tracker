@@ -1,5 +1,5 @@
 /* CACHE_NAME must match APP_VERSION in app.js — bump both together */
-var CACHE_NAME = 'hypertrophy-v38';
+var CACHE_NAME = 'hypertrophy-v42';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -21,7 +21,7 @@ self.addEventListener('install', function(event) {
     caches.open(CACHE_NAME).then(function(cache) {
       /* Cache local assets atomically, CDN assets individually (partial connectivity safe) */
       var cdnPromises = CDN_URLS.map(function(url) {
-        return cache.add(url).catch(function() { /* CDN unavailable — will use stale-while-revalidate */ });
+        return cache.add(url); /* CDN must be cached — React is required for the app to function */
       });
       return cache.addAll(LOCAL_URLS).then(function() {
         return Promise.all(cdnPromises);
@@ -38,7 +38,7 @@ self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'CACHE_CONFIG' && event.data.url) {
     var url = event.data.url;
     /* Only cache same-origin relative URLs to prevent cache poisoning */
-    var isSafeUrl = url.startsWith('./') || url.startsWith('/') || url.indexOf('://') === -1;
+    var isSafeUrl = (url.startsWith('./') || (url.startsWith('/') && !url.startsWith('//'))) && url.indexOf('://') === -1;
     if (isSafeUrl) {
       caches.open(CACHE_NAME).then(function(cache) {
         cache.add(url).catch(function() {});
@@ -61,8 +61,11 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  /* Navigation requests (HTML pages): network-first so updates apply immediately */
-  if (event.request.mode === 'navigate') {
+  /* Navigation, app.js and styles.css: network-first so updates apply immediately */
+  var reqUrl = event.request.url;
+  var isNetworkFirst = event.request.mode === 'navigate' ||
+    reqUrl.endsWith('/app.js') || reqUrl.endsWith('/styles.css');
+  if (isNetworkFirst) {
     event.respondWith(
       fetch(event.request).then(function(response) {
         if (response && response.status === 200) {
@@ -86,7 +89,7 @@ self.addEventListener('fetch', function(event) {
         }
         return response;
       }).catch(function() { return null; });
-      return cached || networkFetch;
+      return cached || networkFetch.then(function(r){ return r || new Response('Not available offline',{status:503,statusText:'Service Unavailable'}); });
     }).catch(function() { return new Response('Not available offline', {status: 503, statusText: 'Service Unavailable'}); })
   );
 });

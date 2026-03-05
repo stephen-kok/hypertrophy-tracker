@@ -183,6 +183,54 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v42 — Maintainability & CSS Cleanup (2026-03-04)
+
+- **Maintainability**: Extracted `formatDate(dateStr)` and `formatDateFull(dateStr)` helpers — replaces 8 duplicate inline date formatters across the codebase
+- **Maintainability**: Named constants `SAVE_DEBOUNCE_MS`, `SWIPE_THRESHOLD_PX`, `SESSION_WARN_SECS` replace magic numbers
+- **Maintainability**: `calcWeeklyVolume` and `calcPreviousWeekVolume` unified into shared `calcVolumeForWeek(config, mondayDate, dayData)` — eliminates duplicated logic
+- **CSS**: All 5 `transition: all` rules replaced with specific property transitions — avoids triggering layout/paint on unrelated state changes
+- **CSS**: `.content` now has `overscroll-behavior-y: contain` — prevents accidental browser pull-to-refresh while scrolling workout lists
+- **CSS**: App root now uses `100dvh` (dynamic viewport height) with `100vh` fallback — fixes clipped layout on iOS Safari and Android Chrome with browser toolbar visible
+- **CSS**: `--warning: #f97316` and `--lime: #84cc16` added to the design system — replaces 6 hardcoded hex values in inline styles
+
+### v41 — PWA/Offline & UX Polish (2026-03-04)
+
+- **PWA**: Service worker now applies network-first strategy to `app.js` and `styles.css` — you always load the latest version, not stale code
+- **PWA**: CDN caching failure during install now fails the service worker install rather than silently allowing a broken offline state
+- **PWA**: Service worker now checks for updates hourly via `reg.update()` in the background
+- **UX**: Update-available notification now persists until tapped — no longer auto-dismisses after 10 seconds
+- **UX**: Deleting a workout template now requires confirmation — no more accidental deletes
+- **UX**: Removing a custom exercise from a day now requires confirmation
+- **UX**: Import now shows count of existing records that will be overwritten before proceeding
+- **UX**: Sessions over 90 minutes now show a gentle wrap-up reminder toast
+
+### v40 — Performance & Accessibility (2026-03-04)
+
+- **Accessibility**: Escape key now closes all modals — `useFocusTrap` updated to accept `onClose` callback
+- **Accessibility**: All remaining dialogs (PersonalRecords, TemplateManager, FatigueTrendChart, WorkoutCalendar, SettingsPanel, More menu) now pass `onClose` to `useFocusTrap`
+- **Accessibility**: All modal close buttons now have `aria-label="Close"` — screen readers no longer announce a bare "×"
+- **Accessibility**: All dialogs now have descriptive `aria-label` attributes
+- **Accessibility**: FloatingTimer `role` changed from `"timer"` (invalid) to `"status"` (ARIA spec compliant)
+- **Accessibility**: Content area promoted from `<div>` to `<main>` landmark — screen reader navigation improved
+- **Performance**: `getIndexDataForDate(dayId, dateStr)` helper added — reads from in-memory history index instead of localStorage
+- **Performance**: `calcWeeklyVolume` and `calcPreviousWeekVolume` now use `getIndexDataForDate` — eliminates ~14 unnecessary localStorage reads per modal open
+- **Performance**: `getDeloadWarning` now reads RPE directly from history index entries — eliminates 3 extra localStorage reads per deload check
+- **Performance**: `FatigueTrendChart` now reads from history index — eliminates up to 112 localStorage reads when the chart opens
+
+### v39 — Data Safety & Reliability (2026-03-04)
+
+- **Reliability**: Pending saves are now flushed via `pagehide` — closing the app mid-rep no longer loses the last 300ms of input
+- **Reliability**: Session date lock is persisted to `localStorage` and restored on page reload — midnight workouts no longer split across two dates
+- **Security**: `importData()` now silently skips any keys that don't belong to the current profile prefix, preventing cross-profile data injection
+- **Fix**: `getStorageStats()` and `cleanOldData()` are now wrapped in try/catch — no longer crash the Settings panel in restricted storage environments (e.g. some private browsing modes)
+- **Fix**: All three `navigator.storage.estimate()` calls now have `.catch()` handlers — no more unhandled promise rejections
+- **Fix**: `ht_onboarded` localStorage access now wrapped in safe helpers — can't crash `DayView` in restricted environments
+- **Fix**: Service worker no longer passes `null` to `respondWith()` when both cache and network fail — returns a proper 503 instead
+- **Fix**: IDB `CACHE_CONFIG` URL validator now correctly rejects protocol-relative URLs (`//evil.com`)
+- **Fix**: IndexedDB `onblocked` event now handled — IDB queue is flushed rather than leaking indefinitely
+- **Fix**: `migrateToIDB()` is now wrapped in try/catch — "Mirror to IndexedDB" button no longer crashes if the IDB connection is stale
+- **CSS**: Added `--surface-alt: #1a1a22` to the design system — was referenced in 4 places but never defined, causing transparent backgrounds
+
 ### v38 — Defaults (2026-03-04)
 
 - RIR tracking and Wellness Check now default to **on** — new users see both features immediately, can disable in Settings
