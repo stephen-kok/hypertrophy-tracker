@@ -2418,7 +2418,7 @@ function MainApp(props){
     });
     if(allDaysDone)setShowMesoAdvance(true);
   },[DAYS,dayData]);
-  useEffect(function(){checkMesoAdvance()},[]);
+  useEffect(function(){checkMesoAdvance()},[checkMesoAdvance]);
   useEffect(function(){var onVis=function(){if(!document.hidden)checkMesoAdvance()};document.addEventListener("visibilitychange",onVis);return function(){document.removeEventListener("visibilitychange",onVis)}},[checkMesoAdvance]);
 
   /* ── Backup reminder, auto-backup, and streak check ── */
