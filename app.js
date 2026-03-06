@@ -1550,7 +1550,7 @@ function CardioLog(props){
   var switchType=function(typeId){var ct=CARDIO_TYPES.find(function(c){return c.id===typeId})||CARDIO_TYPES[0];save(Object.assign({},ct.defaults,{done:data.done,type:typeId}))};
   var speedLabel=unit==="kg"?"km/h":"mph";
   return h("div",{className:data.done?"card card--done":"card",style:{marginTop:12},"aria-label":"Cardio log"},
-    h("div",{onClick:function(){setExpanded(!expanded)},style:{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",WebkitUserSelect:"none",userSelect:"none"},role:"button","aria-expanded":expanded?"true":"false"},
+    h("div",{onClick:function(){setExpanded(!expanded)},onKeyDown:function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();setExpanded(!expanded)}},tabIndex:0,style:{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",WebkitUserSelect:"none",userSelect:"none"},role:"button","aria-expanded":expanded?"true":"false","aria-label":"Cardio log, "+cardioType.label},
       h("div",{style:{display:"flex",alignItems:"center",gap:8}},
         h("span",{style:{fontSize:18},"aria-hidden":"true"},cardioType.icon),
         h("span",{style:{fontSize:14,fontWeight:700,color:data.done?"var(--text-dim)":"var(--text-bright)"}},cardioType.label+" \u2014 Cardio"),
