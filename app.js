@@ -2828,7 +2828,7 @@ function isStandalone(){return window.matchMedia("(display-mode: standalone)").m
 if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(reg){
   reg.addEventListener("updatefound",function(){var nw=reg.installing;if(nw){nw.addEventListener("statechange",function(){if(nw.state==="installed"&&navigator.serviceWorker.controller){
     var toast=document.createElement("div");toast.textContent="Update available \u2014 tap to refresh";
-    toast.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#f59e0b;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
+    toast.style.cssText="position:fixed;top:max(env(safe-area-inset-top,0px),12px);left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#f59e0b;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
     toast.onclick=function(){flushPendingSaves();if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"})};document.body.appendChild(toast);
   }})}});
   setInterval(function(){reg.update().catch(function(){})},3600000);
@@ -2837,7 +2837,7 @@ if("serviceWorker"in navigator){window.addEventListener("load",function(){naviga
     /* Delay reload if user is actively typing to prevent data loss */
     if(document.activeElement&&(document.activeElement.tagName==="INPUT"||document.activeElement.tagName==="TEXTAREA")){
       var banner=document.createElement("div");banner.textContent="Update ready \u2014 tap to reload";
-      banner.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#22c55e;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
+      banner.style.cssText="position:fixed;top:max(env(safe-area-inset-top,0px),12px);left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#22c55e;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
       banner.onclick=function(){flushPendingSaves();window.location.reload()};document.body.appendChild(banner);
     }else{flushPendingSaves();window.location.reload()}
   });
