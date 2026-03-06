@@ -1466,8 +1466,8 @@ function ExerciseCard(props){
     !expanded&&isNext&&!allDone?h(QuickLogBtn,{exId:bilateralExId,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}):null,
     expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
       h("div",{className:"ex-tabs",role:"tablist","aria-label":"Exercise options"},
-        (function(){var tabs=["log","history","coach"];var labels={"log":"Log","history":"History","coach":"Coach"};return tabs.map(function(t,i){return h("button",{key:t,onClick:function(){setActiveTab(t)},onKeyDown:function(e){if(e.key==="ArrowRight")setActiveTab(tabs[(i+1)%tabs.length]);else if(e.key==="ArrowLeft")setActiveTab(tabs[(i-1+tabs.length)%tabs.length])},className:"ex-tab"+(activeTab===t?" ex-tab--active":""),role:"tab","aria-selected":activeTab===t?"true":"false","aria-controls":"tp-"+exercise.id+"-"+t,tabIndex:activeTab===t?0:-1},labels[t])})})()),
-      activeTab==="log"&&h("div",{role:"tabpanel",id:"tp-"+exercise.id+"-log"},
+        (function(){var tabs=["log","history","coach"];var labels={"log":"Log","history":"History","coach":"Coach"};return tabs.map(function(t,i){return h("button",{key:t,onClick:function(){setActiveTab(t)},onKeyDown:function(e){var newTab;if(e.key==="ArrowRight")newTab=tabs[(i+1)%tabs.length];else if(e.key==="ArrowLeft")newTab=tabs[(i-1+tabs.length)%tabs.length];if(newTab){setActiveTab(newTab);setTimeout(function(){var tl=e.currentTarget&&e.currentTarget.parentNode;if(tl){var btn=tl.querySelector("[tabindex='0']");if(btn)btn.focus()}},0)}},className:"ex-tab"+(activeTab===t?" ex-tab--active":""),role:"tab","aria-selected":activeTab===t?"true":"false","aria-controls":"tp-"+exKey+"-"+t,tabIndex:activeTab===t?0:-1},labels[t])})})()),
+      activeTab==="log"&&h("div",{role:"tabpanel",id:"tp-"+exKey+"-log"},
         overload?h("div",{style:{fontSize:12,color:overload.type==="hold"?"var(--info)":overload.type==="volume"?"var(--accent)":"var(--success)",background:overload.type==="hold"?"var(--info-bg)":overload.type==="volume"?"var(--accent-bg)":"var(--success-bg)",border:"1px solid "+(overload.type==="hold"?"var(--info-border)":overload.type==="volume"?"var(--accent-border)":"var(--success-border)"),borderRadius:8,padding:"8px 10px",marginBottom:8}},
           overload.type==="hold"?["\u23F8 ",h("strong",{key:"m"},overload.msg)]:
           overload.type==="volume"?["\uD83D\uDCC8 ",h("strong",{key:"m"},overload.msg)]:
@@ -1497,10 +1497,10 @@ function ExerciseCard(props){
         h(ExerciseNotes,{exId:exercise.id,dayId:dayId}),
         h(CardExtras,{exId:exercise.id,dayId:dayId,isMachine:!!exercise.machine,exercise:exercise,onUpdate:onSetUpdate}),
         !allDone?h("button",{onClick:toggleSkip,className:skipped?"btn btn--ghost btn--sm":"btn btn--ghost btn--sm",style:{marginTop:8,opacity:0.6}},skipped?"\u21A9 Undo Skip":"\u23ED Skip Exercise"):null),
-      activeTab==="history"&&h("div",{role:"tabpanel",id:"tp-"+exercise.id+"-history"},
+      activeTab==="history"&&h("div",{role:"tabpanel",id:"tp-"+exKey+"-history"},
         exercise._swappedFrom?h("div",{style:{fontSize:11,color:"var(--info)",marginBottom:6}},"\u21C4 Swapped from ",h("strong",null,exercise._swappedFrom)," for this session"):null,
         h(HistoryPanel,{dayId:dayId,exId:exercise.id,exercise:exercise})),
-      activeTab==="coach"&&h("div",{role:"tabpanel",id:"tp-"+exercise.id+"-coach"},
+      activeTab==="coach"&&h("div",{role:"tabpanel",id:"tp-"+exKey+"-coach"},
         exercise.tip?h("div",{style:{padding:10,borderRadius:10,background:"var(--accent-bg)",border:"1px solid rgba(245,158,11,0.1)",fontSize:12,color:"var(--text-primary)",lineHeight:1.6,marginBottom:8}},
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--accent)",marginBottom:4}},"PERFORMANCE"),
           exercise.tip):null,
