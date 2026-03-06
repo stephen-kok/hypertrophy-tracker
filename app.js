@@ -2210,7 +2210,6 @@ function DayView(props){
   return h("div",{style:{paddingBottom:40}},
     h("div",{style:{marginBottom:14}},
       h("h2",{style:{fontSize:18,fontWeight:800,margin:0,color:"var(--text-bright)",letterSpacing:-.3}},day.title),
-      h("p",{style:{fontSize:12,color:"var(--text-dim)",margin:"3px 0 0",fontStyle:"italic"}},day.subtitle),
       h("div",{style:{marginTop:10,display:"flex",alignItems:"center",gap:10},"aria-label":"Workout progress"},
         h("div",{className:"progress"},h("div",{className:"progress-fill",style:{width:(pct*100)+"%",background:pct>=1?"var(--success)":"var(--accent)"}})),
         h("span",{style:{fontSize:11,fontWeight:700,color:pct>=1?"var(--success)":"var(--text-secondary)",fontVariantNumeric:"tabular-nums",flexShrink:0}},doneSets+"/"+totalSets+" sets"),

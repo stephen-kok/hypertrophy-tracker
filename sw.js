@@ -69,10 +69,11 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  /* Navigation, app.js and styles.css: network-first so updates apply immediately */
+  /* Navigation, app.js, styles.css, and config JSON files: network-first so updates apply immediately */
   var reqUrl = event.request.url;
   var isNetworkFirst = event.request.mode === 'navigate' ||
-    reqUrl.endsWith('/app.js') || reqUrl.endsWith('/styles.css');
+    reqUrl.endsWith('/app.js') || reqUrl.endsWith('/styles.css') ||
+    reqUrl.indexOf('/configs/') !== -1;
   if (isNetworkFirst) {
     event.respondWith(
       fetch(event.request).then(function(response) {
