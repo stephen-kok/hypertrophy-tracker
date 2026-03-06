@@ -1,5 +1,5 @@
 /* CACHE_NAME must match APP_VERSION in app.js — bump both together */
-var CACHE_NAME = 'hypertrophy-v43';
+var CACHE_NAME = 'hypertrophy-v45';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -34,6 +34,14 @@ self.addEventListener('install', function(event) {
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'SHOW_TIMER_NOTIFICATION') {
+    self.registration.showNotification('Rest Complete', {
+      body: 'Time for your next set!',
+      tag: 'rest-timer',
+      requireInteraction: true,
+      vibrate: [200, 100, 200, 100, 200]
+    });
   }
   if (event.data && event.data.type === 'CACHE_CONFIG' && event.data.url) {
     var url = event.data.url;

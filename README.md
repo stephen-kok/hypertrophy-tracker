@@ -183,6 +183,21 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v45 — Streak Mechanic & Timer Polish (2026-03-05)
+
+- **New**: Session-based workout streak counter — shown in the header (🔥 N) with 48h default grace period
+- **New**: Vacation mode — toggle in Settings to pause streak countdown while travelling
+- **New**: Configurable grace period in Settings (24h / 48h / 72h / 1 week)
+- **New**: Milestone toasts at 3, 5, 10, 15, 20, 25, 30, 50, 100 consecutive sessions
+- **New**: Vacation prompt on app open if grace period elapsed — keep or reset streak
+- **Improvement**: REST COMPLETE banner no longer auto-dismisses after 5s — stays until manually dismissed
+- **Improvement**: Timer sound is louder (gain 0.3→0.6) with a third 1320Hz tone for better audibility
+- **Improvement**: Timer notification routed through Service Worker — fires in background on mobile
+- **Improvement**: Second vibration pulse 4s after rest complete if banner still showing
+- **Bug fix**: Deload suggestions for bodyweight exercises now show "Stop early" hint instead of a nonsensical weight target
+- **Bug fix**: Deload warning banner now says "reduce effort" instead of "reduce weight 40-50%"
+- **Bug fix**: iOS Safari no longer auto-zooms on warmup and small weight inputs (font-size raised to 16px)
+
 ### v43 — Critical Bug Fixes & Data Safety (2026-03-04)
 
 - **Bug fix**: `getDeloadWarning` was crashing silently for all users with workout history — deload warnings now work correctly
