@@ -1340,7 +1340,7 @@ function ExerciseOverrideEditor(props){
   var hasOverrides=overrides.sets||overrides.reps||overrides.rest||overrides.scheme;
   var schemePreview=form.scheme&&form.scheme!=="straight"&&SCHEME_PRESETS[form.scheme]?SCHEME_PRESETS[form.scheme](parseInt(form.sets)||exercise.sets,form.reps||exercise.reps):null;
   return h("div",{style:{marginTop:4}},
-    h("button",{type:"button",onClick:function(){setShowEdit(!showEdit)},style:{fontSize:11,color:"var(--text-dim)",background:"none",border:"none",cursor:"pointer",padding:"8px 0",minHeight:44,display:"flex",alignItems:"center",gap:4}},
+    h("button",{type:"button",onClick:function(){setShowEdit(!showEdit)},"aria-expanded":showEdit?"true":"false","aria-label":"Customize exercise"+(hasOverrides?" (modified)":""),style:{fontSize:11,color:"var(--text-dim)",background:"none",border:"none",cursor:"pointer",padding:"8px 0",minHeight:44,display:"flex",alignItems:"center",gap:4}},
       "\u270E Customize",hasOverrides?" (modified)":""),
     showEdit&&h("div",{className:"fade-in",style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}},
       h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"SETS"),h("input",{type:"number",inputMode:"numeric",value:form.sets,placeholder:String(exercise.sets),onChange:function(e){upd("sets",e.target.value)},className:"input",style:{fontSize:12},"aria-label":"Sets"})),
