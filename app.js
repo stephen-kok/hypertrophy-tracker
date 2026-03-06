@@ -37,11 +37,9 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=49;
+var APP_VERSION=50;
 var WHATS_NEW=[
-  "Accessibility: exercise tabs now support arrow key navigation for keyboard and switch access users",
-  "Accessibility: rest timer completion is now announced to screen readers",
-  "Accessibility: streak badge and timer preset buttons now have descriptive labels for screen readers"
+  "Bug fix: tapping the update toast now safely saves your in-progress workout before reloading"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -51,6 +49,10 @@ function shouldShowWhatsNew(){return getSeenVersion()<APP_VERSION&&getSeenVersio
 var SAVE_DEBOUNCE_MS=300;     /* debounce delay before writing dayData to localStorage */
 var SWIPE_THRESHOLD_PX=80;    /* minimum horizontal swipe distance to trigger day change */
 var SESSION_WARN_SECS=5400;   /* 90 minutes — show long-session warning */
+var SESSION_HISTORY_KEY="session_history"; /* intentional global key — shared across profiles */
+var STREAK_MILESTONES=[3,5,10,15,20,25,30,50,100];
+/* Mesocycle volume factor per week — paired with MESO_REP_SHIFT */
+var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
 
 /* ═══ CONFIG VALIDATION ═══ */
 function validateConfig(cfg){
@@ -133,7 +135,11 @@ var _storageWarningShown=false;
 var _storageFull=false;var _storageFullListeners=[];
 function onStorageFullChange(fn){_storageFullListeners.push(fn);return function(){_storageFullListeners=_storageFullListeners.filter(function(f){return f!==fn})}}
 function lsSet(k,v){try{localStorage.setItem(LS+k,JSON.stringify(v));if(_storageFull){_storageFull=false;_storageFullListeners.forEach(function(fn){fn(false)})}idbSet(LS+k,v)}catch(e){if(e.name==="QuotaExceededError"){if(!_storageFull){_storageFull=true;_storageFullListeners.forEach(function(fn){fn(true)})}if(!_storageWarningShown){_storageWarningShown=true;showUndoToast("Storage full! Export your data and clear old sessions.",null,10000)}idbSet(LS+k,v)}else{console.warn("localStorage write failed for "+k+":",e.message)}}}
-var today=function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+/* toISODate(dateObj) → "YYYY-MM-DD" — used by volume/streak calculations */
+var toISODate=function(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+/* deepClone — uses structuredClone when available (faster), falls back to JSON round-trip */
+var deepClone=typeof structuredClone==="function"?function(o){return structuredClone(o)}:function(o){return JSON.parse(JSON.stringify(o))};
+var today=function(){return toISODate(new Date())};
 /* Session date lock: once a session starts, the date is locked for that session to prevent midnight boundary issues */
 var _sessionDateLock=null;
 function getSessionDate(){return _sessionDateLock||today()}
@@ -158,7 +164,7 @@ function saveDayData(dayId,data,immediate){
   var d=getSessionDate();
   if(immediate){delete _pendingSaves[key];lsSet(dataKey(dayId,d),data);updateHistoryIndex(dayId,d,data);return}
   _pendingSaves[key]={data:data,date:d};
-  _saveTimers[key]=setTimeout(function(){delete _pendingSaves[key];lsSet(dataKey(dayId,d),data);updateHistoryIndex(dayId,d,data)},SAVE_DEBOUNCE_MS);
+  _saveTimers[key]=setTimeout(function(){var p=_pendingSaves[key];if(!p)return;delete _pendingSaves[key];lsSet(dataKey(dayId,p.date),p.data);updateHistoryIndex(dayId,p.date,p.data)},SAVE_DEBOUNCE_MS);
 }
 /* Flush all pending debounced saves immediately — called on page close to prevent data loss */
 function flushPendingSaves(){
@@ -196,7 +202,7 @@ function buildHistoryIndex(){
       var rest=k.slice(LS.length);var atIdx=rest.indexOf("@");if(atIdx===-1)continue;
       var dayId=rest.slice(0,atIdx);var date=rest.slice(atIdx+1);
       if(!date||date.length!==10)continue;
-      try{var data=JSON.parse(localStorage.getItem(k));if(data&&data.exercises){if(!_historyIndex[dayId])_historyIndex[dayId]=[];_historyIndex[dayId].push({date:date,data:JSON.parse(JSON.stringify(data))});if(!newManifest[dayId])newManifest[dayId]=[];newManifest[dayId].push(date)}}catch(e){}
+      try{var data=JSON.parse(localStorage.getItem(k));if(data&&data.exercises){if(!_historyIndex[dayId])_historyIndex[dayId]=[];_historyIndex[dayId].push({date:date,data:deepClone(data)});if(!newManifest[dayId])newManifest[dayId]=[];newManifest[dayId].push(date)}}catch(e){}
     }
     lsSet("_historyManifest",newManifest);
   }
@@ -207,7 +213,7 @@ function updateHistoryIndex(dayId,date,data){
   if(!_historyBuilt)return;
   if(!_historyIndex[dayId])_historyIndex[dayId]=[];
   var existing=_historyIndex[dayId];
-  var cloned=JSON.parse(JSON.stringify(data));
+  var cloned=deepClone(data);
   for(var i=0;i<existing.length;i++){if(existing[i].date===date){existing[i].data=cloned;return}}
   existing.push({date:date,data:cloned});existing.sort(function(a,b){return b.date.localeCompare(a.date)});
   /* Update manifest */
@@ -270,8 +276,8 @@ function getStorageStats(){
 }
 function cleanOldData(monthsToKeep){
   var cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-monthsToKeep);
-  var cutoffStr=cutoff.getFullYear()+"-"+String(cutoff.getMonth()+1).padStart(2,"0")+"-"+String(cutoff.getDate()).padStart(2,"0");
-  var preservePrefixes=["pref_","eu_","eu_source_","exo_","mw_","templates","perm_swaps_","custom_","_app_version","_schema_version","session_history","auto_backup_","_historyManifest"];
+  var cutoffStr=toISODate(cutoff);
+  var preservePrefixes=["pref_","eu_","eu_source_","exo_","mw_","templates","perm_swaps_","custom_","_app_version","_schema_version",SESSION_HISTORY_KEY,"auto_backup_","_historyManifest"];
   var removed=0;var freedBytes=0;
   try{
   for(var i=localStorage.length-1;i>=0;i--){
@@ -572,7 +578,7 @@ function checkBackupReminder(){
   var lastBackup=lsGet("pref_last_backup")||0;
   var TWO_WEEKS=14*24*60*60*1000;
   if(lastBackup&&Date.now()-lastBackup<TWO_WEEKS)return;
-  var sessionCount=lsGet("session_history");
+  var sessionCount=lsGet(SESSION_HISTORY_KEY);
   if(!sessionCount||!sessionCount.length||sessionCount.length<3)return;
   showUndoToast("Back up your data! Tap Export in Settings.",null,8000);
 }
@@ -591,8 +597,7 @@ function updateStreak(){
   d.lastWorkout=getSessionDate();d.lastWorkoutTime=now;
   d.longest=Math.max(d.longest||0,d.count);d.pendingBreak=false;
   saveStreakData(d);
-  var MILESTONES=[3,5,10,15,20,25,30,50,100];
-  if(MILESTONES.indexOf(d.count)>=0)showUndoToast("\uD83D\uDD25 "+d.count+" session streak! Keep it up!",null,5000);
+  if(STREAK_MILESTONES.indexOf(d.count)>=0)showUndoToast("\uD83D\uDD25 "+d.count+" session streak! Keep it up!",null,5000);
 }
 function _showVacationPrompt(d){
   showConfirm({title:"Streak Paused",msg:"Your "+d.count+"-session streak was paused. Were you on holiday or traveling?",confirmLabel:"Keep Streak",
@@ -611,7 +616,7 @@ function checkAutoBackup(){
   var SEVEN_DAYS=7*24*60*60*1000;
   var lastAuto=lsGet("pref_auto_backup_time");
   if(lastAuto&&Date.now()-lastAuto<SEVEN_DAYS)return;
-  var sessionCount=lsGet("session_history");
+  var sessionCount=lsGet(SESSION_HISTORY_KEY);
   if(!sessionCount||!sessionCount.length||sessionCount.length<3)return;
   /* Skip if storage is above 60% to avoid tripling usage */
   if(navigator.storage&&navigator.storage.estimate){
@@ -1576,12 +1581,11 @@ var MUSCLE_LABELS={chest:"Chest",back:"Back",quads:"Quads",hamstrings:"Hams",glu
    mondayDate: Date object for Monday. dayData: DayDataContext (optional, for today's live data). */
 function calcVolumeForWeek(config,mondayDate,dayData){
   var vol={};var found=false;
-  var fmtD=function(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
   config.days.forEach(function(day){
     var allEx=day.exercises.concat(getCustomExercises(day.id));
     for(var d=0;d<7;d++){
       var check=new Date(mondayDate);check.setDate(mondayDate.getDate()+d);
-      var dateStr=fmtD(check);
+      var dateStr=toISODate(check);
       var saved=dateStr===getSessionDate()&&dayData?dayData.getData(day.id):(getIndexDataForDate(day.id,dateStr)||{});
       allEx.forEach(function(ex){var muscles=ex.muscles||[];var doneSets=countBilateralDone(ex,saved,true);if(doneSets>0){found=true;muscles.forEach(function(m){if(!vol[m])vol[m]=0;vol[m]+=doneSets})}});
     }
@@ -1607,7 +1611,6 @@ function VolumeDashboard(props){
   var freq=useMemo(function(){return calcMuscleFrequency(config)},[config]);
   var rawTargets=useMemo(function(){return getVolumeTargets()},[]);
   var mesoWeek=getMesocycle().week;
-  var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
   var mesoFactor=MESO_VOL_FACTOR[mesoWeek]||1.0;
   var targets=useMemo(function(){var scaled={};Object.keys(rawTargets).forEach(function(m){var t=rawTargets[m]||[10,20];scaled[m]=[Math.round(t[0]*mesoFactor),Math.round(t[1]*mesoFactor)]});return scaled},[rawTargets,mesoFactor]);
   var muscleKeys=Object.keys(MUSCLE_LABELS);
@@ -1679,7 +1682,7 @@ function calcPreviousWeekVolume(config){
 /* ── Deload Check ── */
 function getDeloadWarning(config){
   if(!_historyBuilt)buildHistoryIndex();
-  var warnings=[];var td=getSessionDate();
+  var warnings=[];var seenIds=[];var td=getSessionDate();
   config.days.forEach(function(day){day.exercises.forEach(function(ex){
     var entries=_historyIndex[day.id]||[];var recentRpe=[];var count=0;
     for(var i=0;i<entries.length&&count<3;i++){
@@ -1690,7 +1693,7 @@ function getDeloadWarning(config){
       count++;
       if(e.data.rpe&&e.data.rpe[ex.id])recentRpe.push(e.data.rpe[ex.id]);
     }
-    if(recentRpe.length>=2){var avg=recentRpe.reduce(function(a,b){return a+b},0)/recentRpe.length;if(avg>=9&&warnings.indexOf(ex.name)===-1)warnings.push(ex.name)}
+    if(recentRpe.length>=2){var avg=recentRpe.reduce(function(a,b){return a+b},0)/recentRpe.length;if(avg>=9&&seenIds.indexOf(ex.id)===-1){seenIds.push(ex.id);warnings.push(ex.name)}}
   })});
   return warnings.length>0?warnings:null;
 }
@@ -1755,14 +1758,13 @@ function BodyMetrics(props){
 
 /* ── Completion Summary ── */
 function calcWorkoutStreak(){
-  var hist=lsGet("session_history")||[];if(!hist.length)return 0;
+  var hist=lsGet(SESSION_HISTORY_KEY)||[];if(!hist.length)return 0;
   /* Count consecutive weeks with at least 1 session */
   var now=new Date();var streak=0;
   for(var w=0;w<52;w++){
     var weekStart=new Date(now);weekStart.setDate(now.getDate()-((now.getDay()+6)%7)-w*7);weekStart.setHours(0,0,0,0);
     var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+7);
-    var fD=function(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-    var wStart=fD(weekStart),wEnd=fD(weekEnd);
+    var wStart=toISODate(weekStart),wEnd=toISODate(weekEnd);
     var found=hist.some(function(s){return s.date>=wStart&&s.date<wEnd});
     if(found)streak++;else break;
   }
@@ -1809,18 +1811,18 @@ function CompletionSummary(props){
 
 /* ── Session History ── */
 function saveSessionSummary(day,customs,stats){
-  if(!stats)stats=calcSessionStats(day,customs);var key="session_history";var hist=lsGet(key)||[];
+  if(!stats)stats=calcSessionStats(day,customs);var hist=lsGet(SESSION_HISTORY_KEY)||[];
   var sd=getSessionDate();
   if(hist.length>0&&hist[0].date===sd&&hist[0].dayId===day.id)return;
   var sessionRpe=lsGet("sessionRpe_"+day.id+"_"+sd);
   hist.unshift({date:sd,dayId:day.id,dayTitle:day.title,volume:Math.round(stats.totalVolume),sets:stats.totalSets,duration:stats.duration,prs:stats.prs.length,avgRpe:stats.avgRpe?parseFloat(stats.avgRpe.toFixed(1)):null,sessionRpe:sessionRpe||null,cardio:!!stats.cardio});
-  if(hist.length>100)hist=hist.slice(0,100);lsSet(key,hist);
+  if(hist.length>100)hist=hist.slice(0,100);lsSet(SESSION_HISTORY_KEY,hist);
   updateStreak();
 }
 
 function SessionHistory(props){
   var onClose=props.onClose;var unit=getUnit();var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
-  var hist=useMemo(function(){return lsGet("session_history")||[]},[]);
+  var hist=useMemo(function(){return lsGet(SESSION_HISTORY_KEY)||[]},[]);
   var sc=useState(null),compareIdx=sc[0],setCompareIdx=sc[1];
   var sd=useState(false),showDetail=sd[0],setShowDetail=sd[1];
 
@@ -2381,7 +2383,7 @@ function MainApp(props){
   /* Week strip data (memoized to avoid 7×N loadDayData calls per render) */
   var weekStripData=useMemo(function(){var now=new Date();var dayOfWeek=now.getDay()||7;var result=[];
     for(var wi=1;wi<=7;wi++){var d=new Date(now);d.setDate(d.getDate()+(wi-dayOfWeek));
-      var dateStr=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      var dateStr=toISODate(d);
       var doneSets=0,totalSets=0;
       /* Use context cache for today; history index for past dates — avoids 7×N loadDayData calls */
       if(dateStr===getSessionDate()){
@@ -2419,7 +2421,7 @@ function MainApp(props){
       var weekDone=0;
       for(var di=1-dayOfWeek;di<=7-dayOfWeek;di++){
         var d=new Date(now);d.setDate(d.getDate()+di);
-        var dateStr=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+        var dateStr=toISODate(d);
         var dd=dateStr===getSessionDate()?dayData.getData(day.id):(getIndexDataForDate(day.id,dateStr)||{});
         weekDone+=allEx.reduce(function(a,e){return a+countBilateralDone(e,dd)},0);
       }
@@ -2613,7 +2615,7 @@ function FatigueTrendChart(props){
     var now=new Date();
     for(var d=27;d>=0;d--){
       var dt=new Date(now);dt.setDate(dt.getDate()-d);
-      var dateStr=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+      var dateStr=toISODate(dt);
       var rpeSum=0,rpeCount=0,rirSum=0,rirCount=0;
       config.days.forEach(function(day){
         var dd=getIndexDataForDate(day.id,dateStr);if(!dd||!dd.exercises)return;
@@ -2789,7 +2791,7 @@ if("serviceWorker"in navigator){window.addEventListener("load",function(){naviga
   reg.addEventListener("updatefound",function(){var nw=reg.installing;if(nw){nw.addEventListener("statechange",function(){if(nw.state==="installed"&&navigator.serviceWorker.controller){
     var toast=document.createElement("div");toast.textContent="Update available \u2014 tap to refresh";
     toast.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#f59e0b;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
-    toast.onclick=function(){if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"})};document.body.appendChild(toast);
+    toast.onclick=function(){flushPendingSaves();if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"})};document.body.appendChild(toast);
   }})}});
   setInterval(function(){reg.update().catch(function(){})},3600000);
 }).catch(function(e){console.warn("SW registration failed:",e)})});

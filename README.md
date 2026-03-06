@@ -183,6 +183,16 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v50 — Maintainability & Cleanup (2026-03-05)
+
+- **Fix**: Tapping the update-available toast now calls `flushPendingSaves()` before triggering SW swap — prevents data loss race (high priority)
+- **Fix**: Debounce callback now reads date from `_pendingSaves` at fire time instead of closing over stale schedule-time value
+- **Refactor**: `toISODate(dateObj)` helper extracted — eliminates 6 duplicate inline `YYYY-MM-DD` formatters across volume/streak/meso functions
+- **Refactor**: `deepClone()` helper with `structuredClone` progressive enhancement — replaces `JSON.parse(JSON.stringify(...))` at all call sites
+- **Refactor**: `SESSION_HISTORY_KEY` named constant — 5 bare `"session_history"` strings consolidated
+- **Refactor**: `STREAK_MILESTONES` and `MESO_VOL_FACTOR` extracted to module-level constants; `MESO_VOL_FACTOR` no longer recreated on every render
+- **Fix**: Deload warning deduplication now uses `ex.id` instead of `ex.name` — fixes silent drop of identically-named exercises
+
 ### v49 — Accessibility (2026-03-05)
 
 - **a11y**: Exercise card tabs now support arrow-key navigation and have correct `aria-controls`/`id` linkage (WCAG 2.1.1)
