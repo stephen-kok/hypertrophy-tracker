@@ -2390,7 +2390,7 @@ function MainApp(props){
         if(!_historyBuilt)buildHistoryIndex();
         config.days.forEach(function(day){var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);allEx.forEach(function(e){totalSets+=totalSetsFor(e)});var entries=_historyIndex[day.id]||[];for(var ei=0;ei<entries.length;ei++){if(entries[ei].date===dateStr){allEx.forEach(function(e){doneSets+=countBilateralDone(e,entries[ei].data)});break}}});
       }
-      result.push({dow:wi,hasSets:doneSets>0,complete:totalSets>0&&doneSets>=totalSets})}return result},[config,dayData.rev]);
+      result.push({dow:wi,hasSets:doneSets>0,complete:totalSets>0&&doneSets>=totalSets})}return result},[config,dayData.rev,_tick]);
   /* Streak display — recomputed when session data changes (streak updates at session end) */
   var headerStreak=useMemo(function(){return getStreakData()},[dayData.rev]);
   /* Debounce fatigue calculation — only recompute 500ms after last data change to avoid 40+ localStorage reads per keystroke */
