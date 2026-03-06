@@ -37,14 +37,13 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=46;
+var APP_VERSION=47;
 var WHATS_NEW=[
-  "Bug fix: Workout streak no longer counts twice when you complete multiple workouts in one day",
-  "Bug fix: Session notes no longer cause the whole screen to re-render as you type",
-  "Bug fix: Timer no longer fires two notifications at once when a rest is complete",
-  "Bug fix: Offline mode now correctly loads the app when there's no connection",
-  "Bug fix: Update button now reliably installs the new version",
-  "Bug fix: Data is always saved before the app reloads after an update"
+  "Bug fix: Progressive overload suggestions are now more accurate for single-leg and single-arm exercises",
+  "Bug fix: Volume tracking no longer double-counts sets for unilateral exercises",
+  "Bug fix: Readiness score no longer blocks rep and set progression — only weight increases",
+  "Bug fix: Mesocycle advance prompt now waits until your full week is complete",
+  "Bug fix: Strength trend chart now updates correctly mid-session"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -409,10 +408,13 @@ function getOverloadSuggestion(dayId,exercise){
   var effectiveRange=mesoTarget?{min:mesoTarget.min,max:mesoTarget.max}:range;
   var comp=lastSets.filter(function(s){return s.done&&s.weight&&s.reps});if(comp.length<Math.max(1,Math.floor(exercise.sets*0.8)))return null;
   var allTop=comp.every(function(s){return parseInt(s.reps)>=effectiveRange.max});
-  var lw=bestWeight(comp);if(lw===0)return null;
+  /* For bilateral exercises use the weaker side's best weight to avoid over-progressing */
+  var lw;if(exercise.bilateral){var lComp=comp.filter(function(s){return s._side==="L"});var rComp=comp.filter(function(s){return s._side==="R"});var lwL=bestWeight(lComp);var lwR=bestWeight(rComp);lw=(lwL>0&&lwR>0)?Math.min(lwL,lwR):(lwL||lwR)}else{lw=bestWeight(comp)}
+  if(!lw||lw===0)return null;
   var inc=exercise.increment||(exercise.machine?2.5:5);
-  /* RIR guard: if average RIR was 0-1 last session, don't suggest weight increase */
-  var avgRir=exercise.bilateral?function(){var l=getLastSessionRIR(dayId,exercise.id+"_L");var r=getLastSessionRIR(dayId,exercise.id+"_R");if(l!==null&&r!==null)return(l+r)/2;return l!==null?l:r}():getLastSessionRIR(dayId,exercise.id);
+  /* RIR guard: if RIR was 0-1 last session, don't suggest weight increase.
+     For bilateral, use the lower RIR of the two sides (more conservative). */
+  var avgRir=exercise.bilateral?function(){var l=getLastSessionRIR(dayId,exercise.id+"_L");var r=getLastSessionRIR(dayId,exercise.id+"_R");if(l!==null&&r!==null)return Math.min(l,r);return l!==null?l:r}():getLastSessionRIR(dayId,exercise.id);
   if(avgRir!==null&&avgRir<=1&&allTop){
     return{type:"hold",from:lw,to:lw,msg:"RIR was "+avgRir.toFixed(1)+" last session \u2014 repeat weight, focus on form"};
   }
@@ -421,11 +423,7 @@ function getOverloadSuggestion(dayId,exercise){
   if(rirTrend&&rirTrend.declining&&allTop){
     return{type:"hold",from:lw,to:lw,msg:"RIR trending down ("+rirTrend.sessions.slice().reverse().map(function(v){return v.toFixed(1)}).join("\u2192")+") \u2014 consolidate before adding weight"};
   }
-  /* Readiness guard: if readiness is low/moderate, suppress weight increase */
   var readinessAdj=getReadinessAdj(dayId);
-  if(readinessAdj&&allTop){
-    return{type:"hold",from:lw,to:lw,msg:readinessAdj.label+" \u2014 repeat weight today"};
-  }
   var repsFirst=(inc<=2.5&&effectiveRange.max>=12)||effectiveRange.max>=15;
   if(!allTop){
     /* Struggling user guard: near failure but not hitting target reps — hold weight */
@@ -449,6 +447,10 @@ function getOverloadSuggestion(dayId,exercise){
       var targetReps=Math.min(effectiveRange.max+2,30);
       return{type:"reps",from:lw,to:lw,targetReps:targetReps,msg:"Try "+exercise.sets+"\u00D7"+targetReps+" at "+lw+" before adding weight"};
     }
+  }
+  /* Readiness guard: only suppresses weight increases — reps/volume progression still allowed */
+  if(readinessAdj){
+    return{type:"hold",from:lw,to:lw,msg:readinessAdj.label+" \u2014 repeat weight today"};
   }
   return{type:"weight",from:lw,to:lw+inc,increment:inc};
 }
@@ -677,6 +679,8 @@ function TimerProvider(props){
   var forceUpdate=useCallback(function(){bump(function(r){return r+1})},[]);
 
   var triggerTimer=useCallback(function(exKey,seconds){
+    /* Request notification permission here — this is called from a user gesture (set completion) */
+    requestNotifPermission();
     timersRef.current[exKey]={total:seconds,startedAt:Date.now(),running:true,done:false};
     forceUpdate();
   },[forceUpdate]);
@@ -952,8 +956,7 @@ function sendTimerNotification(){
 function FloatingTimer(){
   var timers=useTimers();
   var s=useState(null),display=s[0],setDisplay=s[1];
-  var intervalRef=useRef(null);
-  useEffect(function(){requestNotifPermission()},[]);
+  var intervalRef=useRef(null);;
 
   useEffect(function(){
     if(intervalRef.current)clearInterval(intervalRef.current);
@@ -1373,7 +1376,7 @@ function ExerciseCard(props){
     if(deloadMod&&deloadMod.weight)return deloadMod.weight;
     if(!isDeloadWeek)return null;var hist=getBilateralHistory(dayId,exercise,1);if(!hist.length)return null;var comp=hist[0].sets.filter(function(s){return s.done&&s.weight});if(!comp.length)return null;var w=parseFloat(comp[0].weight)||0;var intensityStrat=DELOAD_STRATEGIES.find(function(s){return s.id==="intensity"});var deloadFactor=intensityStrat?intensityStrat.factor:0.55;return w>0?Math.round(w*deloadFactor):null;
   },[dayId,exercise.id,isDeloadWeek,deloadMod]);
-  var e1rm=useMemo(function(){var best=0;var checkData=isBilateral?[].concat(saved.exercises&&saved.exercises[exercise.id+"_L"]||[],saved.exercises&&saved.exercises[exercise.id+"_R"]||[]):[exData||[]].flat();checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[exData,isBilateral?dayData.rev:null]);
+  var e1rm=useMemo(function(){var best=0;var checkData=isBilateral?[].concat(saved.exercises&&saved.exercises[exercise.id+"_L"]||[],saved.exercises&&saved.exercises[exercise.id+"_R"]||[]):[exData||[]].flat();checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[exData,dayData.rev]);
   /* PR detection */
   var isPR=useMemo(function(){
     if(e1rm<=0)return false;
@@ -1546,7 +1549,9 @@ function countBilateralDone(ex,saved,effectiveOnly){
     var l=saved.exercises&&saved.exercises[ex.id+"_L"];var r=saved.exercises&&saved.exercises[ex.id+"_R"];
     var lCount=l?l.filter(function(s,i){return s.done&&isEffective(ex.id+"_L",i)}).length:0;
     var rCount=r?r.filter(function(s,i){return s.done&&isEffective(ex.id+"_R",i)}).length:0;
-    return Math.min(lCount,ex.sets)+Math.min(rCount,ex.sets);
+    var bilateral_total=Math.min(lCount,ex.sets)+Math.min(rCount,ex.sets);
+    /* For volume tracking, cap at ex.sets — both sides together count as one exercise */
+    return effectiveOnly?Math.min(bilateral_total,ex.sets):bilateral_total;
   }
   var d=saved.exercises&&saved.exercises[ex.id];
   return d?Math.min(d.filter(function(s,i){return s.done&&isEffective(ex.id,i)}).length,ex.sets):0;
@@ -2400,19 +2405,19 @@ function MainApp(props){
     var weekKey="meso_advanced_wk"+m.week;if(lsGet(weekKey))return;
     var allDaysDone=DAYS.every(function(day){
       var now=new Date();var dayOfWeek=now.getDay()||7;
+      var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);
+      var weekTotal=allEx.reduce(function(a,e){return a+totalSetsFor(e)},0);
+      var weekDone=0;
       for(var di=1-dayOfWeek;di<=7-dayOfWeek;di++){
         var d=new Date(now);d.setDate(d.getDate()+di);
         var dateStr=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
         var dd=dateStr===getSessionDate()?dayData.getData(day.id):(getIndexDataForDate(day.id,dateStr)||{});
-        var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);
-        var total=allEx.reduce(function(a,e){return a+totalSetsFor(e)},0);
-        var done=allEx.reduce(function(a,e){return a+countBilateralDone(e,dd)},0);
-        if(done>=Math.ceil(total*0.5))return true;
+        weekDone+=allEx.reduce(function(a,e){return a+countBilateralDone(e,dd)},0);
       }
-      return false;
+      return weekTotal>0&&weekDone>=Math.ceil(weekTotal*0.5);
     });
     if(allDaysDone)setShowMesoAdvance(true);
-  },[DAYS]);
+  },[DAYS,dayData]);
   useEffect(function(){checkMesoAdvance()},[]);
   useEffect(function(){var onVis=function(){if(!document.hidden)checkMesoAdvance()};document.addEventListener("visibilitychange",onVis);return function(){document.removeEventListener("visibilitychange",onVis)}},[checkMesoAdvance]);
 
@@ -2743,6 +2748,7 @@ function App(){
   useEffect(function(){
     if(!profileId)return;
     var safeId=profileId.replace(/[^a-zA-Z0-9_-]/g,"");
+    if(!safeId){setError("Invalid profile name.");return;}
     initProfile(safeId);
     var configUrl="configs/"+safeId+".json";
     fetch(configUrl).then(function(r){if(!r.ok)throw new Error("Profile not found: "+profileId);return r.json()}).then(function(data){

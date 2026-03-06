@@ -183,6 +183,17 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v47 — Business Logic & PWA Fixes (2026-03-05)
+
+- **Bug fix**: Bilateral (unilateral) exercise volume no longer double-counts sets — capped at exercise set count
+- **Bug fix**: Progressive overload for bilateral exercises now uses the weaker side's weight (min, not max)
+- **Bug fix**: RIR guard for bilateral exercises now uses the lower RIR of the two sides (conservative)
+- **Bug fix**: Readiness score now only suppresses weight increases, not rep or set progression suggestions
+- **Bug fix**: Mesocycle advance prompt now aggregates sets across the full week instead of per-session
+- **Bug fix**: Notification permission now requested on first set completion (user gesture), not on page load
+- **Bug fix**: Strength trend e1RM chart now refreshes mid-session for bilateral and standard exercises
+- **Bug fix**: Empty profile names after sanitization now show a clear error instead of silently breaking
+
 ### v46 — Critical Bug Fixes (2026-03-05)
 
 - **Bug fix**: Streak no longer double-increments when completing multiple workouts in one day
