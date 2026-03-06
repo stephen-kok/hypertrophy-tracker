@@ -183,6 +183,19 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v51 — UX Polish & New Features (2026-03-05)
+
+- **Feature**: Tap the exercise name to swap it — cleaner than a separate button; prompts "Today Only" vs "Permanent"
+- **Feature**: Rest Day Cardio — log cardio any day via the More menu, independent of workout days
+- **Feature**: Tempo badge now shows an explanation popup when tapped (same pattern as Target RIR ⓘ)
+- **Feature**: Settings toggle to hide exercise badges (Target RIR / Tempo) for a cleaner card view
+- **Feature**: Settings toggle to show/hide the Tempo Timer component (off by default)
+- **UX**: Day tabs now show just the workout name — removed day-of-week labels
+- **UX**: Workout subtitle in the header is truncated to fit on one line
+- **Fix**: Session summary "Done" button no longer hidden behind the bottom navigation bar on small phones
+- **Fix**: Exercise swap search input now uses font-size 16px — prevents iOS Safari auto-zoom
+- **Fix**: `cancelLabel` support added to `showConfirm` dialog — used for swap "Today Only" vs "Permanent" choice
+
 ### v50 — Maintainability & Cleanup (2026-03-05)
 
 - **Fix**: Tapping the update-available toast now calls `flushPendingSaves()` before triggering SW swap — prevents data loss race (high priority)

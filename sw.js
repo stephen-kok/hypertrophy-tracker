@@ -1,5 +1,5 @@
 /* CACHE_NAME must match APP_VERSION in app.js — bump both together */
-var CACHE_NAME = 'hypertrophy-v50';
+var CACHE_NAME = 'hypertrophy-v51';
 var URLS_TO_CACHE = [
   './',
   './index.html',

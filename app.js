@@ -37,9 +37,13 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=50;
+var APP_VERSION=51;
 var WHATS_NEW=[
-  "Bug fix: tapping the update toast now safely saves your in-progress workout before reloading"
+  "Tap an exercise name to swap it — now asks whether to swap just for today or permanently",
+  "New rest day cardio logging — log cardio any day from the More menu",
+  "Tempo badge now shows an explanation when tapped, just like Target RIR",
+  "Settings: hide exercise badges (RIR/Tempo) and tempo timer to reduce clutter",
+  "Day tabs now show just the workout name — cleaner and less restrictive"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -897,14 +901,14 @@ function SaveFlash(){
 }
 
 /* ── Custom Confirm Dialog ── */
-var _confirmState={show:false,title:"",msg:"",onConfirm:null,onCancel:null,confirmLabel:"Confirm",danger:false};
+var _confirmState={show:false,title:"",msg:"",onConfirm:null,onCancel:null,confirmLabel:"Confirm",cancelLabel:"Cancel",danger:false};
 var _confirmListeners=[];
 function showConfirm(opts){
-  _confirmState={show:true,title:opts.title||"Confirm",msg:opts.msg||"",onConfirm:opts.onConfirm,onCancel:opts.onCancel||null,confirmLabel:opts.confirmLabel||"Confirm",danger:opts.danger!==undefined?opts.danger:false};
+  _confirmState={show:true,title:opts.title||"Confirm",msg:opts.msg||"",onConfirm:opts.onConfirm,onCancel:opts.onCancel||null,confirmLabel:opts.confirmLabel||"Confirm",cancelLabel:opts.cancelLabel||"Cancel",danger:opts.danger!==undefined?opts.danger:false};
   _confirmListeners.forEach(function(fn){fn()});
 }
 function dismissConfirm(){
-  _confirmState={show:false,title:"",msg:"",onConfirm:null,onCancel:null,confirmLabel:"Confirm",danger:false};
+  _confirmState={show:false,title:"",msg:"",onConfirm:null,onCancel:null,confirmLabel:"Confirm",cancelLabel:"Cancel",danger:false};
   _confirmListeners.forEach(function(fn){fn()});
 }
 function ConfirmDialog(){
@@ -921,7 +925,7 @@ function ConfirmDialog(){
       h("h3",{style:{fontSize:16,fontWeight:800,color:"var(--text-bright)",marginBottom:8}},_confirmState.title),
       _confirmState.msg?h("p",{id:"confirm-desc",style:{fontSize:13,color:"var(--text-secondary)",marginBottom:20,lineHeight:1.5}},_confirmState.msg):null,
       h("div",{style:{display:"flex",gap:10}},
-        h("button",{type:"button",onClick:function(){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()},className:"btn btn--ghost",style:{flex:1},"aria-label":"Cancel"},"Cancel"),
+        h("button",{type:"button",onClick:function(){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()},className:"btn btn--ghost",style:{flex:1},"aria-label":_confirmState.cancelLabel},_confirmState.cancelLabel),
         h("button",{type:"button",onClick:function(){if(_confirmState.onConfirm)_confirmState.onConfirm();dismissConfirm()},className:danger?"btn btn--danger":"btn btn--accent",style:{flex:1},"aria-label":_confirmState.confirmLabel},_confirmState.confirmLabel))));
 }
 
@@ -1427,9 +1431,8 @@ function ExerciseCard(props){
       h("div",{style:{flex:1}},
         h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
           h("span",{className:allDone?"badge badge--success":"badge badge--accent"},index+1),
-          h("span",{style:{fontSize:14,fontWeight:700,color:allDone?"var(--text-dim)":"var(--text-bright)",lineHeight:1.3,textDecoration:allDone?"line-through":"none",textDecorationColor:"rgba(34,197,94,0.6)",textDecorationThickness:2}},exercise.name),
+          h("span",{onClick:function(e){e.stopPropagation();setShowSwapMenu(!showSwapMenu)},style:{fontSize:14,fontWeight:700,color:allDone?"var(--text-dim)":"var(--text-bright)",lineHeight:1.3,textDecoration:allDone?"line-through":"none",textDecorationColor:"rgba(34,197,94,0.6)",textDecorationThickness:2,cursor:"pointer"},role:"button","aria-label":"Swap exercise","aria-expanded":showSwapMenu?"true":"false",tabIndex:0,onKeyDown:function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();e.stopPropagation();setShowSwapMenu(!showSwapMenu)}}},exercise.name,(exercise.alternatives||exercise._swappedFrom)?h("span",{style:{fontSize:10,color:"var(--info)",marginLeft:4},"aria-hidden":"true"},"\u21C4"):null),
           supersetGroup?h("span",{className:"superset-badge"},"SS"):null,
-          h("button",{onClick:function(e){e.stopPropagation();setShowSwapMenu(!showSwapMenu)},style:{background:"none",border:"1px solid var(--info-border)",borderRadius:6,padding:"4px 8px",cursor:"pointer",fontSize:10,fontWeight:700,color:"var(--info)",lineHeight:"16px",minHeight:28},"aria-label":"Swap exercise"},"\u21C4"),
           function(){
             var badges=[];
             if(isNext&&!allDone&&completedSets===0)badges.push(h("span",{key:"next",className:"badge badge--accent",style:{letterSpacing:.5}},"UP NEXT"));
@@ -1456,18 +1459,17 @@ function ExerciseCard(props){
         exercise._permanentSwap?h("span",{className:"badge badge--info"},"Permanent"):null,
         h("button",{onClick:function(){clearSwap(dayId,exercise.id);if(exercise._permanentSwap)clearPermanentSwap(dayId,exercise.id);setShowSwapMenu(false);if(onSwap)onSwap(exercise.id,null)},className:"btn btn--ghost btn--xs",style:{fontSize:9}},"Revert")):null,
       exercise.alternatives?h("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}},
-        exercise.alternatives.map(function(alt){return h(React.Fragment,{key:alt},
-          h("button",{onClick:function(){if(onSwap)onSwap(exercise.id,alt,false);setShowSwapMenu(false)},className:"btn btn--info btn--xs"},alt),
-          h("button",{onClick:function(){if(onSwap)onSwap(exercise.id,alt,true);setShowSwapMenu(false)},className:"btn btn--xs",style:{color:"var(--info)",background:"none",border:"1px solid var(--info-border)",fontSize:9}},"\uD83D\uDD12"))})):null,
+        h("div",{style:{fontSize:10,color:"var(--text-dim)",width:"100%",marginBottom:2}},"Tap an alternative to swap:"),
+        exercise.alternatives.map(function(alt){return h("button",{key:alt,onClick:function(){showConfirm({title:"Swap to \u201c"+alt+"\u201d",msg:"Swap just for today, or make it permanent for this workout day?",confirmLabel:"Permanent",cancelLabel:"Today Only",onConfirm:function(){if(onSwap)onSwap(exercise.id,alt,true);setShowSwapMenu(false)},onCancel:function(){if(onSwap)onSwap(exercise.id,alt,false);setShowSwapMenu(false)}})},className:"btn btn--info btn--xs"},alt)})):null,
       h("div",{style:{marginTop:4}},
-        h("input",{type:"text",value:swapSearch,onChange:function(e){setSwapSearch(e.target.value)},placeholder:"Search all exercises\u2026",style:{width:"100%",padding:"6px 8px",background:"var(--surface-alt)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",fontSize:11},onClick:function(e){e.stopPropagation()}}),
+        h("input",{type:"text",value:swapSearch,onChange:function(e){setSwapSearch(e.target.value)},placeholder:"Search all exercises\u2026",style:{width:"100%",padding:"6px 8px",background:"var(--surface-alt)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",fontSize:16},onClick:function(e){e.stopPropagation()}}),
         swapSearch.length>=2?h("div",{style:{maxHeight:120,overflowY:"auto",marginTop:4}},(function(){
           var q=swapSearch.toLowerCase();var lib=props.exerciseLibrary||[];
           var matches=lib.filter(function(ex){return ex.name.toLowerCase().indexOf(q)>=0&&ex.name!==exercise.name});
           if(matches.length===0)return h("div",{style:{fontSize:10,color:"var(--text-dim)",padding:4}},"No matches. Type a custom name and tap Swap.");
-          return matches.slice(0,8).map(function(ex){return h("button",{key:ex.name,onClick:function(){if(onSwap)onSwap(exercise.id,ex.name,false);setShowSwapMenu(false);setSwapSearch("")},className:"btn btn--ghost btn--xs",style:{display:"block",width:"100%",textAlign:"left",padding:"4px 6px",fontSize:11}},ex.name,ex.muscles.length?h("span",{style:{color:"var(--text-dim)",fontSize:9,marginLeft:4}},ex.muscles.slice(0,2).join(", ")):null)})
+          return matches.slice(0,8).map(function(ex){return h("button",{key:ex.name,onClick:function(){showConfirm({title:"Swap to \u201c"+ex.name+"\u201d",msg:"Swap just for today, or make it permanent for this workout day?",confirmLabel:"Permanent",cancelLabel:"Today Only",onConfirm:function(){if(onSwap)onSwap(exercise.id,ex.name,true);setShowSwapMenu(false);setSwapSearch("")},onCancel:function(){if(onSwap)onSwap(exercise.id,ex.name,false);setShowSwapMenu(false);setSwapSearch("")}})},className:"btn btn--ghost btn--xs",style:{display:"block",width:"100%",textAlign:"left",padding:"4px 6px",fontSize:11}},ex.name,ex.muscles.length?h("span",{style:{color:"var(--text-dim)",fontSize:9,marginLeft:4}},ex.muscles.slice(0,2).join(", ")):null)})
         })()):null,
-        swapSearch.length>=2?h("button",{onClick:function(){if(onSwap)onSwap(exercise.id,swapSearch,false);setShowSwapMenu(false);setSwapSearch("")},className:"btn btn--accent btn--xs",style:{marginTop:4,width:"100%"}},"Swap to \""+swapSearch+"\""):null)):null,
+        swapSearch.length>=2?h("button",{onClick:function(){showConfirm({title:"Swap to \u201c"+swapSearch+"\u201d",msg:"Swap just for today, or make it permanent for this workout day?",confirmLabel:"Permanent",cancelLabel:"Today Only",onConfirm:function(){if(onSwap)onSwap(exercise.id,swapSearch,true);setShowSwapMenu(false);setSwapSearch("")},onCancel:function(){if(onSwap)onSwap(exercise.id,swapSearch,false);setShowSwapMenu(false);setSwapSearch("")}})},className:"btn btn--accent btn--xs",style:{marginTop:4,width:"100%"}},"Swap to \u201c"+swapSearch+"\u201d"):null)):null,
     !expanded&&isNext&&!allDone?h(QuickLogBtn,{exId:bilateralExId,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}):null,
     expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
       h("div",{className:"ex-tabs",role:"tablist","aria-label":"Exercise options"},
@@ -1483,8 +1485,8 @@ function ExerciseCard(props){
         deloadMod&&deloadMod.bodyweight?h("div",{style:{fontSize:12,color:"var(--accent)",background:"var(--accent-bg)",border:"1px solid var(--accent-border)",borderRadius:8,padding:"8px 10px",marginBottom:8}},"\uD83E\uDDD8 ",deloadMod.bodyweightHint):null,
         deloadSuggestion?h("div",{style:{fontSize:12,color:"var(--accent)",background:"var(--accent-bg)",border:"1px solid var(--accent-border)",borderRadius:8,padding:"8px 10px",marginBottom:8}},"\uD83E\uDDD8 Deload ~",h("strong",null,deloadSuggestion+" "+unit)," (55%)"):null,
         mesoRepTarget?h("div",{style:{fontSize:11,color:"var(--info)",background:"var(--info-bg)",border:"1px solid var(--info-border)",borderRadius:8,padding:"6px 10px",marginBottom:6}},"\uD83D\uDCC5 ",mesoRepTarget.label):null,
-        exercise.tempo||exercise.rir?h("div",{style:{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}},
-          exercise.tempo?h("div",{className:"badge badge--accent",style:{padding:"5px 8px",fontSize:11,borderRadius:6}},"Tempo: ",h("strong",null,exercise.tempo)):null,
+        (exercise.tempo||exercise.rir)&&getPref("showExBadges",true)?h("div",{style:{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}},
+          exercise.tempo?h("div",{className:"badge badge--accent",style:{padding:"5px 8px",fontSize:11,borderRadius:6,cursor:"pointer"},onClick:function(){showConfirm({title:"Tempo \u2014 "+exercise.tempo,msg:"Tempo is written as Eccentric\u2011Pause\u2011Concentric (in seconds).\n\nFor "+exercise.tempo+":\n\u2022 "+exercise.tempo.split("-")[0]+"s lowering (eccentric)\n\u2022 "+exercise.tempo.split("-")[1]+"s pause at bottom\n\u2022 "+exercise.tempo.split("-")[2]+"s lifting (concentric)\n\nCount it out on every rep to control the movement.",confirmLabel:"Got it",onConfirm:function(){}})}},h("span",null,"Tempo: ",h("strong",null,exercise.tempo))," \u24D8"):null,
           exercise.rir?h("div",{className:"badge badge--info",style:{padding:"5px 8px",fontSize:11,borderRadius:6,cursor:"pointer"},onClick:function(){showConfirm({title:"RIR \u2014 Reps In Reserve",msg:"RIR means how many more reps you could do:\n\n0 = Failure (no reps left)\n1 = Could do 1 more rep\n2 = Could do 2 more reps\n3 = Moderate effort\n4 = Light / warmup effort\n\nTarget: "+exercise.rir+" RIR",confirmLabel:"Got it",onConfirm:function(){}})}},"Target: ",h("strong",null,exercise.rir+" RIR")," \u24D8"):null):null,
         isBilateral?h("div",{style:{display:"flex",gap:4,marginBottom:8}},
           h("button",{onClick:function(){setActiveSide("L")},style:{flex:1,padding:"6px 0",borderRadius:6,border:activeSide==="L"?"1px solid var(--accent-border)":"1px solid rgba(255,255,255,0.08)",background:activeSide==="L"?"var(--accent-bg)":"transparent",color:activeSide==="L"?"var(--accent)":"var(--text-dim)",fontSize:12,fontWeight:700,cursor:"pointer"}},"Left"),
@@ -1492,7 +1494,7 @@ function ExerciseCard(props){
         h(SetLogger,{key:bilateralExId+"_"+dataRev,exId:bilateralExId,numSets:readinessAdj?Math.max(1,Math.round(exercise.sets*readinessAdj.volumeMult)):exercise.sets,dayId:dayId,onSetUpdate:onSetUpdate,onSetDone:onToggleDone,exKey:exKey,rest:exercise.rest,isMachine:!!exercise.machine,increment:exercise.increment||(exercise.machine?2.5:5),intensityMult:readinessAdj?readinessAdj.intensityMult:null}),
         h(QuickLogBtn,{exId:bilateralExId,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}),
         h(RestTimer,{exKey:exKey,defaultSeconds:exercise.rest}),
-        exercise.tempo?h(TempoTimer,{tempo:exercise.tempo}):null,
+        exercise.tempo&&getPref("showTempoTimer",false)?h(TempoTimer,{tempo:exercise.tempo}):null,
         supersetPartner?h("div",{style:{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",background:"var(--info-bg)",border:"1px solid var(--info-border)",borderRadius:8,marginTop:4}},
           h("span",{className:"superset-badge"},"SS"),
           h("span",{style:{fontSize:11,fontWeight:600,color:"var(--info)"}},"Superset with: "+supersetPartner),
@@ -1787,7 +1789,7 @@ function CompletionSummary(props){
   var shareText=useMemo(function(){return generateShareText(day,stats,unit)},[day,stats,unit]);
   var handleShare=function(){if(navigator.share){navigator.share({text:shareText}).catch(function(){})}else{navigator.clipboard.writeText(shareText).then(function(){showUndoToast("Copied to clipboard!",null,2000)}).catch(function(){showUndoToast("Failed to copy \u2014 try long-pressing the text",null,3000)})}};
   return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Workout Complete"},
-    h("div",{className:"sheet celebrate",ref:sheetRef},
+    h("div",{className:"sheet celebrate",ref:sheetRef,style:{paddingBottom:"max(env(safe-area-inset-bottom,0px),80px)"}},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
         h("div",{style:{display:"flex",alignItems:"center",gap:8}},
           h("span",{style:{fontSize:24},"aria-hidden":"true"},"\uD83C\uDFC6"),
@@ -2134,6 +2136,17 @@ function TempoTimer(props){
     h("button",{onClick:start,className:"btn btn--accent-ghost btn--xs"},"Start Tempo"));
 }
 
+/* ── Standalone Cardio Modal (rest day) ── */
+function StandaloneCardio(props){
+  var onClose=props.onClose;var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Rest Day Cardio"},
+    h("div",{className:"sheet fade-in",ref:sheetRef},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+        h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Rest Day Cardio"),
+        h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close"},"\u2715")),
+      h(CardioLog,{dayId:"rest"})));
+}
+
 /* ── Onboarding Steps ── */
 function OnboardingSteps(props){
   var s=useState(0),step=s[0],setStep=s[1];
@@ -2245,6 +2258,8 @@ function SettingsPanel(props){
   var s6w=useState(function(){return getPref("showWellness",true)}),showWellness=s6w[0],setShowWellness=s6w[1];
   var s7g=useState(function(){return getPref("streakGraceHours",48)}),graceHours=s7g[0],setGraceHours=s7g[1];
   var s8v=useState(function(){return getStreakData().vacationMode}),vacationMode=s8v[0],setVacationMode=s8v[1];
+  var s9b=useState(function(){return getPref("showExBadges",true)}),showExBadges=s9b[0],setShowExBadges=s9b[1];
+  var s10t=useState(function(){return getPref("showTempoTimer",false)}),showTempoTimer=s10t[0],setShowTempoTimer=s10t[1];
   var DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   var handleImport=function(e){
     var file=e.target.files&&e.target.files[0];if(!file)return;
@@ -2277,6 +2292,8 @@ function SettingsPanel(props){
         ):null),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"RIR Tracking"),h("div",{className:"settings-row__desc"},"Rate reps-in-reserve after each set")),h(Toggle,{on:showRir,onToggle:function(){var next=!showRir;setShowRir(next);setPref("showRir",next)},label:"Show RIR"})),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Wellness Check"),h("div",{className:"settings-row__desc"},"Pre-session readiness poll (sleep, energy, etc.)")),h(Toggle,{on:showWellness,onToggle:function(){var next=!showWellness;setShowWellness(next);setPref("showWellness",next)},label:"Show wellness"})),
+      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Exercise Badges"),h("div",{className:"settings-row__desc"},"Show Target RIR and Tempo badges on exercise cards")),h(Toggle,{on:showExBadges,onToggle:function(){var next=!showExBadges;setShowExBadges(next);setPref("showExBadges",next)},label:"Show exercise badges"})),
+      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Tempo Timer"),h("div",{className:"settings-row__desc"},"Show interactive tempo countdown timer on cards")),h(Toggle,{on:showTempoTimer,onToggle:function(){var next=!showTempoTimer;setShowTempoTimer(next);setPref("showTempoTimer",next)},label:"Show tempo timer"})),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Streak Grace Period"),h("div",{className:"settings-row__desc"},"Gap allowed between sessions before streak breaks")),
         h("div",{style:{display:"flex",gap:4}},
           [24,48,72,168].map(function(hrs){var label=hrs===168?"1 wk":hrs+"h";return h("button",{key:hrs,onClick:function(){setGraceHours(hrs);setPref("streakGraceHours",hrs);var sd=getStreakData();sd.graceHours=hrs;saveStreakData(sd)},className:"btn btn--xs "+(graceHours===hrs?"btn--accent":"btn--ghost")},label)}))),
@@ -2374,6 +2391,7 @@ function MainApp(props){
   var scal=useState(false),showCalendar=scal[0],setShowCalendar=scal[1];
   var sft=useState(false),showFatigueTrend=sft[0],setShowFatigueTrend=sft[1];
   var stpl=useState(false),showTemplates=stpl[0],setShowTemplates=stpl[1];
+  var scard=useState(false),showCardio=scard[0],setShowCardio=scard[1];
   var sinst=useState(!!_deferredInstallPrompt),canInstall=sinst[0],setCanInstall=sinst[1];
   useEffect(function(){return onInstallPromptChange(setCanInstall)},[]);
   var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0],setDayMapState=s7[1];
@@ -2467,7 +2485,7 @@ function MainApp(props){
           h("div",{style:{display:"flex",alignItems:"center",gap:6,marginTop:2}},
             h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"}},config.name),
             h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"\u00B7"),
-            h("span",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:700,letterSpacing:.5}},config.subtitle||""),
+            h("span",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:700,letterSpacing:.5,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"bottom"}},config.subtitle||""),
             h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"\u00B7"),
             h("span",{style:{fontSize:9,fontWeight:700,color:meso.week===4?"var(--danger)":"var(--info)",letterSpacing:.5}},"Wk "+meso.week+"/4"),
             fatigue?h("span",{style:{fontSize:9,fontWeight:700,color:fatigue.color,marginLeft:4}},"\u25CF "+fatigue.label):null)),
@@ -2481,8 +2499,7 @@ function MainApp(props){
         var prog=dayTabProgress[i];var doneSets=prog.doneSets,totalSets=prog.totalSets;
         var hasProg=doneSets>0,complete=doneSets===totalSets&&totalSets>0;
         return h("button",{key:day.id,onClick:function(){setActiveDay(i);setNavTab(0)},className:"tab"+(activeDay===i?" tab--active":"")+(complete?" tab--complete":""),role:"tab","aria-selected":activeDay===i?"true":"false","aria-controls":"day-panel-"+day.id},
-          h("div",{style:{fontSize:11,fontWeight:700,color:activeDay===i?"var(--accent)":complete?"var(--success)":"var(--text-dim)",letterSpacing:.4}},dayMap[day.id]),
-          h("div",{style:{fontSize:13,fontWeight:700,color:activeDay===i?"var(--text-bright)":complete?"var(--text-dim)":"var(--text-dim)",marginTop:1}},day.label),
+          h("div",{style:{fontSize:12,fontWeight:700,color:activeDay===i?"var(--text-bright)":complete?"var(--text-dim)":"var(--text-dim)",marginTop:1,letterSpacing:.2}},day.label),
           (hasProg||complete)?h("div",{style:{width:4,height:4,borderRadius:2,background:complete?"var(--success)":"var(--accent)",margin:"3px auto 0"},"aria-hidden":"true"}):null)})),
       /* Swipe dot indicators */
       h("div",{style:{display:"flex",justifyContent:"center",gap:4,marginTop:6},"aria-hidden":"true"},DAYS.map(function(_,i){return h("div",{key:i,style:{width:activeDay===i?12:5,height:5,borderRadius:3,background:activeDay===i?"var(--accent)":"rgba(255,255,255,0.12)",transition:"width 0.2s, background 0.2s"}})}))),
@@ -2526,6 +2543,7 @@ function MainApp(props){
           h("button",{onClick:function(){setShowMore(false);setShowCalendar(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCC5 Workout Calendar"),
           h("button",{onClick:function(){setShowMore(false);setShowFatigueTrend(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCA Fatigue Trend"),
           h("button",{onClick:function(){setShowMore(false);setShowTemplates(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCB Templates"),
+          h("button",{onClick:function(){setShowMore(false);setShowCardio(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83C\uDFC3 Rest Day Cardio"),
           h("button",{onClick:function(){setShowMore(false);setShowSettings(true)},className:"btn btn--ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\u2699\uFE0F Settings")),
         /* PWA Install */
         function(){if(isStandalone())return null;
@@ -2533,6 +2551,7 @@ function MainApp(props){
           if(isIOS())return h("div",{style:{marginTop:10,padding:"10px 12px",background:"rgba(255,255,255,0.03)",borderRadius:10,fontSize:11,color:"var(--text-dim)",textAlign:"center",lineHeight:1.5}},"To install: tap ",h("span",{style:{fontWeight:700}},"Share \u2B06\uFE0F")," then ",h("span",{style:{fontWeight:700}},"Add to Home Screen"));
           return null}())):null,
     /* Modals */
+    showCardio?h(StandaloneCardio,{onClose:function(){setShowCardio(false)}}):null,
     showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,dayMap:dayMap,setDayMapState:setDayMapState,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)}}):null,
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
