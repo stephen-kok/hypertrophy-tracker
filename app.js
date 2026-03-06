@@ -3027,6 +3027,7 @@ function InsightsTab(props){
   var ranges=[{val:4,label:"4W"},{val:8,label:"8W"},{val:12,label:"12W"},{val:0,label:"ALL"}];
 
   var ss=useState({strength:true,volume:true,bodyweight:true,prs:true}),sections=ss[0],setSections=ss[1];
+  var smh=useState(false),showMesoHist=smh[0],setShowMesoHist=smh[1];
   var toggleSection=function(key){var next=Object.assign({},sections);next[key]=!next[key];setSections(next)};
 
   var sectionHeader=function(key,title,icon){
@@ -3037,6 +3038,14 @@ function InsightsTab(props){
       h("span",{style:{fontSize:14,fontWeight:700,color:"var(--text-bright)",flex:1,textAlign:"left"}},title),
       h("span",{style:{fontSize:10,color:"var(--text-dim)",transition:"transform 0.2s",transform:sections[key]?"rotate(0)":"rotate(-90deg)"},"aria-hidden":"true"},"\u25BE"));
   };
+
+  if(showMesoHist){
+    return h(Overlay,{onClose:onClose,label:"Meso History"},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+        h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Meso History"),
+        h(CloseBtn,{onClick:onClose})),
+      h(MesoHistory,{onBack:function(){setShowMesoHist(false)}}));
+  }
 
   return h(Overlay,{onClose:onClose,label:"Insights"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
@@ -3050,6 +3059,7 @@ function InsightsTab(props){
                 background:active?"var(--accent-bg)":"transparent",
                 color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},
               "aria-pressed":active?"true":"false"},r.label)})),
+        h("button",{onClick:function(){setShowMesoHist(true)},className:"btn btn--ghost btn--xs",style:{fontSize:10}},"\uD83D\uDD04 Mesos"),
         h(CloseBtn,{onClick:onClose}))),
 
     sectionHeader("strength","Strength Trends","\uD83D\uDCC8"),
@@ -3063,6 +3073,56 @@ function InsightsTab(props){
 
     sectionHeader("prs","Personal Records","\uD83C\uDFC6"),
     sections.prs?h(InsightsPRSection,{config:config}):null);
+}
+
+function MesoHistory(props){
+  var onBack=props.onBack;
+  var history=useMemo(function(){return getMesoHistory()},[]);
+
+  if(history.length===0){
+    return h("div",null,
+      h("button",{onClick:onBack,className:"btn btn--ghost btn--xs",style:{marginBottom:12}},"\u2190 Back to Insights"),
+      h("div",{className:"empty-state"},
+        h("div",{className:"empty-state__icon"},"\uD83D\uDD04"),
+        h("div",{className:"empty-state__title"},"No completed mesocycles"),
+        h("div",{className:"empty-state__desc"},"Complete a 4-week mesocycle to see history here.")));
+  }
+
+  return h("div",null,
+    h("button",{onClick:onBack,className:"btn btn--ghost btn--xs",style:{marginBottom:12}},"\u2190 Back to Insights"),
+    h("div",{style:{fontSize:12,color:"var(--text-dim)",marginBottom:12}},history.length+" completed mesocycle"+(history.length!==1?"s":"")),
+    history.map(function(snap,idx){
+      var sparkW=80,sparkH=20;
+      var wv=snap.weeklyVolume||[0,0,0,0];
+      var sparkMax=Math.max.apply(null,wv.concat([1]));
+      var sparkPath=wv.map(function(v,i){return(i*sparkW/3)+","+(sparkH-(v/sparkMax)*sparkH)}).join(" ");
+
+      var muscles=Object.keys(snap.volumePerMuscle||{}).sort(function(a,b){return(snap.volumePerMuscle[b]||0)-(snap.volumePerMuscle[a]||0)}).slice(0,3);
+      var totalPrs=0;(snap.prsHit||[]).forEach(function(p){totalPrs+=(p.count||1)});
+
+      return h("div",{key:idx,style:{background:"var(--surface-alt)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px",marginBottom:10}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
+          h("div",null,
+            h("div",{style:{fontSize:13,fontWeight:800,color:"var(--text-bright)"}},"Mesocycle #"+(history.length-idx)),
+            h("div",{style:{fontSize:10,color:"var(--text-dim)",marginTop:2}},formatDate(snap.startDate)+" \u2014 "+formatDate(snap.endDate))),
+          h("svg",{width:sparkW,height:sparkH,viewBox:"0 0 "+sparkW+" "+sparkH,"aria-hidden":"true"},
+            h("polyline",{points:sparkPath,fill:"none",stroke:"var(--accent)",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}))),
+        h("div",{style:{display:"flex",gap:12,marginBottom:8}},
+          h("div",{style:{textAlign:"center",flex:1}},
+            h("div",{style:{fontSize:16,fontWeight:800,color:"var(--text-bright)"}},snap.sessionsLogged),
+            h("div",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:600}},"Sessions")),
+          h("div",{style:{textAlign:"center",flex:1}},
+            h("div",{style:{fontSize:16,fontWeight:800,color:snap.avgRpe?RPE_COLORS[Math.round(snap.avgRpe)]||"var(--text-bright)":"var(--text-dim)"}},snap.avgRpe||"\u2014"),
+            h("div",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:600}},"Avg RPE")),
+          h("div",{style:{textAlign:"center",flex:1}},
+            h("div",{style:{fontSize:16,fontWeight:800,color:totalPrs>0?"var(--success)":"var(--text-dim)"}},totalPrs),
+            h("div",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:600}},"PRs"))),
+        muscles.length>0?h("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
+          muscles.map(function(m){
+            return h("span",{key:m,style:{fontSize:10,fontWeight:600,color:"var(--text-secondary)",background:"rgba(255,255,255,0.04)",padding:"2px 8px",borderRadius:4}},
+              (MUSCLE_LABELS[m]||m)+": "+snap.volumePerMuscle[m]+" sets");
+          })):null);
+    }));
 }
 
 /* ── Workout Templates ── */
