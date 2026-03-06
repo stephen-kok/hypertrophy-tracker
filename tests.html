@@ -774,6 +774,54 @@ suite("Program Builder — Config Layer");
   assert("Single-day valid config passes",validateConfig(validConfig)===null);
 })();
 
+suite("Program Builder — Integration");
+(function(){
+  /* validateConfig accepts config with 0 days (blank program) */
+  assert("Empty days array is valid",validateConfig({profile:"t",name:"T",days:[]})===null);
+
+  /* validateConfig rejects non-array days */
+  assert("days as plain object is invalid",validateConfig({profile:"t",name:"T",days:{}})!==null);
+  assert("days as string is invalid",validateConfig({profile:"t",name:"T",days:"upper"})!==null);
+  assert("days as number is invalid",validateConfig({profile:"t",name:"T",days:42})!==null);
+
+  /* validateConfig still catches duplicate exercise IDs in custom programs */
+  var dupConfig={profile:"custom",name:"My Program",days:[
+    {id:"d1",title:"Push",exercises:[
+      {id:"bench",name:"Bench Press",sets:4,reps:"6-8"},
+      {id:"bench",name:"Bench Press (duplicate)",sets:3,reps:"8-10"}
+    ]}
+  ]};
+  assert("Duplicate exercise id rejected in custom config",validateConfig(dupConfig)!==null);
+
+  /* Duplicate IDs across days are also rejected */
+  var dupAcrossDays={profile:"custom",name:"My Program",days:[
+    {id:"d1",title:"Push",exercises:[{id:"squat",name:"Squat",sets:4,reps:"6-8"}]},
+    {id:"d2",title:"Pull",exercises:[{id:"squat",name:"Squat Again",sets:3,reps:"8-10"}]}
+  ]};
+  assert("Duplicate exercise id across days is rejected",validateConfig(dupAcrossDays)!==null);
+
+  /* Valid single-day program with 2 exercises passes */
+  var validConfig={profile:"custom",name:"My Program",days:[
+    {id:"d1",title:"Full Body",exercises:[
+      {id:"squat",name:"Squat",sets:4,reps:"6-8"},
+      {id:"press",name:"Press",sets:3,reps:"8-10"}
+    ]}
+  ]};
+  assert("Valid single-day 2-exercise config passes",validateConfig(validConfig)===null);
+
+  /* Missing exercise name is caught */
+  var noNameConfig={profile:"t",name:"T",days:[
+    {id:"d1",title:"Day 1",exercises:[{id:"ex1",sets:3,reps:"10-12"}]}
+  ]};
+  assert("Exercise missing name is invalid",validateConfig(noNameConfig)!==null);
+
+  /* Exercise missing sets is caught */
+  var noSetsConfig={profile:"t",name:"T",days:[
+    {id:"d1",title:"Day 1",exercises:[{id:"ex1",name:"Curl",reps:"10-12"}]}
+  ]};
+  assert("Exercise missing sets is invalid",validateConfig(noSetsConfig)!==null);
+})();
+
 /* ═══ Output ═══ */
 var el=document.getElementById("results");
 el.innerHTML=results.join("")+'<div class="summary" style="color:'+(failed>0?"#ef4444":"#22c55e")+';background:'+(failed>0?"rgba(239,68,68,0.1)":"rgba(34,197,94,0.1)")+'">'+passed+' passed, '+failed+' failed</div>';
