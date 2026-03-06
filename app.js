@@ -3296,11 +3296,7 @@ function DayEditor(props){
 
   var deleteExercise=function(idx){
     var ex=d.exercises[idx];
-    var hasHistory=false;
-    var entries=_historyIndex[d.id]||[];
-    for(var i=0;i<entries.length;i++){
-      if(entries[i].data&&entries[i].data.exercises&&entries[i].data.exercises[ex.id]){hasHistory=true;break}
-    }
+    var hasHistory=(_historyIndex[d.id]||[]).length>0;
     showConfirm({title:"Delete "+ex.name+"?",
       msg:hasHistory?"This exercise has logged data. The data won't be deleted, but it will no longer appear in your workout.":"Remove this exercise from the day.",
       confirmLabel:"Delete",danger:true,
