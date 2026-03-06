@@ -2525,6 +2525,7 @@ function MainApp(props){
   var sft=useState(false),showFatigueTrend=sft[0],setShowFatigueTrend=sft[1];
   var stpl=useState(false),showTemplates=stpl[0],setShowTemplates=stpl[1];
   var scard=useState(false),showCardio=scard[0],setShowCardio=scard[1];
+  var spb=useState(false),showProgramBuilder=spb[0],setShowProgramBuilder=spb[1];
   var sns=useState(function(){return getPref("navShortcuts",NAV_SHORTCUT_DEFAULTS)}),navShortcuts=sns[0],setNavShortcutsState=sns[1];
   useEffect(function(){
     var current=getPref("navShortcuts",null);
@@ -2682,6 +2683,7 @@ function MainApp(props){
           h("button",{onClick:function(){setShowMore(false);setShowTemplates(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCB Templates"),
           h("button",{onClick:function(){setShowMore(false);setShowCardio(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83C\uDFC3 Rest Day Cardio"),
           h("button",{onClick:function(){setShowMore(false);setShowInsights(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCA Insights"),
+          h("button",{onClick:function(){setShowMore(false);setShowProgramBuilder(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDEE0 Program Builder"),
           h("button",{onClick:function(){setShowMore(false);setShowSettings(true)},className:"btn btn--ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\u2699\uFE0F Settings")),
         /* PWA Install */
         function(){if(isStandalone())return null;
@@ -2690,6 +2692,7 @@ function MainApp(props){
           return null}())):null,
     /* Modals */
     showCardio?h(StandaloneCardio,{onClose:function(){setShowCardio(false)}}):null,
+    showProgramBuilder?h(ProgramBuilder,{config:config,onClose:function(){setShowProgramBuilder(false)},onConfigChange:function(newCfg){if(props.onConfigChange)props.onConfigChange(newCfg)}}):null,
     showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)},navShortcuts:navShortcuts,onNavShortcutsChange:function(v){setPref("navShortcuts",v);setNavShortcutsState(v)}}):null,
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
@@ -3273,6 +3276,99 @@ function WorkoutCalendar(props){
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.12)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"1-7 sets")),
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.25)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"8-14 sets")),
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.4)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"15+ sets"))));
+}
+
+/* ═══ PROGRAM BUILDER ═══ */
+function ProgramBuilder(props){
+  var config=props.config,onClose=props.onClose,onConfigChange=props.onConfigChange;
+  var sc=useState(function(){
+    var existing=getCustomConfig();
+    if(!existing){existing=deepClone(config);saveCustomConfig(existing)}
+    return existing;
+  }),cfg=sc[0],setCfg=sc[1];
+  var ed=useState(null),editDayIdx=ed[0],setEditDayIdx=ed[1];
+
+  var save=function(next){saveCustomConfig(next);setCfg(next);if(onConfigChange)onConfigChange(next)};
+
+  var updateMeta=function(field,val){var next=deepClone(cfg);next[field]=val;save(next)};
+
+  var addDay=function(){
+    var next=deepClone(cfg);
+    var newDay={id:"day_"+Date.now(),label:"Day "+(next.days.length+1),title:"New Day",exercises:[]};
+    next.days.push(newDay);save(next);
+  };
+
+  var deleteDay=function(idx){
+    var day=cfg.days[idx];
+    var hasHistory=(_historyIndex[day.id]||[]).length>0;
+    showConfirm({title:"Delete "+day.label+"?",
+      msg:hasHistory?"This day has logged workout data. The data won't be deleted, but it will no longer appear in your workout.":"This will remove the day and all its exercises.",
+      confirmLabel:"Delete",danger:true,
+      onConfirm:function(){var next=deepClone(cfg);next.days.splice(idx,1);save(next)}});
+  };
+
+  var moveDay=function(idx,dir){
+    var next=deepClone(cfg);var target=idx+dir;
+    if(target<0||target>=next.days.length)return;
+    var tmp=next.days[idx];next.days[idx]=next.days[target];next.days[target]=tmp;
+    save(next);
+  };
+
+  var createBlank=function(){
+    showConfirm({title:"Create Blank Program?",msg:"This will remove all days. You can add new ones from scratch.",
+      confirmLabel:"Create Blank",danger:true,
+      onConfirm:function(){var next=deepClone(cfg);next.days=[];next.program="Custom Program";next.subtitle="";save(next)}});
+  };
+
+  var resetToOriginal=function(){
+    showConfirm({title:"Reset to Original?",msg:"This will discard all custom changes and restore the original program from the server.",
+      confirmLabel:"Reset",danger:true,
+      onConfirm:function(){
+        var safeId=(cfg.profile||"").replace(/[^a-zA-Z0-9_-]/g,"");
+        fetch("configs/"+safeId+".json").then(function(r){return r.json()}).then(function(data){
+          var err=validateConfig(data);if(err){showUndoToast("Error: "+err);return}
+          deleteCustomConfig();setCfg(data);if(onConfigChange)onConfigChange(data);
+        }).catch(function(){showUndoToast("Could not fetch original config")});
+      }});
+  };
+
+  if(editDayIdx!==null&&cfg.days[editDayIdx]){
+    return h(Overlay,{onClose:onClose,label:"Edit Day"},
+      h(DayEditor,{day:cfg.days[editDayIdx],dayIndex:editDayIdx,
+        onBack:function(){setEditDayIdx(null)},
+        onUpdate:function(updatedDay){
+          var next=deepClone(cfg);next.days[editDayIdx]=updatedDay;save(next);
+        }}));
+  }
+
+  return h(Overlay,{onClose:onClose,label:"Program Builder"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+      h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Program Builder"),
+      h(CloseBtn,{onClick:onClose})),
+    h("div",{style:{marginBottom:16}},
+      h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"PROGRAM NAME"),
+      h("input",{type:"text",value:cfg.program||"",onChange:function(e){updateMeta("program",e.target.value)},className:"input",style:{marginBottom:8,textAlign:"left"},"aria-label":"Program name"}),
+      h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"SUBTITLE"),
+      h("input",{type:"text",value:cfg.subtitle||"",onChange:function(e){updateMeta("subtitle",e.target.value)},className:"input",style:{textAlign:"left"},"aria-label":"Program subtitle"})),
+    cfg.days.length===0?h("div",{style:{textAlign:"center",padding:"32px 0",color:"var(--text-dim)",fontSize:13}},"No days yet. Add one below."):
+    cfg.days.map(function(day,i){
+      return h("div",{key:day.id,className:"card",style:{marginBottom:8,padding:"12px 14px"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h("div",{style:{flex:1}},
+            h("div",{style:{fontSize:14,fontWeight:700,color:"var(--text-bright)"}},day.label||day.title),
+            h("div",{style:{fontSize:11,color:"var(--text-secondary)"}},day.title),
+            h("div",{style:{fontSize:10,color:"var(--text-dim)",marginTop:2}},day.exercises.length+" exercise"+(day.exercises.length!==1?"s":""))),
+          h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
+            h("button",{onClick:function(){moveDay(i,-1)},disabled:i===0,className:"btn btn--ghost btn--xs",style:{opacity:i===0?0.3:1,minWidth:32},"aria-label":"Move "+day.label+" up"},"\u25B2"),
+            h("button",{onClick:function(){moveDay(i,1)},disabled:i===cfg.days.length-1,className:"btn btn--ghost btn--xs",style:{opacity:i===cfg.days.length-1?0.3:1,minWidth:32},"aria-label":"Move "+day.label+" down"},"\u25BC"),
+            h("button",{onClick:function(){setEditDayIdx(i)},className:"btn btn--accent-ghost btn--xs","aria-label":"Edit "+day.label},"\u270E"),
+            h("button",{onClick:function(){deleteDay(i)},className:"btn btn--ghost btn--xs",style:{color:"var(--danger)"},"aria-label":"Delete "+day.label},"\u2715"))));
+    }),
+    h("div",{style:{marginTop:16,display:"flex",flexDirection:"column",gap:8}},
+      h("button",{onClick:addDay,className:"btn btn--accent btn--full"},"+ Add Day"),
+      h("div",{style:{display:"flex",gap:8}},
+        h("button",{onClick:createBlank,className:"btn btn--ghost btn--full",style:{flex:1}},"Create Blank"),
+        h("button",{onClick:resetToOriginal,className:"btn btn--ghost btn--full",style:{flex:1}},"Reset to Original"))));
 }
 
 /* ══════════════════════════════════════════
