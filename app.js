@@ -2251,7 +2251,7 @@ function SettingsGroup(props){
 
 /* ── Settings Panel ── */
 function SettingsPanel(props){
-  var onClose=props.onClose,config=props.config,dayMap=props.dayMap,setDayMapState=props.setDayMapState;
+  var onClose=props.onClose,config=props.config;
   var s=useState(null),msg=s[0],setMsg=s[1];var fileRef=useRef(null);var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
   var sq=useState(null),storageInfo=sq[0],setStorageInfo=sq[1];
   var scl=useState(null),cleanupResult=scl[0],setCleanupResult=scl[1];
@@ -2269,7 +2269,6 @@ function SettingsPanel(props){
   var s8v=useState(function(){return getStreakData().vacationMode}),vacationMode=s8v[0],setVacationMode=s8v[1];
   var s9b=useState(function(){return getPref("showExBadges",true)}),showExBadges=s9b[0],setShowExBadges=s9b[1];
   var s10t=useState(function(){return getPref("showTempoTimer",false)}),showTempoTimer=s10t[0],setShowTempoTimer=s10t[1];
-  var DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   var handleImport=function(e){
     var file=e.target.files&&e.target.files[0];if(!file)return;
     var doImport=function(){importData(file,function(count,err,warnings){if(err)setMsg("Import failed: "+(err.message||"Unknown error"));else{var wmsg=warnings?" ("+warnings.join(" ")+")":"";setMsg("Imported "+count+" records."+wmsg);setTimeout(function(){window.location.reload()},warnings?4000:1500)}})};
@@ -2279,7 +2278,6 @@ function SettingsPanel(props){
   };
   var toggleUnit=function(){var next=unit==="lbs"?"kg":"lbs";setUnitState(next);setUnit(next)};
   var toggleAutoTimer=function(){var next=!autoTimer;setAutoTimerState(next);setAutoTimer(next)};
-  var changeDayFor=function(dayId){var cur=dayMap[dayId];var idx=DOW.indexOf(cur);var next=DOW[(idx+1)%7];var newMap=Object.assign({},dayMap);newMap[dayId]=next;setDayMapState(newMap);setDayMap(newMap)};
   return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Settings"},h("div",{className:"sheet fade-in",ref:sheetRef},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Settings"),h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close settings"},"\u2715")),
     h("div",{style:{fontSize:12,color:"var(--text-dim)",marginBottom:16,padding:"10px 12px",background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}},
@@ -2320,9 +2318,6 @@ function SettingsPanel(props){
             h("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
               NAV_SHORTCUTS_DEF.map(function(def){return h("button",{key:def.id,onClick:function(){handleSlot(slot,def.id)},className:"btn btn--xs "+(curShortcuts[slot]===def.id?"btn--accent":"btn--ghost")},def.icon+" "+def.label)})))});
       })()),
-    h(SettingsGroup,{title:"Schedule"},
-      h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:10}},"Tap a day to cycle through the week"),
-      h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},config.days.map(function(day){return h("button",{key:day.id,onClick:function(){changeDayFor(day.id)},style:{padding:"8px 12px",borderRadius:8,border:"1px solid var(--accent-border)",background:"var(--accent-bg)",cursor:"pointer",textAlign:"center",minWidth:60},"aria-label":"Change "+day.label+" day"},h("div",{style:{fontSize:10,fontWeight:700,color:"var(--accent)"}},dayMap[day.id]),h("div",{style:{fontSize:12,fontWeight:600,color:"var(--text-primary)",marginTop:2}},day.label))}))),
     h(SettingsGroup,{title:"Mesocycle",defaultOpen:false},
       h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:6}},"4-week training block. Week 4 = deload."),
       h("div",{style:{fontSize:10,color:"var(--info)",marginBottom:10,fontStyle:"italic"}},MESO_WEEK_LABELS[getMesocycle().week]),
@@ -2570,7 +2565,7 @@ function MainApp(props){
           return null}())):null,
     /* Modals */
     showCardio?h(StandaloneCardio,{onClose:function(){setShowCardio(false)}}):null,
-    showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,dayMap:dayMap,setDayMapState:setDayMapState,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)},navShortcuts:navShortcuts,onNavShortcutsChange:function(v){setPref("navShortcuts",v);setNavShortcutsState(v)}}):null,
+    showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)},navShortcuts:navShortcuts,onNavShortcutsChange:function(v){setPref("navShortcuts",v);setNavShortcutsState(v)}}):null,
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
     showHistory?h(SessionHistory,{onClose:function(){setShowHistory(false)}}):null,
