@@ -80,7 +80,7 @@ function validateConfig(cfg){
   if(!cfg||typeof cfg!=="object")return"Config must be a JSON object";
   if(!cfg.profile||typeof cfg.profile!=="string")return"Missing 'profile' field";
   if(!cfg.name||typeof cfg.name!=="string")return"Missing 'name' field";
-  if(!Array.isArray(cfg.days)||cfg.days.length===0)return"Missing or empty 'days' array";
+  if(!Array.isArray(cfg.days))return"'days' must be an array";
   var ids={};
   for(var i=0;i<cfg.days.length;i++){
     var day=cfg.days[i];
@@ -344,6 +344,11 @@ function getCustomExercises(dayId){return lsGet("custom_"+dayId)||[]}
 function saveCustomExercises(dayId,list){lsSet("custom_"+dayId,list)}
 function addCustomExercise(dayId,ex){var list=getCustomExercises(dayId);list.push(ex);saveCustomExercises(dayId,list);return list}
 function removeCustomExercise(dayId,exId){var list=getCustomExercises(dayId).filter(function(e){return e.id!==exId});saveCustomExercises(dayId,list);return list}
+
+/* ═══ CUSTOM CONFIG (Program Builder) ═══ */
+function getCustomConfig(){return lsGet("custom_config")||null}
+function saveCustomConfig(cfg){lsSet("custom_config",cfg)}
+function deleteCustomConfig(){try{localStorage.removeItem(LS+"custom_config")}catch(e){}}
 
 /* ═══ EXERCISE SWAPS ═══ */
 function getPermanentSwaps(dayId){return lsGet("perm_swaps_"+dayId)||{}}
@@ -3281,6 +3286,13 @@ function App(){
     var safeId=profileId.replace(/[^a-zA-Z0-9_-]/g,"");
     if(!safeId){setError("Invalid profile name.");return;}
     initProfile(safeId);
+    /* Check for custom config in localStorage first */
+    var custom=getCustomConfig();
+    if(custom){
+      var customErr=validateConfig(custom);
+      if(!customErr){setConfig(custom);return}
+      /* Invalid custom config — fall through to JSON fetch */
+    }
     var configUrl="configs/"+safeId+".json";
     fetch(configUrl).then(function(r){if(!r.ok)throw new Error("Profile not found: "+profileId);return r.json()}).then(function(data){
       var err=validateConfig(data);if(err){setError("Config error: "+err);return}
@@ -3292,7 +3304,7 @@ function App(){
   if(!profileId)return h(ProfileSelector,null);
   if(error)return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",padding:40,textAlign:"center"}},h("div",null,h("div",{style:{fontSize:40,marginBottom:16},"aria-hidden":"true"},"\u26A0\uFE0F"),h("h2",{style:{fontSize:18,fontWeight:700,color:"var(--text-bright)",marginBottom:8}},"Profile Not Found"),h("p",{style:{fontSize:14,color:"var(--text-dim)"}},error),h("a",{href:"?",style:{display:"inline-block",marginTop:16,padding:"10px 20px",borderRadius:10,background:"var(--accent)",color:"#000",fontWeight:700,fontSize:14,textDecoration:"none"}},"View All Profiles")));
   if(!config)return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"},"aria-label":"Loading application"},h("div",{style:{width:24,height:24,border:"3px solid rgba(245,158,11,0.3)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}));
-  return h(TimerProvider,null,h(DayDataProvider,null,h(MainApp,{config:config})));
+  return h(TimerProvider,null,h(DayDataProvider,null,h(MainApp,{config:config,onConfigChange:setConfig})));
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(ErrorBoundary,null,h(App)));

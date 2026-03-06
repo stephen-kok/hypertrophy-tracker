@@ -54,6 +54,29 @@ var _testStore={};
 function lsGet(k){var v=_testStore[k];return v===undefined?null:JSON.parse(JSON.stringify(v))}
 function lsSet(k,v){_testStore[k]=JSON.parse(JSON.stringify(v))}
 
+function validateConfig(cfg){
+  if(!cfg||typeof cfg!=="object")return"Config must be a JSON object";
+  if(!cfg.profile||typeof cfg.profile!=="string")return"Missing 'profile' field";
+  if(!cfg.name||typeof cfg.name!=="string")return"Missing 'name' field";
+  if(!Array.isArray(cfg.days))return"'days' must be an array";
+  var ids={};
+  for(var i=0;i<cfg.days.length;i++){
+    var day=cfg.days[i];
+    if(!day.id)return"Day "+(i+1)+" missing 'id'";
+    if(!day.title&&!day.label)return"Day '"+day.id+"' missing 'title' or 'label'";
+    if(!Array.isArray(day.exercises))return"Day '"+day.id+"' missing 'exercises' array";
+    for(var j=0;j<day.exercises.length;j++){
+      var ex=day.exercises[j];
+      if(!ex.id)return"Exercise "+(j+1)+" in '"+day.id+"' missing 'id'";
+      if(!ex.name)return"Exercise '"+ex.id+"' missing 'name'";
+      if(ids[ex.id])return"Duplicate exercise id '"+ex.id+"' (first in '"+ids[ex.id]+"')";
+      ids[ex.id]=day.id;
+      if(!ex.sets||!ex.reps)return"Exercise '"+ex.id+"' missing 'sets' or 'reps'";
+    }
+  }
+  return null;
+}
+
 var TREND_RANGES={4:28,8:56,12:84,0:9999};
 
 function getDefaultCompoundLifts(config){
@@ -721,6 +744,35 @@ assert("getDefaultCompoundLifts dedupes by name", (function(){
   var r = getDefaultCompoundLifts(mockConfig);
   return r.length === 1;
 })(), true);
+
+suite("Program Builder — Config Layer");
+(function(){
+  /* validateConfig accepts config with 0 days (blank program) */
+  assert("Empty days array is valid",validateConfig({profile:"t",name:"T",days:[]})===null);
+
+  /* validateConfig rejects missing days property */
+  assert("Missing days property is invalid",validateConfig({profile:"t",name:"T"})!==null);
+
+  /* validateConfig rejects days that is not an array */
+  assert("days as object is invalid",validateConfig({profile:"t",name:"T",days:{}})!==null);
+  assert("days as string is invalid",validateConfig({profile:"t",name:"T",days:"upper"})!==null);
+  assert("days as null is invalid",validateConfig({profile:"t",name:"T",days:null})!==null);
+
+  /* validateConfig still catches duplicate exercise IDs */
+  var dupConfig={profile:"t",name:"T",days:[
+    {id:"d1",title:"Day 1",exercises:[
+      {id:"ex1",name:"Squat",sets:4,reps:"8-10"},
+      {id:"ex1",name:"Squat Copy",sets:3,reps:"6-8"}
+    ]}
+  ]};
+  assert("Duplicate exercise id is invalid",validateConfig(dupConfig)!==null);
+
+  /* Valid single-day config still passes */
+  var validConfig={profile:"t",name:"T",days:[
+    {id:"d1",title:"Day 1",exercises:[{id:"ex1",name:"Squat",sets:4,reps:"8-10"}]}
+  ]};
+  assert("Single-day valid config passes",validateConfig(validConfig)===null);
+})();
 
 /* ═══ Output ═══ */
 var el=document.getElementById("results");
