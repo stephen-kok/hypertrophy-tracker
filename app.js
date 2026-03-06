@@ -203,6 +203,7 @@ function buildHistoryIndex(){
     var keys=Object.keys(manifest);
     for(var mi=0;mi<keys.length;mi++){
       var dayId=keys[mi];var dates=manifest[dayId];
+      if(!Array.isArray(dates))continue;/* skip corrupted manifest entries */
       if(!_historyIndex[dayId])_historyIndex[dayId]=[];
       for(var di=0;di<dates.length;di++){
         try{var data=JSON.parse(localStorage.getItem(LS+dayId+"@"+dates[di]));if(data&&data.exercises)_historyIndex[dayId].push({date:dates[di],data:data})}catch(e){}
