@@ -65,6 +65,7 @@ var SAVE_FLASH_MS=1600;           /* duration the save indicator stays visible *
 var SW_UPDATE_INTERVAL_MS=MS_PER_HOUR; /* service worker update check interval */
 var INACTIVITY_MS=30*60*1000;          /* auto-end session after 30 min of no interaction */
 var RPE_COLORS={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--warning)",10:"var(--danger)"};
+var TREND_RANGES={4:28,8:56,12:84,0:9999};/* 0 = "All"; value = days to look back */
 /* Bottom-nav configurable shortcut definitions */
 var NAV_SHORTCUTS_DEF=[
   {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL"},
@@ -1795,6 +1796,106 @@ function buildMesoSnapshot(config,startDate,endDate){
     prsHit:prsHit,
     weeklyVolume:weeklyVolume
   };
+}
+
+/* ═══ TREND DATA HELPERS ═══ */
+
+function getE1rmTrends(config,exerciseIds,rangeDays){
+  if(!_historyBuilt)buildHistoryIndex();
+  var cutoff=new Date();cutoff.setDate(cutoff.getDate()-rangeDays);
+  var cutoffStr=toISODate(cutoff);
+  var byDate={};
+
+  config.days.forEach(function(day){
+    var entries=_historyIndex[day.id]||[];
+    entries.forEach(function(entry){
+      if(entry.date<cutoffStr)return;
+      var exs=entry.data.exercises||{};
+      exerciseIds.forEach(function(exId){
+        var sets=exs[exId];if(!sets)return;
+        var best=0;
+        sets.forEach(function(s){
+          if(s.done&&s.weight&&s.reps){
+            var e=calc1RM(parseFloat(s.weight),parseInt(s.reps));
+            if(e>best)best=e;
+          }
+        });
+        if(best>0){
+          if(!byDate[entry.date])byDate[entry.date]={};
+          byDate[entry.date][exId]=best;
+        }
+      });
+    });
+  });
+
+  var dates=Object.keys(byDate);dates.sort();
+  return dates.map(function(d){return{date:d,values:byDate[d]}});
+}
+
+function getVolumeTrends(config,rangeDays){
+  var weeks=Math.ceil(rangeDays/7);
+  var now=new Date();var dow=now.getDay();
+  var thisMon=new Date(now);thisMon.setDate(now.getDate()-((dow+6)%7));thisMon.setHours(0,0,0,0);
+  var results=[];
+
+  for(var w=0;w<weeks;w++){
+    var mon=new Date(thisMon);mon.setDate(thisMon.getDate()-w*7);
+    var vol=calcVolumeForWeek(config,mon,null);
+    if(vol){
+      results.unshift({weekStart:toISODate(mon),volume:vol});
+    }
+  }
+  return results;
+}
+
+function getBodyweightTrends(rangeDays){
+  var cutoff=new Date();cutoff.setDate(cutoff.getDate()-rangeDays);
+  var cutoffStr=toISODate(cutoff);
+  var points=[];
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(!k||!k.startsWith(LS+"metrics_"))continue;
+    var date=k.slice((LS+"metrics_").length);
+    if(date<cutoffStr)continue;
+    try{
+      var d=JSON.parse(localStorage.getItem(k));
+      if(d&&d.bodyweight){
+        points.push({date:date,weight:parseFloat(d.bodyweight)});
+      }
+    }catch(e){}
+  }
+  points.sort(function(a,b){return a.date.localeCompare(b.date)});
+  return points;
+}
+
+function getDefaultCompoundLifts(config){
+  var scored=[];
+  config.days.forEach(function(day){
+    day.exercises.forEach(function(ex){
+      var range=parseRepRange(ex.reps);
+      var score=(ex.muscles||[]).length*10+(20-range.max);
+      scored.push({id:ex.id,name:ex.name,dayId:day.id,score:score});
+    });
+  });
+  scored.sort(function(a,b){return b.score-a.score});
+  var seen={};var result=[];
+  scored.forEach(function(s){
+    if(!seen[s.name]&&result.length<4){
+      seen[s.name]=true;
+      result.push({id:s.id,name:s.name,dayId:s.dayId});
+    }
+  });
+  return result;
+}
+
+function calc7DayAverage(points){
+  if(points.length<2)return[];
+  return points.map(function(p,i){
+    var start=Math.max(0,i-6);
+    var slice=points.slice(start,i+1);
+    var sum=0;slice.forEach(function(s){sum+=s.weight});
+    return{date:p.date,avg:parseFloat((sum/slice.length).toFixed(1))};
+  });
 }
 
 /* ── Body Metrics ── */
