@@ -2764,7 +2764,62 @@ function StrengthTrendsSection(props){
   return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Strength trends coming soon...");
 }
 function VolumeTrendsSection(props){
-  return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Volume trends coming soon...");
+  var config=props.config,rangeDays=props.rangeDays;
+  var targets=useMemo(function(){return getVolumeTargets()},[]);
+  var data=useMemo(function(){return getVolumeTrends(config,rangeDays)},[config,rangeDays]);
+  var muscleKeys=Object.keys(MUSCLE_LABELS);
+  var sd=useState(null),selectedMuscle=sd[0],setSelectedMuscle=sd[1];
+
+  if(data.length===0){
+    return h("div",{style:{padding:"16px 0",textAlign:"center"}},
+      h("div",{style:{fontSize:20,marginBottom:6},"aria-hidden":"true"},"\uD83D\uDCCA"),
+      h("div",{style:{fontSize:12,color:"var(--text-dim)"}},"No volume data yet. Complete workouts to see trends."));
+  }
+
+  var activeMuscles=muscleKeys.filter(function(m){
+    return data.some(function(w){return w.volume[m]>0});
+  });
+
+  if(selectedMuscle){
+    var target=targets[selectedMuscle]||[10,20];
+    var maxSets=Math.max.apply(null,data.map(function(w){return w.volume[selectedMuscle]||0}).concat([target[1]]));
+    return h("div",{style:{paddingBottom:12}},
+      h("button",{onClick:function(){setSelectedMuscle(null)},className:"btn btn--ghost btn--xs",style:{marginBottom:8}},"\u2190 All Muscles"),
+      h("div",{style:{fontSize:13,fontWeight:700,color:"var(--text-bright)",marginBottom:8}},MUSCLE_LABELS[selectedMuscle]),
+      h("div",{style:{fontSize:10,color:"var(--text-dim)",marginBottom:10}},"Target: "+target[0]+"-"+target[1]+" sets/week"),
+      data.map(function(week){
+        var sets=week.volume[selectedMuscle]||0;
+        var pct=maxSets>0?sets/maxSets:0;
+        var color=sets===0?"var(--text-dim)":sets<target[0]?"var(--accent)":sets>target[1]?"var(--danger)":"var(--success)";
+        return h("div",{key:week.weekStart,style:{display:"flex",alignItems:"center",gap:8,marginBottom:4}},
+          h("span",{style:{width:50,fontSize:10,color:"var(--text-dim)",fontWeight:600,flexShrink:0}},formatDate(week.weekStart)),
+          h("div",{className:"vol-bar",style:{flex:1}},
+            h("div",{className:"vol-fill",style:{width:(pct*100)+"%",background:color,minWidth:sets>0?2:0}}),
+            h("span",{style:{position:"absolute",right:4,top:0,lineHeight:"16px",fontSize:9,fontWeight:700,color:"var(--text-secondary)"}},sets>0?sets:"")),
+          h("span",{style:{width:28,fontSize:9,fontWeight:700,color:color,flexShrink:0}},
+            sets===0?"\u2014":sets<target[0]?"Low":sets>target[1]?"High":"OK"));
+      }));
+  }
+
+  return h("div",{style:{paddingBottom:12}},
+    h("div",{style:{fontSize:10,color:"var(--text-dim)",marginBottom:10}},"Tap a muscle to see weekly breakdown."),
+    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
+      activeMuscles.map(function(m){
+        var weekVals=data.map(function(w){return w.volume[m]||0});
+        var target2=targets[m]||[10,20];
+        var latest=weekVals[weekVals.length-1]||0;
+        var color=latest===0?"var(--text-dim)":latest<target2[0]?"var(--accent)":latest>target2[1]?"var(--danger)":"var(--success)";
+        var sparkW=60,sparkH=16;
+        var mx2=Math.max.apply(null,weekVals.concat([1]));
+        var sparkPath=weekVals.map(function(v,i){return(i*sparkW/(Math.max(1,weekVals.length-1)))+","+(sparkH-(v/mx2)*sparkH)}).join(" ");
+        return h("button",{key:m,onClick:function(){setSelectedMuscle(m)},
+          style:{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,cursor:"pointer",textAlign:"left"}},
+          h("div",{style:{flex:1}},
+            h("div",{style:{fontSize:11,fontWeight:700,color:"var(--text-secondary)"}},MUSCLE_LABELS[m]),
+            h("div",{style:{fontSize:13,fontWeight:800,color:color}},latest+" sets")),
+          weekVals.length>=2?h("svg",{width:sparkW,height:sparkH,viewBox:"0 0 "+sparkW+" "+sparkH,"aria-hidden":"true"},
+            h("polyline",{points:sparkPath,fill:"none",stroke:color,strokeWidth:1.5,strokeLinecap:"round",strokeLinejoin:"round"})):null);
+      })));
 }
 function BodyweightTrendSection(props){
   return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Bodyweight trend coming soon...");
