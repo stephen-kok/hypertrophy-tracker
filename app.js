@@ -3278,6 +3278,14 @@ function WorkoutCalendar(props){
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.4)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"15+ sets"))));
 }
 
+/* ─── DayEditor placeholder (implemented in Task 3) ─── */
+function DayEditor(props){
+  var onBack=props.onBack;
+  return h("div",null,
+    h("button",{onClick:onBack,className:"btn btn--ghost btn--xs"},"\u2190 Back"),
+    h("div",{style:{padding:"24px 0",textAlign:"center",color:"var(--text-dim)"}},"Day editor loading..."));
+}
+
 /* ═══ PROGRAM BUILDER ═══ */
 function ProgramBuilder(props){
   var config=props.config,onClose=props.onClose,onConfigChange=props.onConfigChange;
