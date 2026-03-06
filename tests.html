@@ -50,6 +50,19 @@ function calcPlates(totalWeight,unit,barOverride){
   return{bar:bar,plates:result,remainder:Math.round(rem*100)/100,barOnly:false};
 }
 
+var _testStore={};
+function lsGet(k){var v=_testStore[k];return v===undefined?null:JSON.parse(JSON.stringify(v))}
+function lsSet(k,v){_testStore[k]=JSON.parse(JSON.stringify(v))}
+
+var MAX_MESO_HISTORY=20;
+function getMesoHistory(){return lsGet("meso_history")||[]}
+function saveMesoSnapshot(snapshot){
+  var hist=getMesoHistory();
+  hist.unshift(snapshot);
+  if(hist.length>MAX_MESO_HISTORY)hist=hist.slice(0,MAX_MESO_HISTORY);
+  lsSet("meso_history",hist);
+}
+
 function fmtTime(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 function fmtElapsed(s){var hr=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return hr>0?hr+"h "+m+"m":m>0?m+"m "+String(sec).padStart(2,"0")+"s":sec+"s"}
 
@@ -602,6 +615,34 @@ suite("Version sync — APP_VERSION matches CACHE_NAME");
   }).catch(function(){cacheVersion=-1;checkSync()});
   /* Defer output until async checks complete (fall through to output will run first if sync) */
   if(!done){results.push('<div style="color:var(--text-dim);font-style:italic">Version sync test: async check pending...</div>')}
+})();
+
+suite("Meso History");
+
+assert("getMesoHistory returns array", Array.isArray(getMesoHistory()), true);
+
+(function(){
+  /* Test saveMesoSnapshot caps at MAX_MESO_HISTORY */
+  _testStore={};
+  for(var i=0;i<25;i++)saveMesoSnapshot({startDate:"2026-"+String(i+1).padStart(2,"0")+"-01"});
+  var hist=getMesoHistory();
+  assert("saveMesoSnapshot caps at MAX_MESO_HISTORY", hist.length === MAX_MESO_HISTORY, "got "+hist.length);
+  assert("Most recent snapshot is first", hist[0].startDate==="2026-25-01", "got "+hist[0].startDate);
+  _testStore={};
+})();
+
+(function(){
+  /* Test getMesoHistory returns empty array when no data */
+  _testStore={};
+  assert("getMesoHistory empty when no data", getMesoHistory().length===0);
+  /* Test single snapshot */
+  saveMesoSnapshot({startDate:"2026-01-01",endDate:"2026-01-28",sessionsLogged:12,avgRpe:7.5});
+  var hist=getMesoHistory();
+  assert("Single snapshot stored", hist.length===1);
+  assert("Snapshot has correct startDate", hist[0].startDate==="2026-01-01");
+  assert("Snapshot has correct sessionsLogged", hist[0].sessionsLogged===12);
+  assert("Snapshot has correct avgRpe", hist[0].avgRpe===7.5);
+  _testStore={};
 })();
 
 /* ═══ Output ═══ */

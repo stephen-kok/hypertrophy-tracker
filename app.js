@@ -60,6 +60,7 @@ var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
 var MS_PER_HOUR=3600000;          /* milliseconds in one hour — used for grace period and SW update interval */
 var MAX_SESSION_HISTORY=100;      /* cap on session history entries kept in localStorage */
 var MAX_TEMPLATES=20;             /* maximum saved workout templates */
+var MAX_MESO_HISTORY=20;         /* cap on mesocycle history snapshots */
 var SAVE_FLASH_MS=1600;           /* duration the save indicator stays visible */
 var SW_UPDATE_INTERVAL_MS=MS_PER_HOUR; /* service worker update check interval */
 var INACTIVITY_MS=30*60*1000;          /* auto-end session after 30 min of no interaction */
@@ -1729,8 +1730,72 @@ function getMesoRepTarget(baseReps,week){
   if(shift===0)return null;/* No change for week 1 */
   return{min:newMin,max:newMax,label:"Wk"+week+": "+newMin+"-"+newMax+" reps"};
 }
-function advanceMesoWeek(){var m=getMesocycle();m.week=m.week>=4?1:m.week+1;if(m.week===1)m.startDate=today();setMesocycle(m);return m}
+function advanceMesoWeek(config){
+  var m=getMesocycle();
+  var wasWeek4=m.week>=4;
+  m.week=m.week>=4?1:m.week+1;
+  if(wasWeek4&&config){
+    var endDate=today();
+    var snapshot=buildMesoSnapshot(config,m.startDate||endDate,endDate);
+    saveMesoSnapshot(snapshot);
+  }
+  if(m.week===1)m.startDate=today();
+  setMesocycle(m);
+  return m;
+}
 function resetMesocycle(){var m={week:1,startDate:today()};setMesocycle(m);return m}
+
+/* ── Meso History ── */
+function getMesoHistory(){return lsGet("meso_history")||[]}
+function saveMesoSnapshot(snapshot){
+  var hist=getMesoHistory();
+  hist.unshift(snapshot);
+  if(hist.length>MAX_MESO_HISTORY)hist=hist.slice(0,MAX_MESO_HISTORY);
+  lsSet("meso_history",hist);
+}
+function buildMesoSnapshot(config,startDate,endDate){
+  if(!_historyBuilt)buildHistoryIndex();
+  var sessionsLogged=0,rpeSum=0,rpeCount=0;
+  var volumePerMuscle={};
+  var weeklyVolume=[0,0,0,0];
+  var prsHit=[];
+  var startD=new Date(startDate+"T00:00:00");
+
+  /* Scan session history for sessions in date range */
+  var sessionHist=lsGet(SESSION_HISTORY_KEY)||[];
+  sessionHist.forEach(function(s){
+    if(s.date>=startDate&&s.date<=endDate){
+      sessionsLogged++;
+      if(s.sessionRpe){rpeSum+=s.sessionRpe;rpeCount++}
+      if(s.prs)prsHit.push({date:s.date,dayTitle:s.dayTitle,count:s.prs});
+      /* Determine which meso week this session fell in (0-indexed) */
+      var sd=new Date(s.date+"T00:00:00");
+      var daysDiff=Math.round((sd-startD)/(86400000));
+      var weekIdx=Math.min(3,Math.floor(daysDiff/7));
+      weeklyVolume[weekIdx]+=(s.sets||0);
+    }
+  });
+
+  /* Scan volume per muscle across the 4 weeks */
+  for(var w=0;w<4;w++){
+    var mon=new Date(startD);mon.setDate(startD.getDate()+w*7);
+    var vol=calcVolumeForWeek(config,mon,null);
+    if(vol){Object.keys(vol).forEach(function(m){
+      if(!volumePerMuscle[m])volumePerMuscle[m]=0;
+      volumePerMuscle[m]+=vol[m];
+    })}
+  }
+
+  return{
+    startDate:startDate,
+    endDate:endDate,
+    sessionsLogged:sessionsLogged,
+    avgRpe:rpeCount>0?parseFloat((rpeSum/rpeCount).toFixed(1)):null,
+    volumePerMuscle:volumePerMuscle,
+    prsHit:prsHit,
+    weeklyVolume:weeklyVolume
+  };
+}
 
 /* ── Body Metrics ── */
 function BodyMetrics(props){
@@ -2316,7 +2381,7 @@ function SettingsPanel(props){
       h("div",{style:{fontSize:10,color:"var(--info)",marginBottom:10,fontStyle:"italic"}},MESO_WEEK_LABELS[getMesocycle().week]),
       h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10}},
         h("span",{style:{fontSize:13,fontWeight:700,color:"var(--info)"}},"Week "+getMesocycle().week+" of 4"),
-        h("button",{onClick:function(){var m=advanceMesoWeek();if(props.onMesoChange)props.onMesoChange(m)},className:"btn btn--info btn--sm"},"Next Week"),
+        h("button",{onClick:function(){var m=advanceMesoWeek(config);if(props.onMesoChange)props.onMesoChange(m)},className:"btn btn--info btn--sm"},"Next Week"),
         h("button",{onClick:function(){showConfirm({title:"Reset Mesocycle",msg:"Reset to Week 1?",confirmLabel:"Reset",onConfirm:function(){var m=resetMesocycle();if(props.onMesoChange)props.onMesoChange(m)}})},className:"btn btn--ghost btn--sm"},"Reset")),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Undulating Periodization"),h("div",{className:"settings-row__desc"},"Auto-adjust rep targets each week")),h(Toggle,{on:getMesocycle().mode==="undulating",onToggle:function(){var m=getMesocycle();m.mode=m.mode==="undulating"?"linear":"undulating";setMesocycle(m);if(props.onMesoChange)props.onMesoChange(m)},label:"Undulating periodization"}))),
     h(SettingsGroup,{title:"Data"},
@@ -2521,7 +2586,7 @@ function MainApp(props){
       showMesoAdvance?h("div",{style:{background:"var(--info-bg)",border:"1px solid var(--info-border)",borderRadius:10,padding:"10px 12px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}},
         h("div",null,h("div",{style:{fontSize:12,fontWeight:700,color:"var(--info)"}},"Week "+meso.week+" Complete"),h("div",{style:{fontSize:11,color:"var(--text-secondary)"}},"All training days done this week. Advance mesocycle?")),
         h("div",{style:{display:"flex",gap:6}},
-          h("button",{onClick:function(){var m=advanceMesoWeek();setMeso(m);lsSet("meso_advanced_wk"+(m.week-1>0?m.week-1:4),true);setShowMesoAdvance(false);refresh()},className:"btn btn--info btn--sm"},"Advance"),
+          h("button",{onClick:function(){var m=advanceMesoWeek(config);setMeso(m);lsSet("meso_advanced_wk"+(m.week-1>0?m.week-1:4),true);setShowMesoAdvance(false);refresh()},className:"btn btn--info btn--sm"},"Advance"),
           h("button",{onClick:function(){lsSet("meso_advanced_wk"+meso.week,true);setShowMesoAdvance(false)},className:"btn btn--ghost btn--sm"},"Dismiss"))):null,
       h("div",{id:"day-panel-"+DAYS[activeDay].id,role:"tabpanel","aria-label":DAYS[activeDay].label},
         h(DayView,{key:activeDay,day:DAYS[activeDay],refresh:refresh,config:config,fatigue:fatigue,onMesoChange:function(m){setMeso(m)}}))),
