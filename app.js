@@ -3292,6 +3292,7 @@ function App(){
       var customErr=validateConfig(custom);
       if(!customErr){setConfig(custom);return}
       /* Invalid custom config — fall through to JSON fetch */
+      console.warn("[ProgramBuilder] Custom config failed validation:",customErr);
     }
     var configUrl="configs/"+safeId+".json";
     fetch(configUrl).then(function(r){if(!r.ok)throw new Error("Profile not found: "+profileId);return r.json()}).then(function(data){
