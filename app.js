@@ -37,13 +37,9 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=47;
+var APP_VERSION=48;
 var WHATS_NEW=[
-  "Bug fix: Progressive overload suggestions are now more accurate for single-leg and single-arm exercises",
-  "Bug fix: Volume tracking no longer double-counts sets for unilateral exercises",
-  "Bug fix: Readiness score no longer blocks rep and set progression — only weight increases",
-  "Bug fix: Mesocycle advance prompt now waits until your full week is complete",
-  "Bug fix: Strength trend chart now updates correctly mid-session"
+  "Performance: the app is now noticeably more responsive while logging sets — reduced screen refreshes during input"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -728,6 +724,7 @@ var DayDataContext=createContext(null);
 function DayDataProvider(props){
   var cacheRef=useRef({});
   var s=useState(0),rev=s[0],bump=s[1];
+  var revTimerRef=useRef(null);
 
   var getData=useCallback(function(dayId){
     if(!cacheRef.current[dayId])cacheRef.current[dayId]=loadDayData(dayId);
@@ -735,7 +732,12 @@ function DayDataProvider(props){
   },[]);
 
   var saveData=useCallback(function(dayId,data){
-    cacheRef.current[dayId]=data;saveDayData(dayId,data);bump(function(r){return r+1});
+    /* Update cache immediately so getData() is always consistent */
+    cacheRef.current[dayId]=data;
+    saveDayData(dayId,data);
+    /* Debounce rev bump — prevents context re-renders on every keystroke */
+    if(revTimerRef.current)clearTimeout(revTimerRef.current);
+    revTimerRef.current=setTimeout(function(){bump(function(r){return r+1})},SAVE_DEBOUNCE_MS);
   },[]);
 
   var invalidate=useCallback(function(dayId){
@@ -1028,22 +1030,27 @@ function RestTimer(props){
 /* ── Strength Trend Chart ── */
 function StrengthChart(props){
   var hist=props.hist;
-  if(hist.length<2)return null;
-  var points=hist.slice().reverse().map(function(entry){
-    var bestW=bestWeight(entry.sets.filter(function(s){return s.done&&s.weight&&s.reps}));var bestE1rm=0;
-    entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var e=calc1RM(parseFloat(s.weight),parseInt(s.reps));if(e>bestE1rm)bestE1rm=e}});
-    return{date:entry.date,weight:bestW,e1rm:bestE1rm};
-  }).filter(function(p){return p.weight>0});
-  if(points.length<2)return null;
-  var W=280,H=70,pad=4;
-  var e1rmVals=points.map(function(p){return p.e1rm});var wVals=points.map(function(p){return p.weight});
-  var mn=Math.min(Math.min(...e1rmVals),Math.min(...wVals));
-  var mx=Math.max(Math.max(...e1rmVals),Math.max(...wVals));
-  var range=mx-mn||1;
-  var toPath=function(vals){return vals.map(function(v,i){return(pad+i*(W-2*pad)/(vals.length-1))+","+(pad+(1-(v-mn)/range)*(H-2*pad))}).join(" ")};
-  var e1rmPath=toPath(e1rmVals);var wPath=toPath(wVals);
-  var first=e1rmVals[0],last=e1rmVals[e1rmVals.length-1];var delta=last-first;
-  var arrow=delta>0?"\u2191":delta<0?"\u2193":"\u2192";var color=delta>0?"var(--success)":delta<0?"var(--danger)":"var(--text-dim)";
+  var chart=useMemo(function(){
+    if(hist.length<2)return null;
+    var points=hist.slice().reverse().map(function(entry){
+      var bestW=bestWeight(entry.sets.filter(function(s){return s.done&&s.weight&&s.reps}));var bestE1rm=0;
+      entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var e=calc1RM(parseFloat(s.weight),parseInt(s.reps));if(e>bestE1rm)bestE1rm=e}});
+      return{date:entry.date,weight:bestW,e1rm:bestE1rm};
+    }).filter(function(p){return p.weight>0});
+    if(points.length<2)return null;
+    var W=280,H=70,pad=4;
+    var e1rmVals=points.map(function(p){return p.e1rm});var wVals=points.map(function(p){return p.weight});
+    var mn=Math.min(Math.min(...e1rmVals),Math.min(...wVals));
+    var mx=Math.max(Math.max(...e1rmVals),Math.max(...wVals));
+    var range=mx-mn||1;
+    var toPath=function(vals){return vals.map(function(v,i){return(pad+i*(W-2*pad)/(vals.length-1))+","+(pad+(1-(v-mn)/range)*(H-2*pad))}).join(" ")};
+    var e1rmPath=toPath(e1rmVals);var wPath=toPath(wVals);
+    var first=e1rmVals[0],last=e1rmVals[e1rmVals.length-1];var delta=last-first;
+    var arrow=delta>0?"\u2191":delta<0?"\u2193":"\u2192";var color=delta>0?"var(--success)":delta<0?"var(--danger)":"var(--text-dim)";
+    return{W:W,H:H,pad:pad,e1rmPath:e1rmPath,wPath:wPath,delta:delta,arrow:arrow,color:color,points:points};
+  },[hist]);
+  if(!chart)return null;
+  var W=chart.W,H=chart.H,pad=chart.pad,e1rmPath=chart.e1rmPath,wPath=chart.wPath,delta=chart.delta,arrow=chart.arrow,color=chart.color,points=chart.points;
   return h("div",{style:{marginTop:8,marginBottom:4,padding:"8px 10px",background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid var(--border)"},"aria-label":"Strength trend chart"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},
       h("span",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)"}},"Strength Trend"),
@@ -1196,7 +1203,7 @@ function SetLogger(props){
   var schemeData=useMemo(function(){var ov=getExOverrides(baseExId);if(!ov||!ov.scheme||!SCHEME_PRESETS[ov.scheme])return null;return{type:ov.scheme,sets:SCHEME_PRESETS[ov.scheme](numSets,ov.reps||props.reps||"8-10")}},[baseExId,numSets]);
   var s=useState(function(){var saved=dayData.getData(dayId);var ex=saved.exercises&&saved.exercises[exId];var len=ex?Math.max(numSets,ex.length):numSets;return Array.from({length:len},function(_,i){return ex&&ex[i]?{weight:ex[i].weight||"",reps:ex[i].reps||"",done:!!ex[i].done,extra:i>=numSets||undefined}:{weight:"",reps:"",done:false}})}),data=s[0],setData=s[1];
   var lastSession=useMemo(function(){var h=getHistory(dayId,exId,1);return h.length?h[0].sets:null},[dayId,exId]);
-  var save=useCallback(function(d){var all=dayData.getData(dayId);if(!all.exercises)all.exercises={};all.exercises[exId]=d;dayData.saveData(dayId,all)},[dayId,exId,dayData]);
+  var save=useCallback(function(d){var all=dayData.getData(dayId);if(!all.exercises)all.exercises={};all.exercises[exId]=d;dayData.saveData(dayId,all)},[dayId,exId,dayData.getData,dayData.saveData]);
   var persist=useCallback(function(d){save(d);markSessionStart()},[save]);
   var MAX_WEIGHT=1500,MAX_REPS=100;
   var update=function(idx,field,val){if(val!==""&&(isNaN(Number(val))||Number(val)<0))return;if(val!==""&&field==="weight"&&Number(val)>MAX_WEIGHT)return;if(val!==""&&field==="reps"&&Number(val)>MAX_REPS)return;setData(function(prev){var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{[field]:val}):s});save(next);return next})};
@@ -1376,7 +1383,7 @@ function ExerciseCard(props){
     if(deloadMod&&deloadMod.weight)return deloadMod.weight;
     if(!isDeloadWeek)return null;var hist=getBilateralHistory(dayId,exercise,1);if(!hist.length)return null;var comp=hist[0].sets.filter(function(s){return s.done&&s.weight});if(!comp.length)return null;var w=parseFloat(comp[0].weight)||0;var intensityStrat=DELOAD_STRATEGIES.find(function(s){return s.id==="intensity"});var deloadFactor=intensityStrat?intensityStrat.factor:0.55;return w>0?Math.round(w*deloadFactor):null;
   },[dayId,exercise.id,isDeloadWeek,deloadMod]);
-  var e1rm=useMemo(function(){var best=0;var checkData=isBilateral?[].concat(saved.exercises&&saved.exercises[exercise.id+"_L"]||[],saved.exercises&&saved.exercises[exercise.id+"_R"]||[]):[exData||[]].flat();checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[exData,dayData.rev]);
+  var e1rm=useMemo(function(){var best=0;var d=dayData.getData(dayId);var checkData=isBilateral?[].concat(d.exercises&&d.exercises[exercise.id+"_L"]||[],d.exercises&&d.exercises[exercise.id+"_R"]||[]):d.exercises&&d.exercises[bilateralExId]||[];checkData.forEach(function(s){if(s&&s.done&&s.weight&&s.reps){var e=calc1RM(s.weight,s.reps);if(e>best)best=e}});return best},[dayId,bilateralExId,isBilateral,exercise.id,dayData.rev]);
   /* PR detection */
   var isPR=useMemo(function(){
     if(e1rm<=0)return false;
@@ -2384,6 +2391,8 @@ function MainApp(props){
         config.days.forEach(function(day){var customs=getCustomExercises(day.id);var allEx=day.exercises.concat(customs);allEx.forEach(function(e){totalSets+=totalSetsFor(e)});var entries=_historyIndex[day.id]||[];for(var ei=0;ei<entries.length;ei++){if(entries[ei].date===dateStr){allEx.forEach(function(e){doneSets+=countBilateralDone(e,entries[ei].data)});break}}});
       }
       result.push({dow:wi,hasSets:doneSets>0,complete:totalSets>0&&doneSets>=totalSets})}return result},[config,dayData.rev]);
+  /* Streak display — recomputed when session data changes (streak updates at session end) */
+  var headerStreak=useMemo(function(){return getStreakData()},[dayData.rev]);
   /* Debounce fatigue calculation — only recompute 500ms after last data change to avoid 40+ localStorage reads per keystroke */
   var sfat=useState(null),fatigue=sfat[0],setFatigue=sfat[1];
   useEffect(function(){var id=setTimeout(function(){setFatigue(calcFatigueScore(config,dayData))},500);return function(){clearTimeout(id)}},[config,dayData.rev]);
@@ -2417,7 +2426,7 @@ function MainApp(props){
       return weekTotal>0&&weekDone>=Math.ceil(weekTotal*0.5);
     });
     if(allDaysDone)setShowMesoAdvance(true);
-  },[DAYS,dayData]);
+  },[DAYS,dayData.rev]);
   useEffect(function(){checkMesoAdvance()},[checkMesoAdvance]);
   useEffect(function(){var onVis=function(){if(!document.hidden)checkMesoAdvance()};document.addEventListener("visibilitychange",onVis);return function(){document.removeEventListener("visibilitychange",onVis)}},[checkMesoAdvance]);
 
@@ -2462,7 +2471,7 @@ function MainApp(props){
             fatigue?h("span",{style:{fontSize:9,fontWeight:700,color:fatigue.color,marginLeft:4}},"\u25CF "+fatigue.label):null)),
         h("div",{style:{textAlign:"right"}},
           h("div",{style:{display:"flex",alignItems:"center",gap:6,justifyContent:"flex-end"}},
-            (function(){var sd=getStreakData();return sd.count>=2?h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"},title:"Workout streak"},sd.vacationMode?"\uD83C\uDFD6\uFE0F":"\uD83D\uDD25"," "+sd.count):null})(),
+            headerStreak.count>=2?h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"},title:"Workout streak"},headerStreak.vacationMode?"\uD83C\uDFD6\uFE0F":"\uD83D\uDD25"," "+headerStreak.count):null,
             h("div",{style:{fontSize:11,color:"var(--text-dim)"}},formatDateFull(today()))),
           h("div",{style:{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}},h(SessionTimer,{onRefresh:refresh})))),
       /* Day tabs */

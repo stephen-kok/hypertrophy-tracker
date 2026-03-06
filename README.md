@@ -183,6 +183,15 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v48 — Performance (2026-03-05)
+
+- **Perf**: `DayDataProvider` now debounces context re-renders — keystroke inputs no longer trigger full tree re-renders, only the 300ms-debounced rev bump does
+- **Perf**: `checkMesoAdvance` now depends on `dayData.rev` (scalar) rather than the context object — avoids recreating the callback on every data change
+- **Perf**: Streak display in header is now memoized via `useMemo` — replaces a per-render localStorage read
+- **Perf**: `StrengthChart` computation (path generation, e1RM per point) now runs inside `useMemo` keyed on history data
+- **Perf**: `e1rm` in `ExerciseCard` now reads data fresh inside `useMemo` keyed on `dayData.rev` — eliminates stale array reference triggering unnecessary recalculations
+- **Perf**: `SetLogger.save` useCallback now depends on stable `getData`/`saveData` refs instead of the full context object
+
 ### v47 — Business Logic & PWA Fixes (2026-03-05)
 
 - **Bug fix**: Bilateral (unilateral) exercise volume no longer double-counts sets — capped at exercise set count
