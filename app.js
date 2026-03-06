@@ -37,9 +37,11 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=48;
+var APP_VERSION=49;
 var WHATS_NEW=[
-  "Performance: the app is now noticeably more responsive while logging sets — reduced screen refreshes during input"
+  "Accessibility: exercise tabs now support arrow key navigation for keyboard and switch access users",
+  "Accessibility: rest timer completion is now announced to screen readers",
+  "Accessibility: streak badge and timer preset buttons now have descriptive labels for screen readers"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -909,8 +911,8 @@ function ConfirmDialog(){
   useFocusTrap(trapRef,stableClose);
   if(!_confirmState.show)return null;
   var danger=_confirmState.danger;
-  return h("div",{className:"overlay overlay--center",onClick:function(e){if(e.target===e.currentTarget){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()}},role:"dialog","aria-modal":"true","aria-label":_confirmState.title,"aria-describedby":_confirmState.msg?"confirm-desc":undefined},
-    h("div",{ref:dialogRef,className:"fade-in",style:{background:"var(--surface)",borderRadius:16,padding:"24px 20px",width:"90%",maxWidth:340,textAlign:"center"}},
+  return h("div",{className:"overlay overlay--center",onClick:function(e){if(e.target===e.currentTarget){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()}}},
+    h("div",{ref:dialogRef,className:"fade-in",role:"dialog","aria-modal":"true","aria-label":_confirmState.title,"aria-describedby":_confirmState.msg?"confirm-desc":undefined,style:{background:"var(--surface)",borderRadius:16,padding:"24px 20px",width:"90%",maxWidth:340,textAlign:"center"}},
       h("h3",{style:{fontSize:16,fontWeight:800,color:"var(--text-bright)",marginBottom:8}},_confirmState.title),
       _confirmState.msg?h("p",{id:"confirm-desc",style:{fontSize:13,color:"var(--text-secondary)",marginBottom:20,lineHeight:1.5}},_confirmState.msg):null,
       h("div",{style:{display:"flex",gap:10}},
@@ -983,7 +985,7 @@ function FloatingTimer(){
 
   if(!display)return null;
   var isDone=display.remaining===0;
-  return h("div",{style:{position:"fixed",bottom:56,left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between"},role:"status","aria-live":"off","aria-label":isDone?"Rest complete":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
+  return h("div",{style:{position:"fixed",bottom:56,left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between"},"aria-label":isDone?"Rest complete":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
     isDone?h("span",{role:"status","aria-live":"assertive",className:"sr-only"},"Rest complete, time to start your next set"):null,
     h("div",{style:{display:"flex",alignItems:"center",gap:10}},
       isDone?h("span",{style:{fontSize:14,fontWeight:800,color:"var(--success)"}},"\u2705 REST COMPLETE"):
@@ -1463,11 +1465,9 @@ function ExerciseCard(props){
         swapSearch.length>=2?h("button",{onClick:function(){if(onSwap)onSwap(exercise.id,swapSearch,false);setShowSwapMenu(false);setSwapSearch("")},className:"btn btn--accent btn--xs",style:{marginTop:4,width:"100%"}},"Swap to \""+swapSearch+"\""):null)):null,
     !expanded&&isNext&&!allDone?h(QuickLogBtn,{exId:bilateralExId,numSets:exercise.sets,dayId:dayId,exKey:exKey,rest:exercise.rest,onLog:onQuickLog}):null,
     expanded&&h("div",{className:"fade-in",style:{marginTop:10,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:10}},
-      h("div",{className:"ex-tabs",role:"tablist"},
-        h("button",{onClick:function(){setActiveTab("log")},className:"ex-tab"+(activeTab==="log"?" ex-tab--active":""),role:"tab","aria-selected":activeTab==="log"?"true":"false"},"Log"),
-        h("button",{onClick:function(){setActiveTab("history")},className:"ex-tab"+(activeTab==="history"?" ex-tab--active":""),role:"tab","aria-selected":activeTab==="history"?"true":"false"},"History"),
-        h("button",{onClick:function(){setActiveTab("coach")},className:"ex-tab"+(activeTab==="coach"?" ex-tab--active":""),role:"tab","aria-selected":activeTab==="coach"?"true":"false"},"Coach")),
-      activeTab==="log"&&h("div",{role:"tabpanel"},
+      h("div",{className:"ex-tabs",role:"tablist","aria-label":"Exercise options"},
+        (function(){var tabs=["log","history","coach"];var labels={"log":"Log","history":"History","coach":"Coach"};return tabs.map(function(t,i){return h("button",{key:t,onClick:function(){setActiveTab(t)},onKeyDown:function(e){if(e.key==="ArrowRight")setActiveTab(tabs[(i+1)%tabs.length]);else if(e.key==="ArrowLeft")setActiveTab(tabs[(i-1+tabs.length)%tabs.length])},className:"ex-tab"+(activeTab===t?" ex-tab--active":""),role:"tab","aria-selected":activeTab===t?"true":"false","aria-controls":"tp-"+exercise.id+"-"+t,tabIndex:activeTab===t?0:-1},labels[t])})})()),
+      activeTab==="log"&&h("div",{role:"tabpanel",id:"tp-"+exercise.id+"-log"},
         overload?h("div",{style:{fontSize:12,color:overload.type==="hold"?"var(--info)":overload.type==="volume"?"var(--accent)":"var(--success)",background:overload.type==="hold"?"var(--info-bg)":overload.type==="volume"?"var(--accent-bg)":"var(--success-bg)",border:"1px solid "+(overload.type==="hold"?"var(--info-border)":overload.type==="volume"?"var(--accent-border)":"var(--success-border)"),borderRadius:8,padding:"8px 10px",marginBottom:8}},
           overload.type==="hold"?["\u23F8 ",h("strong",{key:"m"},overload.msg)]:
           overload.type==="volume"?["\uD83D\uDCC8 ",h("strong",{key:"m"},overload.msg)]:
@@ -1497,10 +1497,10 @@ function ExerciseCard(props){
         h(ExerciseNotes,{exId:exercise.id,dayId:dayId}),
         h(CardExtras,{exId:exercise.id,dayId:dayId,isMachine:!!exercise.machine,exercise:exercise,onUpdate:onSetUpdate}),
         !allDone?h("button",{onClick:toggleSkip,className:skipped?"btn btn--ghost btn--sm":"btn btn--ghost btn--sm",style:{marginTop:8,opacity:0.6}},skipped?"\u21A9 Undo Skip":"\u23ED Skip Exercise"):null),
-      activeTab==="history"&&h("div",{role:"tabpanel"},
+      activeTab==="history"&&h("div",{role:"tabpanel",id:"tp-"+exercise.id+"-history"},
         exercise._swappedFrom?h("div",{style:{fontSize:11,color:"var(--info)",marginBottom:6}},"\u21C4 Swapped from ",h("strong",null,exercise._swappedFrom)," for this session"):null,
         h(HistoryPanel,{dayId:dayId,exId:exercise.id,exercise:exercise})),
-      activeTab==="coach"&&h("div",{role:"tabpanel"},
+      activeTab==="coach"&&h("div",{role:"tabpanel",id:"tp-"+exercise.id+"-coach"},
         exercise.tip?h("div",{style:{padding:10,borderRadius:10,background:"var(--accent-bg)",border:"1px solid rgba(245,158,11,0.1)",fontSize:12,color:"var(--text-primary)",lineHeight:1.6,marginBottom:8}},
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--accent)",marginBottom:4}},"PERFORMANCE"),
           exercise.tip):null,
@@ -1945,7 +1945,7 @@ function PersonalRecords(props){
   var grouped=useMemo(function(){var g={};records.forEach(function(r){var key=r.muscles.length>0?r.muscles[0]:"other";if(!g[key])g[key]=[];g[key].push(r)});return g},[records]);
   return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Personal Records"},h("div",{className:"sheet fade-in",ref:sheetRef},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Personal Records"),h("button",{onClick:onClose,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715")),
-    h("div",{style:{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"},role:"tablist"},repFilters.map(function(rf){var active=repFilter===rf.val;return h("button",{key:rf.val,onClick:function(){setRepFilter(rf.val)},style:{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:700,border:active?"1px solid var(--accent)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},role:"tab","aria-selected":active?"true":"false"},rf.label)})),
+    h("div",{style:{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"},role:"group","aria-label":"Record type"},repFilters.map(function(rf){var active=repFilter===rf.val;return h("button",{key:rf.val,onClick:function(){setRepFilter(rf.val)},style:{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:700,border:active?"1px solid var(--accent)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},"aria-pressed":active?"true":"false"},rf.label)})),
     records.length===0?h("div",{className:"empty-state"},h("div",{className:"empty-state__icon"},"\uD83C\uDFC6"),h("div",{className:"empty-state__title"},"No records yet"),h("div",{className:"empty-state__desc"},"Complete sets to see PRs.")):
     h("div",{style:{maxHeight:"65vh",overflowY:"auto"}},Object.keys(grouped).map(function(muscle){
       return h("div",{key:muscle,style:{marginBottom:16}},
@@ -2268,9 +2268,9 @@ function SettingsPanel(props){
         editingPresets?h("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:8,alignItems:"center"}},
           timerPresets.map(function(sec){return h("div",{key:sec,style:{display:"flex",alignItems:"center",gap:2,padding:"4px 8px",borderRadius:6,background:"var(--accent-bg)",border:"1px solid var(--accent-border)"}},
             h("span",{style:{fontSize:11,fontWeight:600,color:"var(--accent)"}},sec+"s"),
-            h("button",{onClick:function(){var next=timerPresets.filter(function(s){return s!==sec});setTimerPresetsState(next);setPref("timerPresets",next)},style:{background:"none",border:"none",color:"var(--danger)",cursor:"pointer",fontSize:12,padding:"0 2px"}},"\u2715"))}),
+            h("button",{onClick:function(){var next=timerPresets.filter(function(s){return s!==sec});setTimerPresetsState(next);setPref("timerPresets",next)},"aria-label":"Remove "+sec+"s preset",style:{background:"none",border:"none",color:"var(--danger)",cursor:"pointer",fontSize:12,padding:"0 2px"}},"\u2715"))}),
           h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
-            h("input",{type:"number",inputMode:"numeric",value:presetInput,onChange:function(e){setPresetInput(e.target.value)},placeholder:"sec",className:"input input--sm",style:{width:50}}),
+            h("input",{type:"number",inputMode:"numeric",value:presetInput,onChange:function(e){setPresetInput(e.target.value)},placeholder:"sec","aria-label":"New timer preset in seconds",className:"input input--sm",style:{width:50}}),
             h("button",{onClick:function(){var v=parseInt(presetInput);if(v&&v>0&&v<=600&&timerPresets.indexOf(v)===-1){var next=timerPresets.concat([v]).sort(function(a,b){return a-b});setTimerPresetsState(next);setPref("timerPresets",next);setPresetInput("")}},className:"btn btn--accent btn--xs"},"+"))
         ):null),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"RIR Tracking"),h("div",{className:"settings-row__desc"},"Rate reps-in-reserve after each set")),h(Toggle,{on:showRir,onToggle:function(){var next=!showRir;setShowRir(next);setPref("showRir",next)},label:"Show RIR"})),
@@ -2471,7 +2471,7 @@ function MainApp(props){
             fatigue?h("span",{style:{fontSize:9,fontWeight:700,color:fatigue.color,marginLeft:4}},"\u25CF "+fatigue.label):null)),
         h("div",{style:{textAlign:"right"}},
           h("div",{style:{display:"flex",alignItems:"center",gap:6,justifyContent:"flex-end"}},
-            headerStreak.count>=2?h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"},title:"Workout streak"},headerStreak.vacationMode?"\uD83C\uDFD6\uFE0F":"\uD83D\uDD25"," "+headerStreak.count):null,
+            headerStreak.count>=2?h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"},"aria-label":(headerStreak.vacationMode?"Vacation mode":"Workout streak")+": "+headerStreak.count+" sessions"},h("span",{"aria-hidden":"true"},headerStreak.vacationMode?"\uD83C\uDFD6\uFE0F":"\uD83D\uDD25")," "+headerStreak.count):null,
             h("div",{style:{fontSize:11,color:"var(--text-dim)"}},formatDateFull(today()))),
           h("div",{style:{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}},h(SessionTimer,{onRefresh:refresh})))),
       /* Day tabs */

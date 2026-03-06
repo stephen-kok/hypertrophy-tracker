@@ -183,6 +183,15 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v49 — Accessibility (2026-03-05)
+
+- **a11y**: Exercise card tabs now support arrow-key navigation and have correct `aria-controls`/`id` linkage (WCAG 2.1.1)
+- **a11y**: `FloatingTimer` "Rest complete" is now reliably announced to screen readers — removed conflicting `aria-live="off"` from parent (WCAG 4.1.3)
+- **a11y**: `ConfirmDialog` `role="dialog"` and `aria-modal` now on the focus-trap container, not the overlay backdrop (WCAG 4.1.2)
+- **a11y**: Timer preset delete buttons have descriptive `aria-label` ("Remove Ns preset"); preset input has `aria-label` (WCAG 4.1.2)
+- **a11y**: Streak badge uses `aria-label` with full description; emoji marked `aria-hidden` (WCAG 1.1.1)
+- **a11y**: Personal Records filter buttons changed from `role="tablist"` to `role="group"` + `aria-pressed` — correct semantics for a filter control (WCAG 4.1.2)
+
 ### v48 — Performance (2026-03-05)
 
 - **Perf**: `DayDataProvider` now debounces context re-renders — keystroke inputs no longer trigger full tree re-renders, only the 300ms-debounced rev bump does
