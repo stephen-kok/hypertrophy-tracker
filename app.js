@@ -57,6 +57,12 @@ var SESSION_HISTORY_KEY="session_history"; /* profile-scoped via lsGet/lsSet (ht
 var STREAK_MILESTONES=[3,5,10,15,20,25,30,50,100];
 /* Mesocycle volume factor per week — paired with MESO_REP_SHIFT */
 var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
+var MS_PER_HOUR=3600000;          /* milliseconds in one hour — used for grace period and SW update interval */
+var MAX_SESSION_HISTORY=100;      /* cap on session history entries kept in localStorage */
+var MAX_TEMPLATES=20;             /* maximum saved workout templates */
+var SAVE_FLASH_MS=1600;           /* duration the save indicator stays visible */
+var SW_UPDATE_INTERVAL_MS=MS_PER_HOUR; /* service worker update check interval */
+var INACTIVITY_MS=30*60*1000;          /* auto-end session after 30 min of no interaction */
 var RPE_COLORS={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--warning)",10:"var(--danger)"};
 /* Bottom-nav configurable shortcut definitions */
 var NAV_SHORTCUTS_DEF=[
@@ -281,15 +287,6 @@ function setOnboarded(){try{localStorage.setItem("ht_onboarded","1")}catch(e){}}
 function restartSession(){lsSet("session_"+getSessionDate(),Date.now())}
 
 /* ═══ STORAGE CLEANUP ═══ */
-function getStorageStats(){
-  try{
-    var keys=[];var totalBytes=0;var oldest=null;
-    for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){var v=localStorage.getItem(k)||"";totalBytes+=k.length+v.length;
-      var atIdx=k.indexOf("@");if(atIdx!==-1){var date=k.slice(atIdx+1);if(date.length===10&&(!oldest||date<oldest))oldest=date}
-      keys.push(k)}}
-    return{keys:keys,totalBytes:totalBytes,keyCount:keys.length,oldestSession:oldest}
-  }catch(e){console.warn("[getStorageStats] Failed:",e.message);return{keys:[],totalBytes:0,keyCount:0,oldestSession:null}}
-}
 function cleanOldData(monthsToKeep){
   var cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-monthsToKeep);
   var cutoffStr=toISODate(cutoff);
@@ -322,7 +319,6 @@ function setUnit(u){setPref("unit",u)}
 function getAutoTimer(){return getPref("autotimer",true)}
 function setAutoTimer(v){setPref("autotimer",v)}
 function getDayMap(configDays){var saved=lsGet("pref_daymap");if(saved)return saved;var m={};configDays.forEach(function(d){m[d.id]=d.day});return m}
-function setDayMap(m){lsSet("pref_daymap",m)}
 
 /* ═══ PER-EXERCISE UNIT ═══ */
 function getExUnit(exId){var v=lsGet("eu_"+exId);return v||getUnit()}
@@ -370,7 +366,7 @@ function applySwaps(exercises,dayId){
 
 /* ═══ WORKOUT TEMPLATES ═══ */
 function getTemplates(){return lsGet("templates")||[]}
-function saveTemplate(name,dayId,exercises){var tpl=getTemplates();tpl.unshift({name:name,dayId:dayId,exercises:exercises.map(function(ex){return{id:ex.id,name:ex.name,sets:ex.sets,reps:ex.reps,rest:ex.rest,muscles:ex.muscles||[]}}),createdAt:today()});if(tpl.length>20)tpl=tpl.slice(0,20);lsSet("templates",tpl)}
+function saveTemplate(name,dayId,exercises){var tpl=getTemplates();tpl.unshift({name:name,dayId:dayId,exercises:exercises.map(function(ex){return{id:ex.id,name:ex.name,sets:ex.sets,reps:ex.reps,rest:ex.rest,muscles:ex.muscles||[]}}),createdAt:today()});if(tpl.length>MAX_TEMPLATES)tpl=tpl.slice(0,MAX_TEMPLATES);lsSet("templates",tpl)}
 function deleteTemplate(idx){var tpl=getTemplates();tpl.splice(idx,1);lsSet("templates",tpl)}
 
 /* ═══ CUSTOM VOLUME TARGETS ═══ */
@@ -607,7 +603,7 @@ function getStreakData(){
 }
 function saveStreakData(d){lsSet("streak_data",d)}
 function updateStreak(){
-  var d=getStreakData();var now=Date.now();var grace=(d.graceHours||48)*3600000;
+  var d=getStreakData();var now=Date.now();var grace=(d.graceHours||48)*MS_PER_HOUR;
   if(d.lastWorkout===getSessionDate())return;
   if(d.lastWorkoutTime&&now-d.lastWorkoutTime<=grace){d.count=(d.count||0)+1}else{d.count=1}
   d.lastWorkout=getSessionDate();d.lastWorkoutTime=now;
@@ -622,7 +618,7 @@ function _showVacationPrompt(d){
 }
 function checkStreakOnOpen(){
   var d=getStreakData();if(!d.lastWorkoutTime||d.count<1)return;
-  var now=Date.now();var grace=(d.graceHours||48)*3600000;
+  var now=Date.now();var grace=(d.graceHours||48)*MS_PER_HOUR;
   if(d.pendingBreak){_showVacationPrompt(d);return}
   if(!d.vacationMode&&now-d.lastWorkoutTime>grace){d.pendingBreak=true;saveStreakData(d);_showVacationPrompt(d)}
 }
@@ -903,7 +899,7 @@ var _saveFlashVisible=false;var _saveFlashListeners=[];var _saveFlashTimer=null;
 function showSaveFlash(){
   _saveFlashVisible=true;_saveFlashListeners.forEach(function(fn){fn(true)});
   if(_saveFlashTimer)clearTimeout(_saveFlashTimer);
-  _saveFlashTimer=setTimeout(function(){_saveFlashVisible=false;_saveFlashListeners.forEach(function(fn){fn(false)})},1600);
+  _saveFlashTimer=setTimeout(function(){_saveFlashVisible=false;_saveFlashListeners.forEach(function(fn){fn(false)})},SAVE_FLASH_MS);
 }
 function SaveFlash(){
   var s=useState(_saveFlashVisible),visible=s[0],setVisible=s[1];
@@ -1780,19 +1776,6 @@ function BodyMetrics(props){
 }
 
 /* ── Completion Summary ── */
-function calcWorkoutStreak(){
-  var hist=lsGet(SESSION_HISTORY_KEY)||[];if(!hist.length)return 0;
-  /* Count consecutive weeks with at least 1 session */
-  var now=new Date();var streak=0;
-  for(var w=0;w<52;w++){
-    var weekStart=new Date(now);weekStart.setDate(now.getDate()-((now.getDay()+6)%7)-w*7);weekStart.setHours(0,0,0,0);
-    var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+7);
-    var wStart=toISODate(weekStart),wEnd=toISODate(weekEnd);
-    var found=hist.some(function(s){return s.date>=wStart&&s.date<wEnd});
-    if(found)streak++;else break;
-  }
-  return streak;
-}
 
 function calcSessionStats(day,customs,savedData){
   var allEx=day.exercises.concat(customs||[]);var saved=savedData||loadDayData(day.id);var totalVolume=0,totalSets=0,prs=[],rpeValues=[];
@@ -1839,7 +1822,7 @@ function saveSessionSummary(day,customs,stats){
   if(hist.length>0&&hist[0].date===sd&&hist[0].dayId===day.id)return;
   var sessionRpe=lsGet("sessionRpe_"+day.id+"_"+sd);
   hist.unshift({date:sd,dayId:day.id,dayTitle:day.title,volume:Math.round(stats.totalVolume),sets:stats.totalSets,duration:stats.duration,prs:stats.prs.length,avgRpe:stats.avgRpe?parseFloat(stats.avgRpe.toFixed(1)):null,sessionRpe:sessionRpe||null,cardio:!!stats.cardio});
-  if(hist.length>100)hist=hist.slice(0,100);lsSet(SESSION_HISTORY_KEY,hist);
+  if(hist.length>MAX_SESSION_HISTORY)hist=hist.slice(0,MAX_SESSION_HISTORY);lsSet(SESSION_HISTORY_KEY,hist);
   updateStreak();
 }
 
@@ -2421,7 +2404,7 @@ function MainApp(props){
   var sns=useState(function(){return getPref("navShortcuts",NAV_SHORTCUT_DEFAULTS)}),navShortcuts=sns[0],setNavShortcutsState=sns[1];
   var sinst=useState(!!_deferredInstallPrompt),canInstall=sinst[0],setCanInstall=sinst[1];
   useEffect(function(){return onInstallPromptChange(setCanInstall)},[]);
-  var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0],setDayMapState=s7[1];
+  var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0];
   var sm=useState(function(){return getMesocycle()}),meso=sm[0],setMeso=sm[1];
   var scrollRef=useRef(null);var refresh=useCallback(function(){setTick(function(t){return t+1})},[]);
   var dayData=useDayData();
@@ -2484,7 +2467,7 @@ function MainApp(props){
 
   /* ── Auto-end session after 30 min inactivity ── */
   useEffect(function(){
-    var INACTIVITY_MS=30*60*1000;
+
     var onInteract=function(){_lastActivity=Date.now()};
     document.addEventListener("pointerdown",onInteract);
     function checkAutoEnd(){
@@ -2835,7 +2818,7 @@ if("serviceWorker"in navigator){window.addEventListener("load",function(){naviga
     toast.style.cssText="position:fixed;top:max(env(safe-area-inset-top,0px),12px);left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#f59e0b;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
     toast.onclick=function(){flushPendingSaves();if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"})};document.body.appendChild(toast);
   }})}});
-  setInterval(function(){reg.update().catch(function(){})},3600000);
+  setInterval(function(){reg.update().catch(function(){})},SW_UPDATE_INTERVAL_MS);
 }).catch(function(e){console.warn("SW registration failed:",e)})});
   navigator.serviceWorker.addEventListener("controllerchange",function(){
     /* Delay reload if user is actively typing to prevent data loss */
