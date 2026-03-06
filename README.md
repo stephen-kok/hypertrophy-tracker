@@ -183,6 +183,14 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v55 — Program Builder (2026-03-06)
+
+- Program Builder: create and edit your workout program entirely in-app
+- Add, remove, and reorder training days
+- Add, remove, and reorder exercises per day with full field editing (name, sets, reps, rest, muscle tags)
+- Create a blank program from scratch or customize your existing one
+- Reset to original program restores the JSON config
+
 ### v54 — Insights Tab + Meso History (2026-03-06)
 
 - **Feature**: New "Insights" tab replaces PRs in the nav — strength trends, volume trends, bodyweight trends, and personal records in one place

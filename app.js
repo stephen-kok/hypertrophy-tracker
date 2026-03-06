@@ -37,12 +37,8 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=54;
-var WHATS_NEW=[
-  "New Insights tab — strength, volume, and bodyweight trends over time",
-  "Mesocycle history — see stats from your completed training blocks",
-  "Personal Records now live inside Insights for a unified analytics view"
-];
+var APP_VERSION=55;
+var WHATS_NEW=["Program Builder — create, edit, and reorder your workout days and exercises right in the app","Build a program from scratch or customize your existing one","Full control over exercise names, sets, reps, rest times, and muscle tags"];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
 function shouldShowWhatsNew(){return getSeenVersion()<APP_VERSION&&getSeenVersion()>0}
