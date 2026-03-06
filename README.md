@@ -183,6 +183,13 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v53 — Code Quality & Cleanup (2026-03-05)
+
+- **Refactor**: Extracted shared `RPEButtonGroup` and `CloseBtn` components; all modals now use the `Overlay` helper
+- **Refactor**: Named constants for all magic numbers (`MS_PER_HOUR`, `MAX_SESSION_HISTORY`, `MAX_TEMPLATES`, etc.)
+- **Cleanup**: Removed dead code — `getStorageStats`, `calcWorkoutStreak`, `setDayMap` were never called
+- **CSS**: Removed ~30 unused CSS rules: utility classes, skeleton loader, unused completion/fatigue/badge variants, `slideUp` animation
+
 ### v51 — UX Polish & New Features (2026-03-05)
 
 - **Feature**: Tap the exercise name to swap it — cleaner than a separate button; prompts "Today Only" vs "Permanent"

@@ -37,7 +37,7 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=52;
+var APP_VERSION=53;
 var WHATS_NEW=[
   "Customizable quick-access buttons — pick your two shortcuts in the bottom nav from Settings",
   "Tap an exercise name to swap it — now asks whether to swap just for today or permanently",
