@@ -2241,7 +2241,7 @@ function DayView(props){
 
 /* ── Collapsible Settings Group ── */
 function SettingsGroup(props){
-  var s=useState(props.defaultOpen!==false),open=s[0],setOpen=s[1];
+  var s=useState(props.defaultOpen===true),open=s[0],setOpen=s[1];
   return h("div",{className:"settings-group"},
     h("button",{onClick:function(){setOpen(!open)},style:{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"0 4px",width:"100%",marginBottom:open?8:0},"aria-expanded":open?"true":"false"},
       h("span",{style:{fontSize:8,transform:open?"rotate(90deg)":"rotate(0deg)",transition:"transform 0.15s",display:"inline-block",color:"var(--text-dim)"}},"\u25B6"),
