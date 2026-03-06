@@ -3343,12 +3343,59 @@ function DayEditor(props){
     h("button",{onClick:addExercise,className:"btn btn--accent btn--full",style:{marginTop:12}},"+ Add Exercise"));
 }
 
-/* ─── ExerciseEditor placeholder (implemented in Task 4) ─── */
+/* ═══ EXERCISE EDITOR ═══ */
 function ExerciseEditor(props){
-  var onBack=props.onBack;
+  var exercise=props.exercise,onBack=props.onBack,onUpdate=props.onUpdate;
+  var sf=useState(function(){return deepClone(exercise)}),form=sf[0],setForm=sf[1];
+
+  var upd=function(field,val){var next=Object.assign({},form);next[field]=val;setForm(next)};
+
+  var toggleMuscle=function(m){
+    var muscles=form.muscles||[];
+    var next=muscles.indexOf(m)>=0?muscles.filter(function(x){return x!==m}):muscles.concat([m]);
+    upd("muscles",next);
+  };
+
+  var handleSave=function(){
+    if(!form.name||!form.name.trim()){showUndoToast("Exercise name is required");return}
+    if(form.reps&&!/^\d+(-\d+)?(\/leg)?$/i.test(form.reps.trim())){showUndoToast("Reps format should be like \"10\" or \"8-12\"");return}
+    var updated=Object.assign({},form,{
+      name:form.name.trim(),
+      sets:parseInt(form.sets,10)||3,
+      rest:parseInt(form.rest,10)||60
+    });
+    onUpdate(updated);
+    onBack();
+  };
+
   return h("div",null,
-    h("button",{onClick:onBack,className:"btn btn--ghost btn--xs"},"\u2190 Back"),
-    h("div",{style:{padding:"24px 0",textAlign:"center",color:"var(--text-dim)"}},"Exercise editor loading..."));
+    h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:16}},
+      h("button",{onClick:onBack,className:"btn btn--ghost btn--xs","aria-label":"Back to exercise list"},"\u2190"),
+      h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)",flex:1}},"Edit Exercise")),
+    h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"NAME"),
+    h("input",{type:"text",value:form.name,onChange:function(e){upd("name",e.target.value)},className:"input",style:{marginBottom:10,textAlign:"left"},"aria-label":"Exercise name"}),
+    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}},
+      h("div",null,
+        h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"SETS"),
+        h("input",{type:"number",inputMode:"numeric",value:form.sets,onChange:function(e){upd("sets",e.target.value)},className:"input","aria-label":"Sets"})),
+      h("div",null,
+        h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"REPS"),
+        h("input",{type:"text",value:form.reps,onChange:function(e){upd("reps",e.target.value)},className:"input","aria-label":"Reps"})),
+      h("div",null,
+        h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"REST (s)"),
+        h("input",{type:"number",inputMode:"numeric",value:form.rest,onChange:function(e){upd("rest",e.target.value)},className:"input","aria-label":"Rest seconds"}))),
+    h("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:12}},
+      h("span",{style:{fontSize:12,fontWeight:600,color:"var(--text-secondary)"}},"Machine"),
+      h(Toggle,{on:!!form.machine,onToggle:function(){upd("machine",!form.machine)},label:"Machine exercise"})),
+    h("div",{style:{marginBottom:16}},
+      h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:4}},"MUSCLES (for volume tracking)"),
+      h("div",{style:{display:"flex",flexWrap:"wrap",gap:4}},
+        Object.keys(MUSCLE_LABELS).map(function(m){
+          var active=(form.muscles||[]).indexOf(m)>=0;
+          return h("button",{key:m,type:"button",onClick:function(){toggleMuscle(m)},className:active?"btn btn--accent-ghost btn--xs":"btn btn--ghost btn--xs",style:{fontSize:10},"aria-pressed":active?"true":"false"},MUSCLE_LABELS[m])}))),
+    h("div",{style:{display:"flex",gap:8}},
+      h("button",{onClick:onBack,className:"btn btn--ghost",style:{flex:1}},"Cancel"),
+      h("button",{onClick:handleSave,className:"btn btn--accent",style:{flex:1}},"Save")));
 }
 
 /* ═══ PROGRAM BUILDER ═══ */
