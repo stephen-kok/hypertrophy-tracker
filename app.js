@@ -2915,7 +2915,67 @@ function VolumeTrendsSection(props){
       })));
 }
 function BodyweightTrendSection(props){
-  return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Bodyweight trend coming soon...");
+  var rangeDays=props.rangeDays;var unit=getUnit();
+  var data=useMemo(function(){return getBodyweightTrends(rangeDays)},[rangeDays]);
+  var avgData=useMemo(function(){return calc7DayAverage(data)},[data]);
+  var st=useState(null),tooltip=st[0],setTooltip=st[1];
+
+  if(data.length<2){
+    return h("div",{style:{padding:"16px 0",textAlign:"center"}},
+      h("div",{style:{fontSize:20,marginBottom:6},"aria-hidden":"true"},"\u2696\uFE0F"),
+      h("div",{style:{fontSize:12,color:"var(--text-dim)"}},"Log bodyweight in Body Metrics to see trends."),
+      h("div",{style:{fontSize:10,color:"var(--text-dim)",marginTop:4}},"Need at least 2 entries."));
+  }
+
+  var W=300,H=100,padL=30,padR=8,padT=8,padB=20;
+  var chartW=W-padL-padR,chartH=H-padT-padB;
+  var vals=data.map(function(d){return d.weight});
+  var mn=Math.min.apply(null,vals);var mx=Math.max.apply(null,vals);
+  var range2=mx-mn||1;
+  var pad5=range2*0.05;mn-=pad5;mx+=pad5;range2=mx-mn;
+
+  var toXY=function(pts,valKey){
+    return pts.map(function(p,i){
+      var val=p[valKey];
+      return{
+        x:padL+i*chartW/(Math.max(1,pts.length-1)),
+        y:padT+(1-(val-mn)/range2)*chartH,
+        date:p.date,
+        val:val
+      };
+    });
+  };
+
+  var rawPts=toXY(data,"weight");
+  var avgPts=avgData.length>=2?toXY(avgData,"avg"):[];
+  var delta=vals[vals.length-1]-vals[0];
+  var deltaColor=delta>0?"var(--accent)":delta<0?"var(--info)":"var(--text-dim)";
+
+  return h("div",{style:{paddingBottom:12}},
+    h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:8}},
+      h("span",{style:{fontSize:11,color:"var(--text-dim)"}},"Latest: "+vals[vals.length-1]+" "+unit),
+      h("span",{style:{fontSize:11,fontWeight:700,color:deltaColor}},(delta>0?"+":"")+delta.toFixed(1)+" "+unit)),
+
+    h("div",{style:{position:"relative"}},
+      h("svg",{width:"100%",height:H,viewBox:"0 0 "+W+" "+H,preserveAspectRatio:"none","aria-hidden":"true"},
+        h("text",{x:padL-4,y:padT+6,textAnchor:"end",fontSize:8,fill:"var(--text-dim)"},Math.round(mx)),
+        h("text",{x:padL-4,y:padT+chartH,textAnchor:"end",fontSize:8,fill:"var(--text-dim)"},Math.round(mn+pad5)),
+        h("line",{x1:padL,y1:padT,x2:padL+chartW,y2:padT,stroke:"rgba(255,255,255,0.04)",strokeWidth:0.5}),
+        h("line",{x1:padL,y1:padT+chartH,x2:padL+chartW,y2:padT+chartH,stroke:"rgba(255,255,255,0.04)",strokeWidth:0.5}),
+        h("text",{x:padL,y:H-2,fontSize:8,fill:"var(--text-dim)"},formatDate(data[0].date)),
+        h("text",{x:padL+chartW,y:H-2,textAnchor:"end",fontSize:8,fill:"var(--text-dim)"},formatDate(data[data.length-1].date)),
+        h("polyline",{points:rawPts.map(function(p){return p.x+","+p.y}).join(" "),fill:"none",stroke:"var(--accent)",strokeWidth:1.5,strokeLinecap:"round",strokeLinejoin:"round",opacity:0.5}),
+        avgPts.length>=2?h("polyline",{points:avgPts.map(function(p){return p.x+","+p.y}).join(" "),fill:"none",stroke:"var(--accent)",strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"}):null,
+        rawPts.map(function(p,i){
+          return h("circle",{key:i,cx:p.x,cy:p.y,r:2.5,fill:"var(--accent)",style:{cursor:"pointer"},
+            onClick:function(){setTooltip(tooltip&&tooltip.idx===i?null:{idx:i,date:p.date,val:p.val,x:p.x,y:p.y})}});
+        })),
+      tooltip?h("div",{style:{position:"absolute",left:Math.min(tooltip.x,W-80),top:Math.max(0,tooltip.y-30),background:"var(--surface-hover)",border:"1px solid var(--accent)",borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,color:"var(--accent)",pointerEvents:"none",zIndex:10}},
+        formatDate(tooltip.date)+": "+tooltip.val+" "+unit):null),
+
+    h("div",{style:{display:"flex",gap:12,marginTop:6}},
+      h("span",{style:{fontSize:9,color:"var(--accent)",fontWeight:600,opacity:0.5}},"\u25CF Raw"),
+      h("span",{style:{fontSize:9,color:"var(--accent)",fontWeight:600}},"\u25CF 7-day avg")));
 }
 
 function InsightsPRSection(props){
