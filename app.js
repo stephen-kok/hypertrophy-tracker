@@ -1343,9 +1343,9 @@ function ExerciseOverrideEditor(props){
     h("button",{type:"button",onClick:function(){setShowEdit(!showEdit)},style:{fontSize:11,color:"var(--text-dim)",background:"none",border:"none",cursor:"pointer",padding:"8px 0",minHeight:44,display:"flex",alignItems:"center",gap:4}},
       "\u270E Customize",hasOverrides?" (modified)":""),
     showEdit&&h("div",{className:"fade-in",style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:6}},
-      h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"SETS"),h("input",{type:"number",inputMode:"numeric",value:form.sets,placeholder:String(exercise.sets),onChange:function(e){upd("sets",e.target.value)},className:"input",style:{fontSize:12}})),
-      h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"REPS"),h("input",{type:"text",value:form.reps,placeholder:exercise.reps,onChange:function(e){upd("reps",e.target.value)},className:"input",style:{fontSize:12}})),
-      h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"REST (s)"),h("input",{type:"number",inputMode:"numeric",value:form.rest,placeholder:String(exercise.rest),onChange:function(e){upd("rest",e.target.value)},className:"input",style:{fontSize:12}})),
+      h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"SETS"),h("input",{type:"number",inputMode:"numeric",value:form.sets,placeholder:String(exercise.sets),onChange:function(e){upd("sets",e.target.value)},className:"input",style:{fontSize:12},"aria-label":"Sets"})),
+      h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"REPS"),h("input",{type:"text",value:form.reps,placeholder:exercise.reps,onChange:function(e){upd("reps",e.target.value)},className:"input",style:{fontSize:12},"aria-label":"Reps"})),
+      h("div",null,h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"REST (s)"),h("input",{type:"number",inputMode:"numeric",value:form.rest,placeholder:String(exercise.rest),onChange:function(e){upd("rest",e.target.value)},className:"input",style:{fontSize:12},"aria-label":"Rest in seconds"})),
       h("div",{style:{gridColumn:"1 / -1"}},h("label",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"SCHEME"),
         h("div",{style:{display:"flex",gap:4,marginTop:2}},SCHEME_TYPES.map(function(st){return h("button",{key:st.id,onClick:function(){upd("scheme",st.id==="straight"?"":st.id)},className:"btn btn--xs",style:{flex:1,background:(form.scheme||"straight")===st.id?"var(--accent-bg)":"transparent",color:(form.scheme||"straight")===st.id?"var(--accent)":"var(--text-dim)",border:"1px solid "+((form.scheme||"straight")===st.id?"var(--accent-border)":"var(--border)")}},st.label)}))),
       schemePreview?h("div",{style:{gridColumn:"1 / -1",background:"var(--surface-alt)",borderRadius:6,padding:8}},
@@ -1473,7 +1473,7 @@ function ExerciseCard(props){
         h("div",{style:{fontSize:10,color:"var(--text-dim)",width:"100%",marginBottom:2}},"Tap an alternative to swap:"),
         exercise.alternatives.map(function(alt){return h("button",{key:alt,onClick:function(){showConfirm({title:"Swap to \u201c"+alt+"\u201d",msg:"Swap just for today, or make it permanent for this workout day?",confirmLabel:"Permanent",cancelLabel:"Today Only",onConfirm:function(){if(onSwap)onSwap(exercise.id,alt,true);setShowSwapMenu(false)},onCancel:function(){if(onSwap)onSwap(exercise.id,alt,false);setShowSwapMenu(false)}})},className:"btn btn--info btn--xs"},alt)})):null,
       h("div",{style:{marginTop:4}},
-        h("input",{type:"text",value:swapSearch,onChange:function(e){setSwapSearch(e.target.value)},placeholder:"Search all exercises\u2026",style:{width:"100%",padding:"6px 8px",background:"var(--surface-alt)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",fontSize:16},onClick:function(e){e.stopPropagation()}}),
+        h("input",{type:"text",value:swapSearch,onChange:function(e){setSwapSearch(e.target.value)},placeholder:"Search all exercises\u2026","aria-label":"Search exercises to swap",style:{width:"100%",padding:"6px 8px",background:"var(--surface-alt)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",fontSize:16},onClick:function(e){e.stopPropagation()}}),
         swapSearch.length>=2?h("div",{style:{maxHeight:120,overflowY:"auto",marginTop:4}},(function(){
           var q=swapSearch.toLowerCase();var lib=props.exerciseLibrary||[];
           var matches=lib.filter(function(ex){return ex.name.toLowerCase().indexOf(q)>=0&&ex.name!==exercise.name});
@@ -1646,9 +1646,9 @@ function VolumeDashboard(props){
       return h("div",{key:m,style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
         h("div",{style:{width:70,fontSize:11,fontWeight:600,color:"var(--text-secondary)",textAlign:"right",flexShrink:0}},MUSCLE_LABELS[m]),
         editing?h("div",{style:{display:"flex",gap:4,flex:1,alignItems:"center"}},
-          h("input",{type:"number",inputMode:"numeric",min:"0",value:editTargets[m]?editTargets[m][0]:"",onChange:function(e){var t=Object.assign({},editTargets);t[m]=[Math.max(0,parseInt(e.target.value,10)||0),(t[m]||[10,20])[1]];setEditTargets(t)},className:"input input--sm",style:{width:40}}),
+          h("input",{type:"number",inputMode:"numeric",min:"0",value:editTargets[m]?editTargets[m][0]:"",onChange:function(e){var t=Object.assign({},editTargets);t[m]=[Math.max(0,parseInt(e.target.value,10)||0),(t[m]||[10,20])[1]];setEditTargets(t)},className:"input input--sm",style:{width:40},"aria-label":(MUSCLE_LABELS[m]||m)+" minimum sets target"}),
           h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"-"),
-          h("input",{type:"number",inputMode:"numeric",min:"0",value:editTargets[m]?editTargets[m][1]:"",onChange:function(e){var t=Object.assign({},editTargets);t[m]=[(t[m]||[10,20])[0],Math.max(0,parseInt(e.target.value,10)||0)];setEditTargets(t)},className:"input input--sm",style:{width:40}})
+          h("input",{type:"number",inputMode:"numeric",min:"0",value:editTargets[m]?editTargets[m][1]:"",onChange:function(e){var t=Object.assign({},editTargets);t[m]=[(t[m]||[10,20])[0],Math.max(0,parseInt(e.target.value,10)||0)];setEditTargets(t)},className:"input input--sm",style:{width:40},"aria-label":(MUSCLE_LABELS[m]||m)+" maximum sets target"})
         ):h("div",{className:"vol-bar"},
           h("div",{className:"vol-fill",style:{width:(pct*100)+"%",background:color,minWidth:sets>0?2:0}}),
           h("span",{style:{position:"absolute",right:4,top:0,lineHeight:"16px",fontSize:9,fontWeight:700,color:"var(--text-secondary)"}},sets>0?sets:"")),
@@ -1742,7 +1742,7 @@ function BodyMetrics(props){
     h("button",{onClick:function(){setShowMore(!showMore)},style:{fontSize:11,fontWeight:600,color:"var(--info)",background:"none",border:"none",cursor:"pointer",padding:"4px 0",marginBottom:8},"aria-expanded":showMore?"true":"false"},showMore?"\u25BE Hide measurements":"\u25B8 More measurements"),
     showMore?h("div",{className:"fade-in",style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}},
       ["arms","chest","quads"].map(function(key){return h("div",{key:key},h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:4}},key.toUpperCase()+" ("+cmIn+")"),h("input",{type:"number",inputMode:"decimal",value:data[key]||"",onChange:function(e){update(key,e.target.value)},className:"input input--lg","aria-label":key}))})):null,
-    h("div",{style:{marginBottom:12}},h("label",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:6}},"NOTES"),h("input",{type:"text",value:data.notes||"",onChange:function(e){update("notes",e.target.value)},placeholder:"Sleep, energy, etc.",className:"input input--text input--lg"})),
+    h("div",{style:{marginBottom:12}},h("label",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:6}},"NOTES"),h("input",{type:"text",value:data.notes||"",onChange:function(e){update("notes",e.target.value)},placeholder:"Sleep, energy, etc.",className:"input input--text input--lg","aria-label":"Daily notes"})),
     /* Body Composition Trend Chart */
     history.length>=2?h("div",{style:{marginTop:8,marginBottom:8}},
       h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-dim)",marginBottom:8}},"Trend"),
@@ -2541,8 +2541,8 @@ function MainApp(props){
       var shortcutActions={volume:function(){setShowVolume(true)},records:function(){setShowRecords(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
       var shortcutActive={volume:showVolume,records:showRecords,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
       return h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
-        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),h("span",{className:"nav-btn__label"},"TRAIN")),
-        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.icon),h("span",{className:"nav-btn__label"},def.navLabel))}),
+        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),h("span",{className:"nav-btn__label"},"TRAIN")),
+        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.icon),h("span",{className:"nav-btn__label"},def.navLabel))}),
         h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u2699\uFE0F"),h("span",{className:"nav-btn__label"},"MORE")));
     })(),
     /* More Menu */
