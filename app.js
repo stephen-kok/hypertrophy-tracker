@@ -3278,12 +3278,81 @@ function WorkoutCalendar(props){
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.4)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"15+ sets"))));
 }
 
-/* ─── DayEditor placeholder (implemented in Task 3) ─── */
+/* ═══ DAY EDITOR ═══ */
 function DayEditor(props){
+  var day=props.day,onBack=props.onBack,onUpdate=props.onUpdate;
+  var sd=useState(function(){return deepClone(day)}),d=sd[0],setD=sd[1];
+  var ee=useState(null),editExIdx=ee[0],setEditExIdx=ee[1];
+
+  var save=function(next){setD(next);onUpdate(next)};
+
+  var updateField=function(field,val){var next=deepClone(d);next[field]=val;save(next)};
+
+  var addExercise=function(){
+    var newEx={id:"ex_"+Date.now(),name:"New Exercise",sets:3,reps:"10-12",rest:60,machine:false,muscles:[]};
+    var next=deepClone(d);next.exercises.push(newEx);save(next);
+    setEditExIdx(next.exercises.length-1);
+  };
+
+  var deleteExercise=function(idx){
+    var ex=d.exercises[idx];
+    var hasHistory=false;
+    var entries=_historyIndex[d.id]||[];
+    for(var i=0;i<entries.length;i++){
+      if(entries[i].data&&entries[i].data.exercises&&entries[i].data.exercises[ex.id]){hasHistory=true;break}
+    }
+    showConfirm({title:"Delete "+ex.name+"?",
+      msg:hasHistory?"This exercise has logged data. The data won't be deleted, but it will no longer appear in your workout.":"Remove this exercise from the day.",
+      confirmLabel:"Delete",danger:true,
+      onConfirm:function(){var next=deepClone(d);next.exercises.splice(idx,1);save(next)}});
+  };
+
+  var moveExercise=function(idx,dir){
+    var next=deepClone(d);var target=idx+dir;
+    if(target<0||target>=next.exercises.length)return;
+    var tmp=next.exercises[idx];next.exercises[idx]=next.exercises[target];next.exercises[target]=tmp;
+    save(next);
+  };
+
+  if(editExIdx!==null&&d.exercises[editExIdx]){
+    return h(ExerciseEditor,{exercise:d.exercises[editExIdx],
+      onBack:function(){setEditExIdx(null)},
+      onUpdate:function(updatedEx){
+        var next=deepClone(d);next.exercises[editExIdx]=updatedEx;save(next);
+      }});
+  }
+
+  return h("div",null,
+    h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:16}},
+      h("button",{onClick:onBack,className:"btn btn--ghost btn--xs","aria-label":"Back to day list"},"\u2190"),
+      h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)",flex:1}},"Edit Day")),
+    h("div",{style:{marginBottom:16}},
+      h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"LABEL"),
+      h("input",{type:"text",value:d.label||"",onChange:function(e){updateField("label",e.target.value)},className:"input",style:{marginBottom:8,textAlign:"left"},"aria-label":"Day label"}),
+      h("label",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:3}},"TITLE"),
+      h("input",{type:"text",value:d.title||"",onChange:function(e){updateField("title",e.target.value)},className:"input",style:{textAlign:"left"},"aria-label":"Day title"})),
+    d.exercises.length===0?h("div",{style:{textAlign:"center",padding:"24px 0",color:"var(--text-dim)",fontSize:13}},"No exercises yet. Add one below."):
+    d.exercises.map(function(ex,i){
+      return h("div",{key:ex.id,className:"card",style:{marginBottom:6,padding:"10px 12px"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h("div",{style:{flex:1}},
+            h("div",{style:{fontSize:13,fontWeight:700,color:"var(--text-bright)"}},ex.name),
+            h("div",{style:{fontSize:11,color:"var(--text-secondary)"}},ex.sets+" x "+ex.reps+(ex.rest?" \u2022 "+ex.rest+"s rest":""))),
+          h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
+            h("button",{onClick:function(){moveExercise(i,-1)},disabled:i===0,className:"btn btn--ghost btn--xs",style:{opacity:i===0?0.3:1,minWidth:32},"aria-label":"Move "+ex.name+" up"},"\u25B2"),
+            h("button",{onClick:function(){moveExercise(i,1)},disabled:i===d.exercises.length-1,className:"btn btn--ghost btn--xs",style:{opacity:i===d.exercises.length-1?0.3:1,minWidth:32},"aria-label":"Move "+ex.name+" down"},"\u25BC"),
+            h("button",{onClick:function(){setEditExIdx(i)},className:"btn btn--accent-ghost btn--xs","aria-label":"Edit "+ex.name},"\u270E"),
+            h("button",{onClick:function(){deleteExercise(i)},className:"btn btn--ghost btn--xs",style:{color:"var(--danger)"},"aria-label":"Delete "+ex.name},"\u2715"))));
+    }),
+    h("button",{onClick:addExercise,className:"btn btn--accent btn--full",style:{marginTop:12}},"+ Add Exercise"));
+}
+
+/* ─── ExerciseEditor placeholder (implemented in Task 4) ─── */
+function ExerciseEditor(props){
   var onBack=props.onBack;
   return h("div",null,
     h("button",{onClick:onBack,className:"btn btn--ghost btn--xs"},"\u2190 Back"),
-    h("div",{style:{padding:"24px 0",textAlign:"center",color:"var(--text-dim)"}},"Day editor loading..."));
+    h("div",{style:{padding:"24px 0",textAlign:"center",color:"var(--text-dim)"}},"Exercise editor loading..."));
 }
 
 /* ═══ PROGRAM BUILDER ═══ */
