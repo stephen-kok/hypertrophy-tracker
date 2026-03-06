@@ -69,13 +69,13 @@ var TREND_RANGES={4:28,8:56,12:84,0:9999};/* 0 = "All"; value = days to look bac
 /* Bottom-nav configurable shortcut definitions */
 var NAV_SHORTCUTS_DEF=[
   {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL"},
-  {id:"records", icon:"\uD83C\uDFC6",label:"PRs",          navLabel:"PRs"},
+  {id:"insights", icon:"\uD83D\uDCCA",label:"Insights",     navLabel:"STATS"},
   {id:"calendar",icon:"\uD83D\uDCC5",label:"Calendar",     navLabel:"CAL"},
   {id:"history", icon:"\uD83D\uDCCB",label:"History",      navLabel:"LOG"},
   {id:"metrics", icon:"\uD83D\uDCCF",label:"Body Metrics", navLabel:"BODY"},
   {id:"fatigue", icon:"\uD83D\uDCC8",label:"Fatigue Trend",navLabel:"TREND"},
 ];
-var NAV_SHORTCUT_DEFAULTS=["calendar","records"];
+var NAV_SHORTCUT_DEFAULTS=["calendar","insights"];
 
 /* ═══ CONFIG VALIDATION ═══ */
 function validateConfig(cfg){
@@ -2561,6 +2561,7 @@ function MainApp(props){
   var s3=useState(false),showSettings=s3[0],setShowSettings=s3[1];var s4=useState(false),showMetrics=s4[0],setShowMetrics=s4[1];
   var sv=useState(false),showVolume=sv[0],setShowVolume=sv[1];var sh=useState(false),showHistory=sh[0],setShowHistory=sh[1];
   var sr=useState(false),showRecords=sr[0],setShowRecords=sr[1];
+  var si=useState(false),showInsights=si[0],setShowInsights=si[1];
   var swn=useState(function(){return shouldShowWhatsNew()}),showWhatsNew=swn[0],setShowWhatsNew=swn[1];
   var smo=useState(false),showMore=smo[0],setShowMore=smo[1];var moreRef=useRef(null);useFocusTrap(showMore?moreRef:null,function(){setShowMore(false)});
   var scal=useState(false),showCalendar=scal[0],setShowCalendar=scal[1];
@@ -2568,6 +2569,13 @@ function MainApp(props){
   var stpl=useState(false),showTemplates=stpl[0],setShowTemplates=stpl[1];
   var scard=useState(false),showCardio=scard[0],setShowCardio=scard[1];
   var sns=useState(function(){return getPref("navShortcuts",NAV_SHORTCUT_DEFAULTS)}),navShortcuts=sns[0],setNavShortcutsState=sns[1];
+  useEffect(function(){
+    var current=getPref("navShortcuts",null);
+    if(current&&current.indexOf("records")!==-1){
+      var migrated=current.map(function(id){return id==="records"?"insights":id});
+      setPref("navShortcuts",migrated);setNavShortcutsState(migrated);
+    }
+  },[]);
   var sinst=useState(!!_deferredInstallPrompt),canInstall=sinst[0],setCanInstall=sinst[1];
   useEffect(function(){return onInstallPromptChange(setCanInstall)},[]);
   var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0];
@@ -2696,8 +2704,8 @@ function MainApp(props){
     h(FloatingTimer,null),
     /* Bottom Navigation */
     (function(){
-      var shortcutActions={volume:function(){setShowVolume(true)},records:function(){setShowRecords(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
-      var shortcutActive={volume:showVolume,records:showRecords,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
+      var shortcutActions={volume:function(){setShowVolume(true)},insights:function(){setShowInsights(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
+      var shortcutActive={volume:showVolume,insights:showInsights,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
       return h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
         h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),h("span",{className:"nav-btn__label"},"TRAIN")),
         navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.icon),h("span",{className:"nav-btn__label"},def.navLabel))}),
@@ -2716,6 +2724,7 @@ function MainApp(props){
           h("button",{onClick:function(){setShowMore(false);setShowFatigueTrend(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCA Fatigue Trend"),
           h("button",{onClick:function(){setShowMore(false);setShowTemplates(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCB Templates"),
           h("button",{onClick:function(){setShowMore(false);setShowCardio(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83C\uDFC3 Rest Day Cardio"),
+          h("button",{onClick:function(){setShowMore(false);setShowInsights(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCA Insights"),
           h("button",{onClick:function(){setShowMore(false);setShowSettings(true)},className:"btn btn--ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\u2699\uFE0F Settings")),
         /* PWA Install */
         function(){if(isStandalone())return null;
@@ -2729,6 +2738,7 @@ function MainApp(props){
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
     showHistory?h(SessionHistory,{onClose:function(){setShowHistory(false)}}):null,
     showRecords?h(PersonalRecords,{onClose:function(){setShowRecords(false)},config:config}):null,
+    showInsights?h(InsightsTab,{onClose:function(){setShowInsights(false)},config:config}):null,
     showCalendar?h(WorkoutCalendar,{onClose:function(){setShowCalendar(false)},config:config}):null,
     showFatigueTrend?h(FatigueTrendChart,{onClose:function(){setShowFatigueTrend(false)},config:config}):null,
     showTemplates?h(TemplateManager,{onClose:function(){setShowTemplates(false);refresh()},config:config}):null,
@@ -2745,6 +2755,106 @@ function MainApp(props){
         h("button",{onClick:function(){markVersionSeen();setShowWhatsNew(false)},className:"btn btn--accent btn--full",style:{marginTop:14}},"Got it"))):null,
     h(UndoToast,null),
     h(ConfirmDialog,null));
+}
+
+/* ═══ INSIGHTS TAB ═══ */
+
+/* Placeholder chart sections — replaced in Tasks 5-7 */
+function StrengthTrendsSection(props){
+  return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Strength trends coming soon...");
+}
+function VolumeTrendsSection(props){
+  return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Volume trends coming soon...");
+}
+function BodyweightTrendSection(props){
+  return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Bodyweight trend coming soon...");
+}
+
+function InsightsPRSection(props){
+  var config=props.config;
+  var srf=useState(0),repFilter=srf[0],setRepFilter=srf[1];
+  var repFilters=[{val:0,label:"e1RM"},{val:1,label:"1RM"},{val:3,label:"3RM"},{val:5,label:"5RM"},{val:8,label:"8RM"},{val:10,label:"10RM"}];
+  var records=useMemo(function(){
+    var recs=[];
+    config.days.forEach(function(day){
+      var allEx=day.exercises.concat(getCustomExercises(day.id));
+      var todayData=loadDayData(day.id);
+      allEx.forEach(function(ex){
+        var exUnit=getExUnit(ex.id);var hist=getBilateralHistory(day.id,ex,50);
+        var todaySets=getBilateralSets(ex,todayData);if(!todaySets.length)todaySets=null;
+        var allSessions=hist.slice();if(todaySets)allSessions.unshift({date:today(),sets:todaySets});
+        if(repFilter===0){
+          var bestW=0,bestReps=0,bestDate="",bestE1rm=0;
+          allSessions.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps),e=calc1RM(w,r);if(e>bestE1rm){bestE1rm=e;bestW=w;bestReps=r;bestDate=entry.date}}})});
+          if(bestW>0)recs.push({name:ex.name,weight:bestW,reps:bestReps,date:bestDate,e1rm:bestE1rm,unit:exUnit,muscles:ex.muscles||[]});
+        }else{
+          var bestW2=0,bestR2=0,bestDate2="";
+          allSessions.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps);if(r>=repFilter&&w>bestW2){bestW2=w;bestR2=r;bestDate2=entry.date}}})});
+          if(bestW2>0)recs.push({name:ex.name,weight:bestW2,reps:bestR2,date:bestDate2,e1rm:calc1RM(bestW2,bestR2),unit:exUnit,muscles:ex.muscles||[]});
+        }
+      });
+    });
+    recs.sort(function(a,b){return b.e1rm-a.e1rm});return recs;
+  },[config,repFilter]);
+  var grouped=useMemo(function(){var g={};records.forEach(function(r){var key=r.muscles.length>0?r.muscles[0]:"other";if(!g[key])g[key]=[];g[key].push(r)});return g},[records]);
+  return h("div",null,
+    h("div",{style:{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"},role:"group","aria-label":"Record type"},repFilters.map(function(rf){var active=repFilter===rf.val;return h("button",{key:rf.val,onClick:function(){setRepFilter(rf.val)},style:{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:700,border:active?"1px solid var(--accent)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},"aria-pressed":active?"true":"false"},rf.label)})),
+    records.length===0?h("div",{className:"empty-state"},h("div",{className:"empty-state__icon"},"\uD83C\uDFC6"),h("div",{className:"empty-state__title"},"No records yet"),h("div",{className:"empty-state__desc"},"Complete sets to see PRs.")):
+    h("div",null,Object.keys(grouped).map(function(muscle){
+      return h("div",{key:muscle,style:{marginBottom:16}},
+        h("div",{style:{fontSize:11,fontWeight:700,color:"var(--accent)",letterSpacing:.5,marginBottom:6}},(MUSCLE_LABELS[muscle]||muscle).toUpperCase()),
+        grouped[muscle].map(function(r,i){
+          var label=formatDate(r.date);
+          return h("div",{key:i,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
+            h("div",null,h("div",{style:{fontSize:13,fontWeight:700,color:"var(--text-bright)"}},r.name),h("div",{style:{fontSize:11,color:"var(--text-dim)"}},label)),
+            h("div",{style:{textAlign:"right"}},h("div",{style:{fontSize:15,fontWeight:800,color:"var(--text-bright)"}},r.weight+" "+r.unit+" \u00D7 "+r.reps),h("div",{style:{fontSize:10,fontWeight:600,color:"var(--info)"}},"e1RM "+r.e1rm+" "+r.unit)));
+        }));
+    })));
+}
+
+function InsightsTab(props){
+  var onClose=props.onClose,config=props.config;
+  var sr=useState(8),range=sr[0],setRange=sr[1];
+  var rangeDays=TREND_RANGES[range]||56;
+  var ranges=[{val:4,label:"4W"},{val:8,label:"8W"},{val:12,label:"12W"},{val:0,label:"ALL"}];
+
+  var ss=useState({strength:true,volume:true,bodyweight:true,prs:true}),sections=ss[0],setSections=ss[1];
+  var toggleSection=function(key){var next=Object.assign({},sections);next[key]=!next[key];setSections(next)};
+
+  var sectionHeader=function(key,title,icon){
+    return h("button",{onClick:function(){toggleSection(key)},
+      style:{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"10px 0",background:"none",border:"none",borderBottom:"1px solid var(--border)",cursor:"pointer",marginBottom:sections[key]?10:0},
+      "aria-expanded":sections[key]?"true":"false"},
+      h("span",{style:{fontSize:14},"aria-hidden":"true"},icon),
+      h("span",{style:{fontSize:14,fontWeight:700,color:"var(--text-bright)",flex:1,textAlign:"left"}},title),
+      h("span",{style:{fontSize:10,color:"var(--text-dim)",transition:"transform 0.2s",transform:sections[key]?"rotate(0)":"rotate(-90deg)"},"aria-hidden":"true"},"\u25BE"));
+  };
+
+  return h(Overlay,{onClose:onClose,label:"Insights"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+      h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Insights"),
+      h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
+        h("div",{style:{display:"flex",gap:2},role:"group","aria-label":"Time range"},
+          ranges.map(function(r){var active=range===r.val;
+            return h("button",{key:r.val,onClick:function(){setRange(r.val)},
+              style:{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:700,
+                border:active?"1px solid var(--accent)":"1px solid rgba(255,255,255,0.08)",
+                background:active?"var(--accent-bg)":"transparent",
+                color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},
+              "aria-pressed":active?"true":"false"},r.label)})),
+        h(CloseBtn,{onClick:onClose}))),
+
+    sectionHeader("strength","Strength Trends","\uD83D\uDCC8"),
+    sections.strength?h(StrengthTrendsSection,{config:config,rangeDays:rangeDays}):null,
+
+    sectionHeader("volume","Volume Trends","\uD83D\uDCCA"),
+    sections.volume?h(VolumeTrendsSection,{config:config,rangeDays:rangeDays}):null,
+
+    sectionHeader("bodyweight","Bodyweight Trend","\u2696\uFE0F"),
+    sections.bodyweight?h(BodyweightTrendSection,{rangeDays:rangeDays}):null,
+
+    sectionHeader("prs","Personal Records","\uD83C\uDFC6"),
+    sections.prs?h(InsightsPRSection,{config:config}):null);
 }
 
 /* ── Workout Templates ── */
