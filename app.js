@@ -57,6 +57,7 @@ var SESSION_HISTORY_KEY="session_history"; /* profile-scoped via lsGet/lsSet (ht
 var STREAK_MILESTONES=[3,5,10,15,20,25,30,50,100];
 /* Mesocycle volume factor per week — paired with MESO_REP_SHIFT */
 var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
+var RPE_COLORS={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--warning)",10:"var(--danger)"};
 /* Bottom-nav configurable shortcut definitions */
 var NAV_SHORTCUTS_DEF=[
   {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL"},
@@ -1276,6 +1277,20 @@ function SetLogger(props){
     !isMachine&&firstWeight?h(PlateDisplay,{weight:firstWeight,exId:exId,exUnit:unit}):null);
 }
 
+/* ── Close Button (shared modal/sheet close button) ── */
+function CloseBtn(props){
+  return h("button",{onClick:props.onClick,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715");
+}
+
+/* ── RPE Button Group (shared by RPERating and SessionRPE) ── */
+function RPEButtonGroup(props){
+  var value=props.value,onSelect=props.onSelect,labels=props.labels,groupLabel=props.groupLabel||"Rate perceived exertion";
+  return h("div",{style:{display:"flex",gap:4},role:"radiogroup","aria-label":groupLabel},[6,7,8,9,10].map(function(val){var active=value===val;
+    return h("button",{key:val,onClick:function(){onSelect(val)},className:"rpe-btn",style:{border:active?"2px solid "+RPE_COLORS[val]:"1px solid rgba(255,255,255,0.08)",background:active?"rgba(255,255,255,0.06)":"transparent"},role:"radio","aria-checked":active?"true":"false","aria-label":"RPE "+val+" - "+labels[val]},
+      h("div",{style:{fontSize:15,fontWeight:800,color:active?RPE_COLORS[val]:"var(--text-dim)"}},val),
+      h("div",{style:{fontSize:8,fontWeight:600,color:active?"var(--text-secondary)":"var(--text-dim)",marginTop:1}},labels[val]))}));
+}
+
 /* ── RPE Rating ── */
 function RPERating(props){
   var exId=props.exId,dayId=props.dayId,allDone=props.allDone;
@@ -1284,13 +1299,9 @@ function RPERating(props){
   if(!allDone)return null;
   var save=function(val){setRpe(val);var all=dayData.getData(dayId);if(!all.rpe)all.rpe={};all.rpe[exId]=val;dayData.saveData(dayId,all)};
   var labels={6:"Light",7:"Moderate",8:"Hard",9:"Very Hard",10:"Max"};
-  var colors={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--warning)",10:"var(--danger)"};
   return h("div",{className:"fade-in",style:{marginTop:8,padding:"8px 0"},"aria-label":"RPE rating"},
     h("div",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"How hard was that? (RPE)"),
-    h("div",{style:{display:"flex",gap:4},role:"radiogroup","aria-label":"Rate perceived exertion"},[6,7,8,9,10].map(function(val){var active=rpe===val;
-      return h("button",{key:val,onClick:function(){save(val)},className:"rpe-btn",style:{border:active?"2px solid "+colors[val]:"1px solid rgba(255,255,255,0.08)",background:active?"rgba(255,255,255,0.06)":"transparent"},role:"radio","aria-checked":active?"true":"false","aria-label":"RPE "+val+" - "+labels[val]},
-        h("div",{style:{fontSize:15,fontWeight:800,color:active?colors[val]:"var(--text-dim)"}},val),
-        h("div",{style:{fontSize:8,fontWeight:600,color:active?"var(--text-secondary)":"var(--text-dim)",marginTop:1}},labels[val]))})),
+    h(RPEButtonGroup,{value:rpe,onSelect:save,labels:labels}),
     rpe?h("div",{style:{fontSize:11,color:rpe>=9?"var(--warning)":"var(--text-dim)",marginTop:4,fontStyle:"italic"},"aria-live":"polite"},rpe<=7?"Good \u2014 room to progress next session.":rpe===8?"Solid \u2014 right in the hypertrophy zone.":rpe===9?"Tough \u2014 repeat this weight next session, focus on form.":"Max effort \u2014 drop 5-10% next session. Consider a deload if this persists."):null);
 }
 
@@ -1631,11 +1642,10 @@ function VolumeDashboard(props){
   var se=useState(false),editing=se[0],setEditing=se[1];
   var ste=useState(rawTargets),editTargets=ste[0],setEditTargets=ste[1];
   var saveTargets=function(){setVolumeTargets(editTargets);setEditing(false)};
-  var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Weekly Volume"},h("div",{className:"sheet fade-in",ref:sheetRef},
+  return h(Overlay,{onClose:onClose,label:"Weekly Volume"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
       h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Weekly Volume"),
-      h("div",{style:{display:"flex",gap:8}},h("button",{onClick:function(){setEditing(!editing)},className:"btn btn--ghost btn--xs"},editing?"Cancel":"Targets"),h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close"},"\u2715"))),
+      h("div",{style:{display:"flex",gap:8}},h("button",{onClick:function(){setEditing(!editing)},className:"btn btn--ghost btn--xs"},editing?"Cancel":"Targets"),h(CloseBtn,{onClick:onClose}))),
     mesoFactor!==1.0?h("div",{style:{fontSize:10,color:"var(--info)",marginBottom:8,fontStyle:"italic"}},"Wk "+mesoWeek+" targets scaled to "+Math.round(mesoFactor*100)+"% of base"):null,
     h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:14}},"Sets completed this week per muscle group."),
     !muscleKeys.some(function(m){return vol[m]>0})?h("div",{style:{textAlign:"center",padding:"24px 16px",color:"var(--text-dim)"}},h("div",{style:{fontSize:28,marginBottom:8}},"\uD83D\uDCCA"),h("div",{style:{fontSize:13,fontWeight:600,marginBottom:4}},"No volume logged this week"),h("div",{style:{fontSize:11}},"Complete sets in your workouts to see volume tracking here.")):null,
@@ -1683,7 +1693,7 @@ function VolumeDashboard(props){
             h("span",{style:{fontSize:10,color:color,fontWeight:700}},arrow+(delta!==0?" "+(delta>0?"+":"")+delta:"")),
             h("span",{style:{fontSize:10,color:"var(--text-dim)"}},prev>0?"(prev: "+prev+")":"(new)"))
         }));
-    }():null));
+    }():null);
 }
 
 function calcPreviousWeekVolume(config){
@@ -1728,14 +1738,14 @@ function resetMesocycle(){var m={week:1,startDate:today()};setMesocycle(m);retur
 
 /* ── Body Metrics ── */
 function BodyMetrics(props){
-  var onClose=props.onClose;var unit=getUnit();var metricsKey="metrics_"+today();var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var onClose=props.onClose;var unit=getUnit();var metricsKey="metrics_"+today();
   var s=useState(function(){return lsGet(metricsKey)||{bodyweight:"",waist:"",notes:"",arms:"",chest:"",quads:""}}),data=s[0],setData=s[1];
   var sm=useState(false),showMore=sm[0],setShowMore=sm[1];
   var save=function(d){setData(d);lsSet(metricsKey,d)};var update=function(field,val){save(Object.assign({},data,{[field]:val}))};
   var history=useMemo(function(){var results=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS+"metrics_")){var date=k.slice((LS+"metrics_").length);if(date===today())continue;try{var d=JSON.parse(localStorage.getItem(k));if(d&&(d.bodyweight||d.waist))results.push({date:date,bw:d.bodyweight,waist:d.waist})}catch(e){}}}results.sort(function(a,b){return b.date.localeCompare(a.date)});return results.slice(0,10)},[]);
   var wLabel=unit==="kg"?"BODYWEIGHT (kg)":"BODYWEIGHT (lbs)";var mLabel=unit==="kg"?"WAIST (cm)":"WAIST (inches)";var cmIn=unit==="kg"?"cm":"in";
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Body Metrics"},h("div",{className:"sheet fade-in",ref:sheetRef},
-    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Body Metrics"),h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close"},"\u2715")),
+  return h(Overlay,{onClose:onClose,label:"Body Metrics"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Body Metrics"),h(CloseBtn,{onClick:onClose})),
     h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
       h("div",null,h("label",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:6}},wLabel),h("input",{type:"number",inputMode:"decimal",value:data.bodyweight,onChange:function(e){update("bodyweight",e.target.value)},placeholder:unit==="kg"?"63":"140",className:"input input--lg","aria-label":"Bodyweight"})),
       h("div",null,h("label",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",display:"block",marginBottom:6}},mLabel),h("input",{type:"number",inputMode:"decimal",value:data.waist,onChange:function(e){update("waist",e.target.value)},placeholder:unit==="kg"?"81":"32",className:"input input--lg","aria-label":"Waist"}))),
@@ -1766,7 +1776,7 @@ function BodyMetrics(props){
             h("span",{style:{fontSize:9,color:"var(--accent)",fontWeight:600}},"\u25CF Weight"),
             waistVals.length>=2?h("span",{style:{fontSize:9,color:"var(--info)",fontWeight:600}},"\u25CF Waist"):null));
       })()):null,
-    history.length>0?h("div",{style:{marginTop:4}},h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-dim)",marginBottom:8}},"Recent Entries"),h("div",{style:{maxHeight:200,overflowY:"auto"}},history.map(function(entry){var label=formatDate(entry.date);return h("div",{key:entry.date,style:{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.03)",fontSize:12}},h("span",{style:{color:"var(--text-dim)",fontWeight:600}},label),h("div",{style:{display:"flex",gap:12}},entry.bw?h("span",{style:{color:"var(--text-primary)"}},entry.bw+" "+unit):null,entry.waist?h("span",{style:{color:"var(--text-secondary)"}},entry.waist+(unit==="kg"?" cm":'"')):null))}))):null));
+    history.length>0?h("div",{style:{marginTop:4}},h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-dim)",marginBottom:8}},"Recent Entries"),h("div",{style:{maxHeight:200,overflowY:"auto"}},history.map(function(entry){var label=formatDate(entry.date);return h("div",{key:entry.date,style:{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.03)",fontSize:12}},h("span",{style:{color:"var(--text-dim)",fontWeight:600}},label),h("div",{style:{display:"flex",gap:12}},entry.bw?h("span",{style:{color:"var(--text-primary)"}},entry.bw+" "+unit):null,entry.waist?h("span",{style:{color:"var(--text-secondary)"}},entry.waist+(unit==="kg"?" cm":'"')):null))}))):null);
 }
 
 /* ── Completion Summary ── */
@@ -1834,7 +1844,7 @@ function saveSessionSummary(day,customs,stats){
 }
 
 function SessionHistory(props){
-  var onClose=props.onClose;var unit=getUnit();var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var onClose=props.onClose;var unit=getUnit();
   var hist=useMemo(function(){return lsGet(SESSION_HISTORY_KEY)||[]},[]);
   var sc=useState(null),compareIdx=sc[0],setCompareIdx=sc[1];
   var sd=useState(false),showDetail=sd[0],setShowDetail=sd[1];
@@ -1907,8 +1917,8 @@ function SessionHistory(props){
     }else{compareView=h("div",{style:{fontSize:11,color:"var(--text-dim)",padding:"8px 0",fontStyle:"italic"}},"No previous session of this workout found to compare.")}
   }
 
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Session History"},h("div",{className:"sheet fade-in",ref:sheetRef},
-    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Session History"),h("div",{style:{display:"flex",gap:8,alignItems:"center"}},hist.length>0?h("button",{onClick:function(){var csv="Date,Workout,Volume ("+unit+"),Sets,Duration (min),Avg RPE,PRs,Cardio\n";hist.forEach(function(s){csv+=s.date+","+'"'+(s.dayTitle||s.dayId).replace(/"/g,'""')+'"'+","+Math.round(s.volume)+","+s.sets+","+(s.duration?Math.round(s.duration/60):"")+","+(s.avgRpe||"")+","+(s.prs||0)+","+(s.cardio?"Yes":"No")+"\n"});var blob=new Blob([csv],{type:"text/csv"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="session-history.csv";a.click();URL.revokeObjectURL(url)},className:"btn btn--ghost btn--xs"},"Export CSV"):null,h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close"},"\u2715"))),
+  return h(Overlay,{onClose:onClose,label:"Session History"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Session History"),h("div",{style:{display:"flex",gap:8,alignItems:"center"}},hist.length>0?h("button",{onClick:function(){var csv="Date,Workout,Volume ("+unit+"),Sets,Duration (min),Avg RPE,PRs,Cardio\n";hist.forEach(function(s){csv+=s.date+","+'"'+(s.dayTitle||s.dayId).replace(/"/g,'""')+'"'+","+Math.round(s.volume)+","+s.sets+","+(s.duration?Math.round(s.duration/60):"")+","+(s.avgRpe||"")+","+(s.prs||0)+","+(s.cardio?"Yes":"No")+"\n"});var blob=new Blob([csv],{type:"text/csv"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="session-history.csv";a.click();URL.revokeObjectURL(url)},className:"btn btn--ghost btn--xs"},"Export CSV"):null,h(CloseBtn,{onClick:onClose}))),
     compareView,
     hist.length===0?h("div",{className:"empty-state"},h("div",{className:"empty-state__icon"},"\uD83D\uDCCB"),h("div",{className:"empty-state__title"},"No sessions yet"),h("div",{className:"empty-state__desc"},"Complete a workout to see it here.")):
     h("div",{style:{maxHeight:"60vh",overflowY:"auto"}},hist.map(function(s,i){
@@ -1925,12 +1935,12 @@ function SessionHistory(props){
           s.duration?h("span",{style:{fontSize:11,color:"var(--text-secondary)"}},fmtElapsed(s.duration)):null,
           s.avgRpe?h("span",{style:{fontSize:11,color:s.avgRpe>=9?"var(--danger)":s.avgRpe>=8?"var(--accent)":"var(--success)"}},"RPE "+s.avgRpe):null,
           s.prs>0?h("span",{style:{fontSize:11,color:"var(--accent)",fontWeight:700}},s.prs+" PR"+(s.prs>1?"s":"")):null,
-          s.cardio?h("span",{style:{fontSize:11,color:"var(--success)"}},"+ Cardio"):null))}))));
+          s.cardio?h("span",{style:{fontSize:11,color:"var(--success)"}},"+ Cardio"):null))})));
 }
 
 /* ── Personal Records ── */
 function PersonalRecords(props){
-  var onClose=props.onClose,config=props.config;var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var onClose=props.onClose,config=props.config;
   var srf=useState(0),repFilter=srf[0],setRepFilter=srf[1];/* 0=e1RM, 1=1RM, 3=3RM, 5=5RM, 8=8RM, 10=10RM */
   var repFilters=[{val:0,label:"e1RM"},{val:1,label:"1RM"},{val:3,label:"3RM"},{val:5,label:"5RM"},{val:8,label:"8RM"},{val:10,label:"10RM"}];
   var records=useMemo(function(){
@@ -1958,8 +1968,8 @@ function PersonalRecords(props){
     recs.sort(function(a,b){return b.e1rm-a.e1rm});return recs;
   },[config,repFilter]);
   var grouped=useMemo(function(){var g={};records.forEach(function(r){var key=r.muscles.length>0?r.muscles[0]:"other";if(!g[key])g[key]=[];g[key].push(r)});return g},[records]);
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Personal Records"},h("div",{className:"sheet fade-in",ref:sheetRef},
-    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Personal Records"),h("button",{onClick:onClose,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715")),
+  return h(Overlay,{onClose:onClose,label:"Personal Records"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Personal Records"),h(CloseBtn,{onClick:onClose})),
     h("div",{style:{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"},role:"group","aria-label":"Record type"},repFilters.map(function(rf){var active=repFilter===rf.val;return h("button",{key:rf.val,onClick:function(){setRepFilter(rf.val)},style:{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:700,border:active?"1px solid var(--accent)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},"aria-pressed":active?"true":"false"},rf.label)})),
     records.length===0?h("div",{className:"empty-state"},h("div",{className:"empty-state__icon"},"\uD83C\uDFC6"),h("div",{className:"empty-state__title"},"No records yet"),h("div",{className:"empty-state__desc"},"Complete sets to see PRs.")):
     h("div",{style:{maxHeight:"65vh",overflowY:"auto"}},Object.keys(grouped).map(function(muscle){
@@ -1971,7 +1981,7 @@ function PersonalRecords(props){
             h("div",null,h("div",{style:{fontSize:13,fontWeight:700,color:"var(--text-bright)"}},r.name),h("div",{style:{fontSize:11,color:"var(--text-dim)"}},label)),
             h("div",{style:{textAlign:"right"}},h("div",{style:{fontSize:15,fontWeight:800,color:"var(--text-bright)"}},r.weight+" "+r.unit+" \u00D7 "+r.reps),h("div",{style:{fontSize:10,fontWeight:600,color:"var(--info)"}},"e1RM "+r.e1rm+" "+r.unit)));
         }));
-    }))));
+    })));
 }
 
 /* ── Add Custom Exercise Form ── */
@@ -2007,10 +2017,10 @@ function SessionRPE(props){
   var dayId=props.dayId;
   var s=useState(function(){return lsGet("sessionRpe_"+dayId+"_"+getSessionDate())}),rpe=s[0],setRpe=s[1];
   var save=function(val){setRpe(val);lsSet("sessionRpe_"+dayId+"_"+getSessionDate(),val)};
-  var labels={6:"Easy",7:"Moderate",8:"Hard",9:"Very Hard",10:"Max"};var colors={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--warning)",10:"var(--danger)"};
+  var labels={6:"Easy",7:"Moderate",8:"Hard",9:"Very Hard",10:"Max"};
   return h("div",{className:"fade-in",style:{background:"var(--success-bg)",border:"1px solid var(--success-border)",borderRadius:12,padding:"14px 16px",marginTop:12},"aria-label":"Session RPE rating"},
     h("div",{style:{fontSize:13,fontWeight:700,color:"var(--success)",marginBottom:8}},"Session RPE \u2014 How was the overall workout?"),
-    h("div",{style:{display:"flex",gap:4},role:"radiogroup","aria-label":"Session RPE"},[6,7,8,9,10].map(function(val){var active=rpe===val;return h("button",{key:val,onClick:function(){save(val)},className:"rpe-btn",style:{border:active?"2px solid "+colors[val]:"1px solid rgba(255,255,255,0.08)",background:active?"rgba(255,255,255,0.06)":"transparent"},role:"radio","aria-checked":active?"true":"false"},h("div",{style:{fontSize:16,fontWeight:800,color:active?colors[val]:"var(--text-dim)"}},val),h("div",{style:{fontSize:8,fontWeight:600,color:active?"var(--text-secondary)":"var(--text-dim)",marginTop:1}},labels[val]))})),
+    h(RPEButtonGroup,{value:rpe,onSelect:save,labels:labels,groupLabel:"Session RPE"}),
     rpe?h("div",{style:{fontSize:11,color:"var(--text-secondary)",marginTop:6,fontStyle:"italic"},"aria-live":"polite"},rpe<=7?"Recovered well \u2014 room to push harder.":rpe===8?"Solid session \u2014 sustainable load.":rpe===9?"High fatigue \u2014 watch recovery.":"Maximum effort \u2014 consider lighter session next."):null);
 }
 
@@ -2149,13 +2159,12 @@ function TempoTimer(props){
 
 /* ── Standalone Cardio Modal (rest day) ── */
 function StandaloneCardio(props){
-  var onClose=props.onClose;var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Rest Day Cardio"},
-    h("div",{className:"sheet fade-in",ref:sheetRef},
-      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
-        h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Rest Day Cardio"),
-        h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close"},"\u2715")),
-      h(CardioLog,{dayId:"rest"})));
+  var onClose=props.onClose;
+  return h(Overlay,{onClose:onClose,label:"Rest Day Cardio"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+      h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Rest Day Cardio"),
+      h(CloseBtn,{onClick:onClose})),
+    h(CardioLog,{dayId:"rest"}));
 }
 
 /* ── Onboarding Steps ── */
@@ -2253,7 +2262,7 @@ function SettingsGroup(props){
 /* ── Settings Panel ── */
 function SettingsPanel(props){
   var onClose=props.onClose,config=props.config;
-  var s=useState(null),msg=s[0],setMsg=s[1];var fileRef=useRef(null);var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var s=useState(null),msg=s[0],setMsg=s[1];var fileRef=useRef(null);
   var sq=useState(null),storageInfo=sq[0],setStorageInfo=sq[1];
   var scl=useState(null),cleanupResult=scl[0],setCleanupResult=scl[1];
   var sclm=useState(6),cleanupMonths=sclm[0],setCleanupMonths=sclm[1];
@@ -2279,7 +2288,7 @@ function SettingsPanel(props){
   };
   var toggleUnit=function(){var next=unit==="lbs"?"kg":"lbs";setUnitState(next);setUnit(next)};
   var toggleAutoTimer=function(){var next=!autoTimer;setAutoTimerState(next);setAutoTimer(next)};
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Settings"},h("div",{className:"sheet fade-in",ref:sheetRef},
+  return h(Overlay,{onClose:onClose,label:"Settings"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Settings"),h("button",{onClick:onClose,style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close settings"},"\u2715")),
     h("div",{style:{fontSize:12,color:"var(--text-dim)",marginBottom:16,padding:"10px 12px",background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}},
       h("span",null,h("span",{style:{fontWeight:700,color:"var(--accent)"}},"Profile: "),config.name," \u2014 ",config.program),
@@ -2364,7 +2373,7 @@ function SettingsPanel(props){
     h(SettingsGroup,{title:"Tools",defaultOpen:false},
       h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
         h("button",{onClick:function(){if(props.onBodyMetrics)props.onBodyMetrics()},className:"btn btn--accent-ghost btn--full"},"\uD83D\uDCCF Body Metrics"),
-        h("button",{onClick:function(){if(props.onSessionHistory)props.onSessionHistory()},className:"btn btn--accent-ghost btn--full"},"\uD83D\uDCCB Session History")))));
+        h("button",{onClick:function(){if(props.onSessionHistory)props.onSessionHistory()},className:"btn btn--accent-ghost btn--full"},"\uD83D\uDCCB Session History"))));
 }
 
 /* ── Profile Selector ── */
@@ -2550,7 +2559,7 @@ function MainApp(props){
       h("div",{className:"sheet fade-in",ref:moreRef,style:{paddingBottom:"max(env(safe-area-inset-bottom,0px),24px)"}},
         h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
           h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"More"),
-          h("button",{onClick:function(){setShowMore(false)},style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"},"aria-label":"Close"},"\u2715")),
+          h(CloseBtn,{onClick:function(){setShowMore(false)}})),
         h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
           h("button",{onClick:function(){setShowMore(false);setShowMetrics(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCF Body Metrics"),
           h("button",{onClick:function(){setShowMore(false);setShowHistory(true)},className:"btn btn--accent-ghost btn--full",style:{padding:"14px 12px",fontSize:13}},"\uD83D\uDCCB Session History"),
@@ -2591,7 +2600,7 @@ function MainApp(props){
 
 /* ── Workout Templates ── */
 function TemplateManager(props){
-  var onClose=props.onClose,config=props.config;var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var onClose=props.onClose,config=props.config;
   var st=useState(function(){return getTemplates()}),templates=st[0],setTemplates=st[1];
   var ss=useState(false),showSave=ss[0],setShowSave=ss[1];
   var sn=useState(""),tplName=sn[0],setTplName=sn[1];
@@ -2617,10 +2626,10 @@ function TemplateManager(props){
 
   var handleDelete=function(idx){showConfirm({title:"Delete Template",msg:"Delete \""+templates[idx].name+"\"? This cannot be undone.",confirmLabel:"Delete",danger:true,onConfirm:function(){deleteTemplate(idx);setTemplates(getTemplates())}})}
 
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Workout Templates"},h("div",{className:"sheet fade-in",ref:sheetRef},
+  return h(Overlay,{onClose:onClose,label:"Workout Templates"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
       h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Workout Templates"),
-      h("button",{onClick:onClose,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715")),
+      h(CloseBtn,{onClick:onClose})),
     h("button",{onClick:function(){setShowSave(!showSave)},className:"btn btn--accent btn--full",style:{marginBottom:12}},showSave?"Cancel":"+ Save Current Workout"),
     showSave?h("div",{className:"fade-in",style:{background:"var(--surface-alt)",borderRadius:10,padding:12,marginBottom:12}},
       h("input",{type:"text",value:tplName,onChange:function(e){setTplName(e.target.value)},placeholder:"Template name",style:{width:"100%",padding:"8px 10px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",fontSize:13,marginBottom:8}}),
@@ -2636,12 +2645,12 @@ function TemplateManager(props){
             h("button",{onClick:function(){handleLoad(tpl)},className:"btn btn--success btn--xs"},"Load"),
             h("button",{onClick:function(){handleDelete(i)},className:"btn btn--ghost btn--xs",style:{color:"var(--danger)"}},"\u2715"))),
         h("div",{style:{fontSize:11,color:"var(--text-dim)"}},tpl.exercises.length+" exercises \u00B7 "+tpl.createdAt),
-        h("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}},tpl.exercises.map(function(ex){return h("span",{key:ex.id,style:{fontSize:10,color:"var(--text-secondary)",background:"rgba(255,255,255,0.04)",padding:"2px 6px",borderRadius:4}},ex.name)})))}))));
+        h("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginTop:4}},tpl.exercises.map(function(ex){return h("span",{key:ex.id,style:{fontSize:10,color:"var(--text-secondary)",background:"rgba(255,255,255,0.04)",padding:"2px 6px",borderRadius:4}},ex.name)})))})));
 }
 
 /* ── Fatigue Trend Chart (4-week rolling) ── */
 function FatigueTrendChart(props){
-  var onClose=props.onClose,config=props.config;var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var onClose=props.onClose,config=props.config;
   var data=useMemo(function(){
     var points=[];
     /* Scan last 28 days */
@@ -2668,11 +2677,11 @@ function FatigueTrendChart(props){
     return points;
   },[config]);
   var scored=data.filter(function(p){return p.score!==null});
-  if(scored.length<2)return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Fatigue Trend"},h("div",{className:"sheet fade-in",ref:sheetRef},
+  if(scored.length<2)return h(Overlay,{onClose:onClose,label:"Fatigue Trend"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
       h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Fatigue Trend"),
-      h("button",{onClick:onClose,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715")),
-    h("div",{style:{textAlign:"center",padding:"20px 0",color:"var(--text-dim)",fontSize:12}},"Not enough data yet. Log RPE or RIR for at least 2 sessions.")));
+      h(CloseBtn,{onClick:onClose})),
+    h("div",{style:{textAlign:"center",padding:"20px 0",color:"var(--text-dim)",fontSize:12}},"Not enough data yet. Log RPE or RIR for at least 2 sessions."));
   var W=300,H=120,pad=8;
   var vals=scored.map(function(p){return p.score});
   var mn=Math.min(...vals),mx=Math.max(...vals);var range=mx-mn||1;
@@ -2684,10 +2693,10 @@ function FatigueTrendChart(props){
   var latest=scored[scored.length-1].score;var earliest=scored[0].score;
   var trend=latest-earliest;var trendColor=trend>0.5?"var(--danger)":trend<-0.5?"var(--success)":"var(--text-dim)";
   var trendLabel=trend>0.5?"Fatigue increasing":trend<-0.5?"Fatigue decreasing":"Stable";
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Fatigue Trend"},h("div",{className:"sheet fade-in",ref:sheetRef},
+  return h(Overlay,{onClose:onClose,label:"Fatigue Trend"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
       h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Fatigue Trend"),
-      h("button",{onClick:onClose,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715")),
+      h(CloseBtn,{onClick:onClose})),
     h("div",{style:{textAlign:"center",marginBottom:12}},
       h("span",{style:{fontSize:13,fontWeight:700,color:trendColor}},trendLabel),
       h("span",{style:{fontSize:11,color:"var(--text-dim)",marginLeft:8}},"(last 4 weeks)")),
@@ -2704,12 +2713,12 @@ function FatigueTrendChart(props){
     h("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginTop:16}},
       weekAvgs.map(function(avg,i){return h("div",{key:i,style:{textAlign:"center",padding:"8px 4px",borderRadius:8,background:avg===null?"rgba(255,255,255,0.02)":avg>=8.5?"var(--danger-bg)":avg>=7.5?"var(--accent-bg)":"var(--success-bg)",border:"1px solid "+(avg===null?"var(--border)":avg>=8.5?"var(--danger-border)":avg>=7.5?"var(--accent-border)":"var(--success-border)")}},
         h("div",{style:{fontSize:9,fontWeight:700,color:"var(--text-dim)"}},"Wk "+(i+1)),
-        h("div",{style:{fontSize:16,fontWeight:800,color:avg===null?"var(--text-dim)":avg>=8.5?"var(--danger)":avg>=7.5?"var(--accent)":"var(--success)"}},avg!==null?avg.toFixed(1):"\u2014"))}))));
+        h("div",{style:{fontSize:16,fontWeight:800,color:avg===null?"var(--text-dim)":avg>=8.5?"var(--danger)":avg>=7.5?"var(--accent)":"var(--success)"}},avg!==null?avg.toFixed(1):"\u2014"))})));
 }
 
 /* ── Workout Calendar ── */
 function WorkoutCalendar(props){
-  var onClose=props.onClose,config=props.config;var sheetRef=useRef(null);useFocusTrap(sheetRef,onClose);
+  var onClose=props.onClose,config=props.config;
   var sm=useState(function(){var d=new Date();return{year:d.getFullYear(),month:d.getMonth()}}),monthState=sm[0],setMonthState=sm[1];
   var sd=useState(null),selectedDate=sd[0],setSelectedDate=sd[1];
   var workoutDates=useMemo(function(){
@@ -2734,10 +2743,10 @@ function WorkoutCalendar(props){
   var cells=[];for(var pad=1;pad<firstDay;pad++)cells.push(null);
   for(var d=1;d<=daysInMonth;d++)cells.push(d);
   var todayStr=today();
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Workout Calendar"},h("div",{className:"sheet fade-in",ref:sheetRef},
+  return h(Overlay,{onClose:onClose,label:"Workout Calendar"},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
       h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Workout Calendar"),
-      h("button",{onClick:onClose,"aria-label":"Close",style:{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer"}},"\u2715")),
+      h(CloseBtn,{onClick:onClose})),
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
       h("button",{onClick:prevMonth,className:"btn btn--ghost btn--sm"},"\u2190"),
       h("span",{style:{fontSize:14,fontWeight:700,color:"var(--text-bright)"}},monthLabel),
@@ -2780,7 +2789,7 @@ function WorkoutCalendar(props){
     h("div",{style:{display:"flex",gap:12,marginTop:12,justifyContent:"center"}},
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.12)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"1-7 sets")),
       h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.25)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"8-14 sets")),
-      h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.4)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"15+ sets")))));
+      h("div",{style:{display:"flex",alignItems:"center",gap:4}},h("div",{style:{width:10,height:10,borderRadius:3,background:"rgba(34,197,94,0.4)"}}),h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"15+ sets"))));
 }
 
 /* ══════════════════════════════════════════
