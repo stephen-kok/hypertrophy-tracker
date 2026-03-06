@@ -183,6 +183,15 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v54 — Insights Tab + Meso History (2026-03-06)
+
+- **Feature**: New "Insights" tab replaces PRs in the nav — strength trends, volume trends, bodyweight trends, and personal records in one place
+- **Feature**: Strength trend chart shows estimated 1RM over time for compound lifts with exercise picker
+- **Feature**: Volume trends show weekly sets per muscle with sparklines and drill-down
+- **Feature**: Bodyweight trend chart with 7-day rolling average
+- **Feature**: Mesocycle history — auto-captures stats when completing a 4-week block
+- **Feature**: Time range toggle (4W / 8W / 12W / All) syncs across all trend charts
+
 ### v53 — Code Quality & Cleanup (2026-03-05)
 
 - **Refactor**: Extracted shared `RPEButtonGroup` and `CloseBtn` components; all modals now use the `Overlay` helper

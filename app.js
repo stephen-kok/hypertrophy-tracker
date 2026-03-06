@@ -37,13 +37,11 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=53;
+var APP_VERSION=54;
 var WHATS_NEW=[
-  "Customizable quick-access buttons — pick your two shortcuts in the bottom nav from Settings",
-  "Tap an exercise name to swap it — now asks whether to swap just for today or permanently",
-  "New rest day cardio logging — log cardio any day from the More menu",
-  "Tempo badge now shows an explanation when tapped, just like Target RIR",
-  "Settings: hide exercise badges (RIR/Tempo) and tempo timer to reduce clutter"
+  "New Insights tab — strength, volume, and bodyweight trends over time",
+  "Mesocycle history — see stats from your completed training blocks",
+  "Personal Records now live inside Insights for a unified analytics view"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -2087,51 +2085,6 @@ function SessionHistory(props){
           s.cardio?h("span",{style:{fontSize:11,color:"var(--success)"}},"+ Cardio"):null))})));
 }
 
-/* ── Personal Records ── */
-function PersonalRecords(props){
-  var onClose=props.onClose,config=props.config;
-  var srf=useState(0),repFilter=srf[0],setRepFilter=srf[1];/* 0=e1RM, 1=1RM, 3=3RM, 5=5RM, 8=8RM, 10=10RM */
-  var repFilters=[{val:0,label:"e1RM"},{val:1,label:"1RM"},{val:3,label:"3RM"},{val:5,label:"5RM"},{val:8,label:"8RM"},{val:10,label:"10RM"}];
-  var records=useMemo(function(){
-    var recs=[];
-    config.days.forEach(function(day){
-      var allEx=day.exercises.concat(getCustomExercises(day.id));
-      var todayData=loadDayData(day.id);/* hoisted — one read per day, not per exercise */
-      allEx.forEach(function(ex){
-        var exUnit=getExUnit(ex.id);var hist=getBilateralHistory(day.id,ex,50);
-        var todaySets=getBilateralSets(ex,todayData);if(!todaySets.length)todaySets=null;
-        var allSessions=hist.slice();if(todaySets)allSessions.unshift({date:today(),sets:todaySets});
-        if(repFilter===0){
-          /* e1RM mode — original behavior */
-          var bestW=0,bestReps=0,bestDate="",bestE1rm=0;
-          allSessions.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps),e=calc1RM(w,r);if(e>bestE1rm){bestE1rm=e;bestW=w;bestReps=r;bestDate=entry.date}}})});
-          if(bestW>0)recs.push({name:ex.name,weight:bestW,reps:bestReps,date:bestDate,e1rm:bestE1rm,unit:exUnit,muscles:ex.muscles||[]});
-        }else{
-          /* Rep-range mode — best weight at exactly N reps or more */
-          var bestW2=0,bestR2=0,bestDate2="";
-          allSessions.forEach(function(entry){entry.sets.forEach(function(s){if(s.done&&s.weight&&s.reps){var w=parseFloat(s.weight),r=parseInt(s.reps);if(r>=repFilter&&w>bestW2){bestW2=w;bestR2=r;bestDate2=entry.date}}})});
-          if(bestW2>0)recs.push({name:ex.name,weight:bestW2,reps:bestR2,date:bestDate2,e1rm:calc1RM(bestW2,bestR2),unit:exUnit,muscles:ex.muscles||[]});
-        }
-      });
-    });
-    recs.sort(function(a,b){return b.e1rm-a.e1rm});return recs;
-  },[config,repFilter]);
-  var grouped=useMemo(function(){var g={};records.forEach(function(r){var key=r.muscles.length>0?r.muscles[0]:"other";if(!g[key])g[key]=[];g[key].push(r)});return g},[records]);
-  return h(Overlay,{onClose:onClose,label:"Personal Records"},
-    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Personal Records"),h(CloseBtn,{onClick:onClose})),
-    h("div",{style:{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"},role:"group","aria-label":"Record type"},repFilters.map(function(rf){var active=repFilter===rf.val;return h("button",{key:rf.val,onClick:function(){setRepFilter(rf.val)},style:{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:700,border:active?"1px solid var(--accent)":"1px solid rgba(255,255,255,0.08)",background:active?"var(--accent-bg)":"transparent",color:active?"var(--accent)":"var(--text-dim)",cursor:"pointer"},"aria-pressed":active?"true":"false"},rf.label)})),
-    records.length===0?h("div",{className:"empty-state"},h("div",{className:"empty-state__icon"},"\uD83C\uDFC6"),h("div",{className:"empty-state__title"},"No records yet"),h("div",{className:"empty-state__desc"},"Complete sets to see PRs.")):
-    h("div",{style:{maxHeight:"65vh",overflowY:"auto"}},Object.keys(grouped).map(function(muscle){
-      return h("div",{key:muscle,style:{marginBottom:16}},
-        h("div",{style:{fontSize:11,fontWeight:700,color:"var(--accent)",letterSpacing:.5,marginBottom:6}},(MUSCLE_LABELS[muscle]||muscle).toUpperCase()),
-        grouped[muscle].map(function(r,i){
-          var label=formatDate(r.date);
-          return h("div",{key:i,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
-            h("div",null,h("div",{style:{fontSize:13,fontWeight:700,color:"var(--text-bright)"}},r.name),h("div",{style:{fontSize:11,color:"var(--text-dim)"}},label)),
-            h("div",{style:{textAlign:"right"}},h("div",{style:{fontSize:15,fontWeight:800,color:"var(--text-bright)"}},r.weight+" "+r.unit+" \u00D7 "+r.reps),h("div",{style:{fontSize:10,fontWeight:600,color:"var(--info)"}},"e1RM "+r.e1rm+" "+r.unit)));
-        }));
-    })));
-}
 
 /* ── Add Custom Exercise Form ── */
 function AddExerciseForm(props){
@@ -2560,7 +2513,6 @@ function MainApp(props){
   var sn=useState(0),navTab=sn[0],setNavTab=sn[1];
   var s3=useState(false),showSettings=s3[0],setShowSettings=s3[1];var s4=useState(false),showMetrics=s4[0],setShowMetrics=s4[1];
   var sv=useState(false),showVolume=sv[0],setShowVolume=sv[1];var sh=useState(false),showHistory=sh[0],setShowHistory=sh[1];
-  var sr=useState(false),showRecords=sr[0],setShowRecords=sr[1];
   var si=useState(false),showInsights=si[0],setShowInsights=si[1];
   var swn=useState(function(){return shouldShowWhatsNew()}),showWhatsNew=swn[0],setShowWhatsNew=swn[1];
   var smo=useState(false),showMore=smo[0],setShowMore=smo[1];var moreRef=useRef(null);useFocusTrap(showMore?moreRef:null,function(){setShowMore(false)});
@@ -2737,7 +2689,6 @@ function MainApp(props){
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
     showHistory?h(SessionHistory,{onClose:function(){setShowHistory(false)}}):null,
-    showRecords?h(PersonalRecords,{onClose:function(){setShowRecords(false)},config:config}):null,
     showInsights?h(InsightsTab,{onClose:function(){setShowInsights(false)},config:config}):null,
     showCalendar?h(WorkoutCalendar,{onClose:function(){setShowCalendar(false)},config:config}):null,
     showFatigueTrend?h(FatigueTrendChart,{onClose:function(){setShowFatigueTrend(false)},config:config}):null,
