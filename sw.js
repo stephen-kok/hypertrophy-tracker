@@ -1,5 +1,5 @@
 /* CACHE_NAME must match APP_VERSION in app.js — bump both together */
-var CACHE_NAME = 'hypertrophy-v45';
+var CACHE_NAME = 'hypertrophy-v46';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -41,7 +41,7 @@ self.addEventListener('message', function(event) {
       tag: 'rest-timer',
       requireInteraction: true,
       vibrate: [200, 100, 200, 100, 200]
-    });
+    }).catch(function(){});
   }
   if (event.data && event.data.type === 'CACHE_CONFIG' && event.data.url) {
     var url = event.data.url;
@@ -82,7 +82,7 @@ self.addEventListener('fetch', function(event) {
         }
         return response;
       }).catch(function() {
-        return caches.match('./index.html');
+        return caches.match(new Request('./index.html'));
       })
     );
     return;

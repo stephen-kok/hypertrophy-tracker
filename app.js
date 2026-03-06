@@ -37,15 +37,14 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=45;
+var APP_VERSION=46;
 var WHATS_NEW=[
-  "New: Workout streak — your consecutive session count now shows in the header",
-  "New: Vacation mode — pause your streak while travelling; set your grace period in Settings",
-  "New: Hit a streak milestone (3, 5, 10, 15... sessions in a row) and get a celebration message",
-  "Improvement: REST COMPLETE banner stays on screen until you dismiss it",
-  "Improvement: Rest timer alert is louder and more distinctive",
-  "Bug fix: Deload on bodyweight exercises (e.g. leg raises) now gives useful guidance instead of a nonsensical weight target",
-  "Bug fix: Tapping weight inputs on iOS no longer triggers screen zoom"
+  "Bug fix: Workout streak no longer counts twice when you complete multiple workouts in one day",
+  "Bug fix: Session notes no longer cause the whole screen to re-render as you type",
+  "Bug fix: Timer no longer fires two notifications at once when a rest is complete",
+  "Bug fix: Offline mode now correctly loads the app when there's no connection",
+  "Bug fix: Update button now reliably installs the new version",
+  "Bug fix: Data is always saved before the app reloads after an update"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -200,7 +199,7 @@ function buildHistoryIndex(){
       var rest=k.slice(LS.length);var atIdx=rest.indexOf("@");if(atIdx===-1)continue;
       var dayId=rest.slice(0,atIdx);var date=rest.slice(atIdx+1);
       if(!date||date.length!==10)continue;
-      try{var data=JSON.parse(localStorage.getItem(k));if(data&&data.exercises){if(!_historyIndex[dayId])_historyIndex[dayId]=[];_historyIndex[dayId].push({date:date,data:data});if(!newManifest[dayId])newManifest[dayId]=[];newManifest[dayId].push(date)}}catch(e){}
+      try{var data=JSON.parse(localStorage.getItem(k));if(data&&data.exercises){if(!_historyIndex[dayId])_historyIndex[dayId]=[];_historyIndex[dayId].push({date:date,data:JSON.parse(JSON.stringify(data))});if(!newManifest[dayId])newManifest[dayId]=[];newManifest[dayId].push(date)}}catch(e){}
     }
     lsSet("_historyManifest",newManifest);
   }
@@ -586,7 +585,8 @@ function getStreakData(){
 }
 function saveStreakData(d){lsSet("streak_data",d)}
 function updateStreak(){
-  var d=getStreakData();var now=Date.now();var grace=d.graceHours*3600000;
+  var d=getStreakData();var now=Date.now();var grace=(d.graceHours||48)*3600000;
+  if(d.lastWorkout===getSessionDate())return;
   if(d.lastWorkoutTime&&now-d.lastWorkoutTime<=grace){d.count=(d.count||0)+1}else{d.count=1}
   d.lastWorkout=getSessionDate();d.lastWorkoutTime=now;
   d.longest=Math.max(d.longest||0,d.count);d.pendingBreak=false;
@@ -601,7 +601,7 @@ function _showVacationPrompt(d){
 }
 function checkStreakOnOpen(){
   var d=getStreakData();if(!d.lastWorkoutTime||d.count<1)return;
-  var now=Date.now();var grace=d.graceHours*3600000;
+  var now=Date.now();var grace=(d.graceHours||48)*3600000;
   if(d.pendingBreak){_showVacationPrompt(d);return}
   if(!d.vacationMode&&now-d.lastWorkoutTime>grace){d.pendingBreak=true;saveStreakData(d);_showVacationPrompt(d)}
 }
@@ -898,7 +898,9 @@ function ConfirmDialog(){
   var s=useState(0),bump=s[1];var dialogRef=useRef(null);
   useEffect(function(){var fn=function(){bump(function(r){return r+1})};_confirmListeners.push(fn);return function(){_confirmListeners=_confirmListeners.filter(function(f){return f!==fn})}},[]);
   var trapRef=_confirmState.show?dialogRef:null;
-  useFocusTrap(trapRef,function(){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()});
+  var onCancelRef=useRef(null);onCancelRef.current=_confirmState.onCancel;
+  var stableClose=useCallback(function(){if(onCancelRef.current)onCancelRef.current();dismissConfirm()},[]);
+  useFocusTrap(trapRef,stableClose);
   if(!_confirmState.show)return null;
   var danger=_confirmState.danger;
   return h("div",{className:"overlay overlay--center",onClick:function(e){if(e.target===e.currentTarget){if(_confirmState.onCancel)_confirmState.onCancel();dismissConfirm()}},role:"dialog","aria-modal":"true","aria-label":_confirmState.title,"aria-describedby":_confirmState.msg?"confirm-desc":undefined},
@@ -942,8 +944,8 @@ function sendTimerNotification(){
   if(navigator.vibrate)navigator.vibrate([200,100,200]);
   playTimerSound();
   /* Toast removed — FloatingTimer already shows "REST COMPLETE" banner */
-  if("Notification"in window&&Notification.permission==="granted"){try{new Notification("Rest Complete",{body:"Time to start your next set!",tag:"rest-timer"})}catch(e){}}
   if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.controller.postMessage({type:"SHOW_TIMER_NOTIFICATION"})}
+  else if("Notification"in window&&Notification.permission==="granted"){try{new Notification("Rest Complete",{body:"Time to start your next set!",tag:"rest-timer"})}catch(e){}}
 }
 
 /* ── Floating Rest Timer ── */
@@ -1001,7 +1003,7 @@ function RestTimer(props){
   useEffect(function(){
     if(!t||!t.running){setRemaining(t&&t.done?0:null);return}
     setTotal(t.total);totalRef.current=t.total;
-    var tick=function(){var left=Math.max(0,t.total-Math.floor((Date.now()-t.startedAt)/1000));setRemaining(left);if(left===0){t.running=false;t.done=true;timers.setTimer(exKey,t)}};
+    var tick=function(){var left=Math.max(0,t.total-Math.floor((Date.now()-t.startedAt)/1000));setRemaining(left)};
     tick();var id=setInterval(tick,1000);return function(){clearInterval(id)};
   },[timers.rev,exKey]);
   var startFn=useCallback(function(){timers.triggerTimer(exKey,totalRef.current)},[exKey,timers]);
@@ -1265,9 +1267,9 @@ function ExerciseNotes(props){
   var exId=props.exId,dayId=props.dayId;
   var dayData=useDayData();
   var s=useState(function(){var d=dayData.getData(dayId);return d.exNotes&&d.exNotes[exId]?d.exNotes[exId]:""}),note=s[0],setNote=s[1];
-  var save=function(val){setNote(val);var all=dayData.getData(dayId);if(!all.exNotes)all.exNotes={};all.exNotes[exId]=val;dayData.saveData(dayId,all)};
+  var save=function(val){var all=dayData.getData(dayId);if(!all.exNotes)all.exNotes={};all.exNotes[exId]=val;dayData.saveData(dayId,all)};
   return h("div",{style:{marginTop:6}},
-    h("input",{type:"text",value:note,onChange:function(e){save(e.target.value)},placeholder:"Session note (e.g. shoulder felt tight)...",className:"input input--text","aria-label":"Exercise session note"}));
+    h("input",{type:"text",value:note,onChange:function(e){setNote(e.target.value)},onBlur:function(e){save(e.target.value)},placeholder:"Session note (e.g. shoulder felt tight)...",className:"input input--text","aria-label":"Exercise session note"}));
 }
 
 /* ── Quick Log ── */
@@ -1767,7 +1769,7 @@ function CompletionSummary(props){
   var dayData=useDayData();
   var stats=useMemo(function(){return calcSessionStats(day,customs,dayData.getData(day.id))},[day,customs,dayData.rev]);
   var ssd=useState(function(){return getStreakData()}),streakData=ssd[0],setStreakData=ssd[1];
-  useEffect(function(){saveSessionSummary(day,customs);setStreakData(getStreakData())},[]);
+  useEffect(function(){saveSessionSummary(day,customs,stats);setStreakData(getStreakData())},[]);
   var shareText=useMemo(function(){return generateShareText(day,stats,unit)},[day,stats,unit]);
   var handleShare=function(){if(navigator.share){navigator.share({text:shareText}).catch(function(){})}else{navigator.clipboard.writeText(shareText).then(function(){showUndoToast("Copied to clipboard!",null,2000)}).catch(function(){showUndoToast("Failed to copy \u2014 try long-pressing the text",null,3000)})}};
   return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Workout Complete"},
@@ -1794,8 +1796,8 @@ function CompletionSummary(props){
 }
 
 /* ── Session History ── */
-function saveSessionSummary(day,customs){
-  var stats=calcSessionStats(day,customs);var key="session_history";var hist=lsGet(key)||[];
+function saveSessionSummary(day,customs,stats){
+  if(!stats)stats=calcSessionStats(day,customs);var key="session_history";var hist=lsGet(key)||[];
   var sd=getSessionDate();
   if(hist.length>0&&hist[0].date===sd&&hist[0].dayId===day.id)return;
   var sessionRpe=lsGet("sessionRpe_"+day.id+"_"+sd);
@@ -2772,7 +2774,7 @@ if("serviceWorker"in navigator){window.addEventListener("load",function(){naviga
   reg.addEventListener("updatefound",function(){var nw=reg.installing;if(nw){nw.addEventListener("statechange",function(){if(nw.state==="installed"&&navigator.serviceWorker.controller){
     var toast=document.createElement("div");toast.textContent="Update available \u2014 tap to refresh";
     toast.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#f59e0b;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
-    toast.onclick=function(){nw.postMessage({type:"SKIP_WAITING"})};document.body.appendChild(toast);
+    toast.onclick=function(){if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"})};document.body.appendChild(toast);
   }})}});
   setInterval(function(){reg.update().catch(function(){})},3600000);
 }).catch(function(e){console.warn("SW registration failed:",e)})});
@@ -2781,8 +2783,8 @@ if("serviceWorker"in navigator){window.addEventListener("load",function(){naviga
     if(document.activeElement&&(document.activeElement.tagName==="INPUT"||document.activeElement.tagName==="TEXTAREA")){
       var banner=document.createElement("div");banner.textContent="Update ready \u2014 tap to reload";
       banner.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;background:#22c55e;color:#000;font-weight:700;font-size:13px;z-index:9999;cursor:pointer;font-family:-apple-system,sans-serif";
-      banner.onclick=function(){window.location.reload()};document.body.appendChild(banner);
-    }else{window.location.reload()}
+      banner.onclick=function(){flushPendingSaves();window.location.reload()};document.body.appendChild(banner);
+    }else{flushPendingSaves();window.location.reload()}
   });
 }
 

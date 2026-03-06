@@ -183,6 +183,19 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v46 — Critical Bug Fixes (2026-03-05)
+
+- **Bug fix**: Streak no longer double-increments when completing multiple workouts in one day
+- **Bug fix**: Exercise notes no longer re-render every exercise card on each keystroke (saves on blur)
+- **Bug fix**: Timer no longer fires two notifications simultaneously — SW and direct paths are now exclusive
+- **Bug fix**: Offline navigation fallback now correctly matches cached `index.html`
+- **Bug fix**: Update toast now posts `SKIP_WAITING` to the waiting worker (was sending to wrong worker)
+- **Bug fix**: `flushPendingSaves()` called before page reload on SW update — no data lost on update
+- **Bug fix**: `buildHistoryIndex` full scan now deep-clones data before storing
+- **Bug fix**: `ConfirmDialog` focus trap no longer re-runs on every render
+- **Bug fix**: `RestTimer` no longer races `FloatingTimer` to set timer done state
+- **Bug fix**: `graceHours` NaN guard prevents streak never breaking after a data migration
+
 ### v45 — Streak Mechanic & Timer Polish (2026-03-05)
 
 - **New**: Session-based workout streak counter — shown in the header (🔥 N) with 48h default grace period
