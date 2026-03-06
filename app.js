@@ -2760,8 +2760,101 @@ function MainApp(props){
 /* ═══ INSIGHTS TAB ═══ */
 
 /* Placeholder chart sections — replaced in Tasks 5-7 */
+var TREND_COLORS=["var(--accent)","var(--info)","var(--success)","var(--warning)"];
+
 function StrengthTrendsSection(props){
-  return h("div",{style:{padding:"16px 0",color:"var(--text-dim)",fontSize:12,fontStyle:"italic",textAlign:"center"}},"Strength trends coming soon...");
+  var config=props.config,rangeDays=props.rangeDays;
+  var defaults=useMemo(function(){return getDefaultCompoundLifts(config)},[config]);
+  var sl=useState(null),selectedLifts=sl[0],setSelectedLifts=sl[1];
+  var sp=useState(false),showPicker=sp[0],setShowPicker=sp[1];
+  var st=useState(null),tooltip=st[0],setTooltip=st[1];
+  var lifts=selectedLifts||defaults;
+  var liftIds=lifts.map(function(l){return l.id});
+
+  var data=useMemo(function(){return getE1rmTrends(config,liftIds,rangeDays)},[config,liftIds.join(","),rangeDays]);
+
+  if(data.length<2&&!showPicker){
+    return h("div",{style:{padding:"16px 0",textAlign:"center"}},
+      h("div",{style:{fontSize:20,marginBottom:6},"aria-hidden":"true"},"\uD83D\uDCC8"),
+      h("div",{style:{fontSize:12,color:"var(--text-dim)"}},"Need at least 2 sessions to show trends."),
+      h("button",{onClick:function(){setShowPicker(true)},className:"btn btn--ghost btn--xs",style:{marginTop:8}},"Choose Exercises"));
+  }
+
+  var W=300,H=120,padL=30,padR=8,padT=8,padB=20;
+  var chartW=W-padL-padR,chartH=H-padT-padB;
+
+  var allVals=[];
+  data.forEach(function(d){liftIds.forEach(function(id){if(d.values[id])allVals.push(d.values[id])})});
+  var mn=allVals.length?Math.min.apply(null,allVals):0;
+  var mx=allVals.length?Math.max.apply(null,allVals):100;
+  var range2=mx-mn||1;
+
+  var lines=liftIds.map(function(id,idx){
+    var pts=[];
+    data.forEach(function(d,di){
+      if(d.values[id]){
+        var x=padL+(data.length>1?di*chartW/(data.length-1):chartW/2);
+        var y=padT+(1-(d.values[id]-mn)/range2)*chartH;
+        pts.push({x:x,y:y,date:d.date,val:d.values[id]});
+      }
+    });
+    return{id:id,color:TREND_COLORS[idx%TREND_COLORS.length],points:pts};
+  });
+
+  var allExercises=useMemo(function(){
+    var exs=[];
+    config.days.forEach(function(day){day.exercises.forEach(function(ex){
+      exs.push({id:ex.id,name:ex.name,dayId:day.id});
+    })});
+    return exs;
+  },[config]);
+
+  return h("div",{style:{paddingBottom:12}},
+    h("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8,alignItems:"center"}},
+      lifts.map(function(l,i){
+        return h("span",{key:l.id,style:{fontSize:10,fontWeight:700,color:TREND_COLORS[i%TREND_COLORS.length],background:"rgba(255,255,255,0.04)",padding:"2px 8px",borderRadius:4}},l.name)}),
+      h("button",{onClick:function(){setShowPicker(!showPicker)},className:"btn btn--ghost btn--xs",style:{fontSize:10}},showPicker?"Done":"Edit")),
+
+    showPicker?h("div",{className:"fade-in",style:{background:"var(--surface-alt)",borderRadius:10,padding:10,marginBottom:10,maxHeight:180,overflowY:"auto"}},
+      allExercises.map(function(ex){
+        var active=liftIds.indexOf(ex.id)!==-1;
+        return h("button",{key:ex.id,onClick:function(){
+          var next=active?lifts.filter(function(l){return l.id!==ex.id}):lifts.concat([{id:ex.id,name:ex.name,dayId:ex.dayId}]);
+          setSelectedLifts(next.length>0?next:null);
+        },style:{display:"block",width:"100%",textAlign:"left",padding:"6px 8px",fontSize:11,fontWeight:active?700:400,color:active?"var(--accent)":"var(--text-secondary)",background:"none",border:"none",cursor:"pointer",borderBottom:"1px solid rgba(255,255,255,0.03)"},"aria-pressed":active?"true":"false"},
+          (active?"\u2713 ":"")+ex.name);
+      })):null,
+
+    data.length>=2?h("div",{style:{position:"relative"}},
+      h("svg",{width:"100%",height:H,viewBox:"0 0 "+W+" "+H,preserveAspectRatio:"none","aria-hidden":"true"},
+        h("text",{x:padL-4,y:padT+4,textAnchor:"end",fontSize:8,fill:"var(--text-dim)"},Math.round(mx)),
+        h("text",{x:padL-4,y:padT+chartH,textAnchor:"end",fontSize:8,fill:"var(--text-dim)"},Math.round(mn)),
+        h("line",{x1:padL,y1:padT,x2:padL+chartW,y2:padT,stroke:"rgba(255,255,255,0.04)",strokeWidth:0.5}),
+        h("line",{x1:padL,y1:padT+chartH,x2:padL+chartW,y2:padT+chartH,stroke:"rgba(255,255,255,0.04)",strokeWidth:0.5}),
+        data.length>0?h("text",{x:padL,y:H-2,fontSize:8,fill:"var(--text-dim)"},formatDate(data[0].date)):null,
+        data.length>1?h("text",{x:padL+chartW,y:H-2,textAnchor:"end",fontSize:8,fill:"var(--text-dim)"},formatDate(data[data.length-1].date)):null,
+        lines.map(function(line){
+          if(line.points.length<2)return null;
+          var pathStr=line.points.map(function(p){return p.x+","+p.y}).join(" ");
+          return h("polyline",{key:line.id,points:pathStr,fill:"none",stroke:line.color,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"});
+        }),
+        lines.map(function(line){
+          return line.points.map(function(p,pi){
+            return h("circle",{key:line.id+"-"+pi,cx:p.x,cy:p.y,r:3,fill:line.color,style:{cursor:"pointer"},
+              onClick:function(){setTooltip(tooltip&&tooltip.id===line.id&&tooltip.idx===pi?null:{id:line.id,idx:pi,date:p.date,val:p.val,x:p.x,y:p.y,color:line.color})}});
+          });
+        })),
+      tooltip?h("div",{style:{position:"absolute",left:Math.min(tooltip.x,W-80),top:Math.max(0,tooltip.y-30),background:"var(--surface-hover)",border:"1px solid "+tooltip.color,borderRadius:6,padding:"4px 8px",fontSize:10,fontWeight:700,color:tooltip.color,pointerEvents:"none",zIndex:10}},
+        formatDate(tooltip.date)+": "+tooltip.val):null):null,
+
+    lines.length>0?h("div",{style:{display:"flex",gap:10,flexWrap:"wrap",marginTop:6}},
+      lines.map(function(line){
+        var lift=lifts.find(function(l){return l.id===line.id});
+        var delta=line.points.length>=2?line.points[line.points.length-1].val-line.points[0].val:0;
+        var arrow=delta>0?"\u2191":delta<0?"\u2193":"\u2192";
+        return h("span",{key:line.id,style:{fontSize:9,fontWeight:600,color:line.color}},
+          "\u25CF "+(lift?lift.name:line.id)+" "+arrow+(delta!==0?" "+(delta>0?"+":"")+delta:""));
+      })):null);
 }
 function VolumeTrendsSection(props){
   var config=props.config,rangeDays=props.rangeDays;
