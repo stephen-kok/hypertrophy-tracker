@@ -49,7 +49,7 @@ function shouldShowWhatsNew(){return getSeenVersion()<APP_VERSION&&getSeenVersio
 var SAVE_DEBOUNCE_MS=300;     /* debounce delay before writing dayData to localStorage */
 var SWIPE_THRESHOLD_PX=80;    /* minimum horizontal swipe distance to trigger day change */
 var SESSION_WARN_SECS=5400;   /* 90 minutes — show long-session warning */
-var SESSION_HISTORY_KEY="session_history"; /* intentional global key — shared across profiles */
+var SESSION_HISTORY_KEY="session_history"; /* profile-scoped via lsGet/lsSet (ht_[profile]_session_history) */
 var STREAK_MILESTONES=[3,5,10,15,20,25,30,50,100];
 /* Mesocycle volume factor per week — paired with MESO_REP_SHIFT */
 var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
