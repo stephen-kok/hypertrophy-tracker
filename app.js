@@ -1798,8 +1798,8 @@ function CompletionSummary(props){
   useEffect(function(){saveSessionSummary(day,customs,stats);setStreakData(getStreakData())},[]);
   var shareText=useMemo(function(){return generateShareText(day,stats,unit)},[day,stats,unit]);
   var handleShare=function(){if(navigator.share){navigator.share({text:shareText}).catch(function(){})}else{navigator.clipboard.writeText(shareText).then(function(){showUndoToast("Copied to clipboard!",null,2000)}).catch(function(){showUndoToast("Failed to copy \u2014 try long-pressing the text",null,3000)})}};
-  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Workout Complete"},
-    h("div",{className:"sheet celebrate",ref:sheetRef,style:{paddingBottom:"max(env(safe-area-inset-bottom,0px),80px)"}},
+  return h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)onClose()},role:"dialog","aria-modal":"true","aria-label":"Workout Complete",style:{paddingBottom:"calc(56px + max(env(safe-area-inset-bottom,0px),0px))"}},
+    h("div",{className:"sheet celebrate",ref:sheetRef},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
         h("div",{style:{display:"flex",alignItems:"center",gap:8}},
           h("span",{style:{fontSize:24},"aria-hidden":"true"},"\uD83C\uDFC6"),
