@@ -2521,9 +2521,9 @@ function MainApp(props){
       h("div",{style:{display:"flex",justifyContent:"center",gap:4,marginTop:6},"aria-hidden":"true"},DAYS.map(function(_,i){return h("div",{key:i,style:{width:activeDay===i?12:5,height:5,borderRadius:3,background:activeDay===i?"var(--accent)":"rgba(255,255,255,0.12)",transition:"width 0.2s, background 0.2s"}})}))),
     /* Week strip */
     h("div",{style:{display:"flex",justifyContent:"center",gap:3,padding:"4px 16px 6px",background:"var(--bg)"},"aria-label":"This week"},
-      weekStripData.map(function(wd){var isToday=wd.dow===(new Date().getDay()||7);return h("div",{key:wd.dow,style:{flex:1,textAlign:"center",padding:"3px 0",borderRadius:6,background:isToday?"rgba(245,158,11,0.1)":"transparent",border:isToday?"1px solid var(--accent-border)":"1px solid transparent"}},
-        h("div",{style:{fontSize:9,fontWeight:700,color:isToday?"var(--accent)":"var(--text-dim)"}},["M","T","W","T","F","S","S"][wd.dow-1]),
-        h("div",{style:{width:5,height:5,borderRadius:3,margin:"2px auto 0",background:wd.complete?"var(--success)":wd.hasSets?"var(--accent)":"rgba(255,255,255,0.06)"}}))})),
+      weekStripData.map(function(wd){var isToday=wd.dow===(new Date().getDay()||7);var dayNames=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];var status=wd.complete?"complete":wd.hasSets?"in progress":"no workout";return h("div",{key:wd.dow,"aria-label":dayNames[wd.dow-1]+(isToday?" (today)":"")+", "+status,style:{flex:1,textAlign:"center",padding:"3px 0",borderRadius:6,background:isToday?"rgba(245,158,11,0.1)":"transparent",border:isToday?"1px solid var(--accent-border)":"1px solid transparent"}},
+        h("div",{style:{fontSize:9,fontWeight:700,color:isToday?"var(--accent)":"var(--text-dim)"},"aria-hidden":"true"},["M","T","W","T","F","S","S"][wd.dow-1]),
+        h("div",{style:{width:5,height:5,borderRadius:3,margin:"2px auto 0",background:wd.complete?"var(--success)":wd.hasSets?"var(--accent)":"rgba(255,255,255,0.06)"},"aria-hidden":"true"}))})),
     /* Content */
     h("main",{ref:scrollRef,onTouchStart:onTouchStart,onTouchEnd:onTouchEnd,className:"content"},
       showMesoAdvance?h("div",{style:{background:"var(--info-bg)",border:"1px solid var(--info-border)",borderRadius:10,padding:"10px 12px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}},
