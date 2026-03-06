@@ -2,17 +2,17 @@
   "profiles": [
     {
       "id": "stephen",
-      "name": "Stephen",
+      "name": "Stephen K",
       "program": "5-Day Hypertrophy — Upper/Lower/Push/Pull/Legs"
     },
     {
       "id": "james",
-      "name": "James",
+      "name": "James G",
       "program": "4-Day Push/Pull/Legs/Shoulders & Abs"
     },
     {
       "id": "timmy",
-      "name": "Timmy",
+      "name": "Timmy C",
       "program": "6-Day PPL A/B — Push/Pull/Legs Rotation"
     }
   ]

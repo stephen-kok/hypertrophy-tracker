@@ -37,13 +37,13 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=51;
+var APP_VERSION=52;
 var WHATS_NEW=[
+  "Customizable quick-access buttons — pick your two shortcuts in the bottom nav from Settings",
   "Tap an exercise name to swap it — now asks whether to swap just for today or permanently",
   "New rest day cardio logging — log cardio any day from the More menu",
   "Tempo badge now shows an explanation when tapped, just like Target RIR",
-  "Settings: hide exercise badges (RIR/Tempo) and tempo timer to reduce clutter",
-  "Day tabs now show just the workout name — cleaner and less restrictive"
+  "Settings: hide exercise badges (RIR/Tempo) and tempo timer to reduce clutter"
 ];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
@@ -57,6 +57,16 @@ var SESSION_HISTORY_KEY="session_history"; /* profile-scoped via lsGet/lsSet (ht
 var STREAK_MILESTONES=[3,5,10,15,20,25,30,50,100];
 /* Mesocycle volume factor per week — paired with MESO_REP_SHIFT */
 var MESO_VOL_FACTOR={1:0.85,2:1.0,3:1.1,4:0.5};
+/* Bottom-nav configurable shortcut definitions */
+var NAV_SHORTCUTS_DEF=[
+  {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL"},
+  {id:"records", icon:"\uD83C\uDFC6",label:"PRs",          navLabel:"PRs"},
+  {id:"calendar",icon:"\uD83D\uDCC5",label:"Calendar",     navLabel:"CAL"},
+  {id:"history", icon:"\uD83D\uDCCB",label:"History",      navLabel:"LOG"},
+  {id:"metrics", icon:"\uD83D\uDCCF",label:"Body Metrics", navLabel:"BODY"},
+  {id:"fatigue", icon:"\uD83D\uDCC8",label:"Fatigue Trend",navLabel:"TREND"},
+];
+var NAV_SHORTCUT_DEFAULTS=["calendar","records"];
 
 /* ═══ CONFIG VALIDATION ═══ */
 function validateConfig(cfg){
@@ -2299,6 +2309,18 @@ function SettingsPanel(props){
           [24,48,72,168].map(function(hrs){var label=hrs===168?"1 wk":hrs+"h";return h("button",{key:hrs,onClick:function(){setGraceHours(hrs);setPref("streakGraceHours",hrs);var sd=getStreakData();sd.graceHours=hrs;saveStreakData(sd)},className:"btn btn--xs "+(graceHours===hrs?"btn--accent":"btn--ghost")},label)}))),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Vacation Mode"),h("div",{className:"settings-row__desc"},"Pause streak countdown while travelling")),
         h(Toggle,{on:vacationMode,onToggle:function(){var next=!vacationMode;setVacationMode(next);var sd=getStreakData();sd.vacationMode=next;if(!next)sd.lastWorkoutTime=Date.now();saveStreakData(sd)},label:"Vacation mode"}))),
+    h(SettingsGroup,{title:"Navigation",defaultOpen:false},
+      h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:14}},"Choose the two shortcut buttons in the bottom navigation bar."),
+      (function(){
+        var curShortcuts=props.navShortcuts||NAV_SHORTCUT_DEFAULTS;
+        var handleSlot=function(slot,id){var next=[slot===0?id:curShortcuts[0],slot===1?id:curShortcuts[1]];if(props.onNavShortcutsChange)props.onNavShortcutsChange(next)};
+        return [0,1].map(function(slot){
+          var curDef=NAV_SHORTCUTS_DEF.find(function(d){return d.id===curShortcuts[slot]})||NAV_SHORTCUTS_DEF[0];
+          return h("div",{key:slot,style:{marginBottom:slot===0?14:0}},
+            h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-primary)",marginBottom:6}},"Slot "+(slot+1)+" \u2014 "+curDef.icon+" "+curDef.label),
+            h("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
+              NAV_SHORTCUTS_DEF.map(function(def){return h("button",{key:def.id,onClick:function(){handleSlot(slot,def.id)},className:"btn btn--xs "+(curShortcuts[slot]===def.id?"btn--accent":"btn--ghost")},def.icon+" "+def.label)})))});
+      })()),
     h(SettingsGroup,{title:"Schedule"},
       h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:10}},"Tap a day to cycle through the week"),
       h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},config.days.map(function(day){return h("button",{key:day.id,onClick:function(){changeDayFor(day.id)},style:{padding:"8px 12px",borderRadius:8,border:"1px solid var(--accent-border)",background:"var(--accent-bg)",cursor:"pointer",textAlign:"center",minWidth:60},"aria-label":"Change "+day.label+" day"},h("div",{style:{fontSize:10,fontWeight:700,color:"var(--accent)"}},dayMap[day.id]),h("div",{style:{fontSize:12,fontWeight:600,color:"var(--text-primary)",marginTop:2}},day.label))}))),
@@ -2392,6 +2414,7 @@ function MainApp(props){
   var sft=useState(false),showFatigueTrend=sft[0],setShowFatigueTrend=sft[1];
   var stpl=useState(false),showTemplates=stpl[0],setShowTemplates=stpl[1];
   var scard=useState(false),showCardio=scard[0],setShowCardio=scard[1];
+  var sns=useState(function(){return getPref("navShortcuts",NAV_SHORTCUT_DEFAULTS)}),navShortcuts=sns[0],setNavShortcutsState=sns[1];
   var sinst=useState(!!_deferredInstallPrompt),canInstall=sinst[0],setCanInstall=sinst[1];
   useEffect(function(){return onInstallPromptChange(setCanInstall)},[]);
   var s7=useState(function(){return getDayMap(DAYS)}),dayMap=s7[0],setDayMapState=s7[1];
@@ -2485,8 +2508,6 @@ function MainApp(props){
           h("div",{style:{display:"flex",alignItems:"center",gap:6,marginTop:2}},
             h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"}},config.name),
             h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"\u00B7"),
-            h("span",{style:{fontSize:9,color:"var(--text-dim)",fontWeight:700,letterSpacing:.5,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"bottom"}},config.subtitle||""),
-            h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"\u00B7"),
             h("span",{style:{fontSize:9,fontWeight:700,color:meso.week===4?"var(--danger)":"var(--info)",letterSpacing:.5}},"Wk "+meso.week+"/4"),
             fatigue?h("span",{style:{fontSize:9,fontWeight:700,color:fatigue.color,marginLeft:4}},"\u25CF "+fatigue.label):null)),
         h("div",{style:{textAlign:"right"}},
@@ -2521,16 +2542,14 @@ function MainApp(props){
     h(SaveFlash,null),
     h(FloatingTimer,null),
     /* Bottom Navigation */
-    h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
-      [{icon:"\uD83C\uDFCB\uFE0F",label:"TRAIN",idx:0},{icon:"\uD83D\uDCCA",label:"VOLUME",idx:1},{icon:"\uD83C\uDFC6",label:"PRs",idx:2},{icon:"\u2699\uFE0F",label:"MORE",idx:3}].map(function(nav){
-        return h("button",{key:nav.idx,onClick:function(){
-          if(nav.idx===0){setNavTab(0)}
-          else if(nav.idx===1){setShowVolume(true)}
-          else if(nav.idx===2){setShowRecords(true)}
-          else if(nav.idx===3){setShowMore(true)}
-        },className:"nav-btn"+(navTab===nav.idx?" nav-btn--active":""),"aria-label":nav.label},
-          h("span",{className:"nav-btn__icon","aria-hidden":"true"},nav.icon),
-          h("span",{className:"nav-btn__label"},nav.label))})),
+    (function(){
+      var shortcutActions={volume:function(){setShowVolume(true)},records:function(){setShowRecords(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
+      var shortcutActive={volume:showVolume,records:showRecords,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
+      return h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
+        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),h("span",{className:"nav-btn__label"},"TRAIN")),
+        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.icon),h("span",{className:"nav-btn__label"},def.navLabel))}),
+        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u2699\uFE0F"),h("span",{className:"nav-btn__label"},"MORE")));
+    })(),
     /* More Menu */
     showMore?h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)setShowMore(false)},role:"dialog","aria-modal":"true","aria-label":"More options"},
       h("div",{className:"sheet fade-in",ref:moreRef,style:{paddingBottom:"max(env(safe-area-inset-bottom,0px),24px)"}},
@@ -2552,7 +2571,7 @@ function MainApp(props){
           return null}())):null,
     /* Modals */
     showCardio?h(StandaloneCardio,{onClose:function(){setShowCardio(false)}}):null,
-    showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,dayMap:dayMap,setDayMapState:setDayMapState,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)}}):null,
+    showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,dayMap:dayMap,setDayMapState:setDayMapState,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)},navShortcuts:navShortcuts,onNavShortcutsChange:function(v){setPref("navShortcuts",v);setNavShortcutsState(v)}}):null,
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
     showHistory?h(SessionHistory,{onClose:function(){setShowHistory(false)}}):null,
