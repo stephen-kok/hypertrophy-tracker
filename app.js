@@ -37,8 +37,8 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=55;
-var WHATS_NEW=["Program Builder — create, edit, and reorder your workout days and exercises right in the app","Build a program from scratch or customize your existing one","Full control over exercise names, sets, reps, rest times, and muscle tags"];
+var APP_VERSION=56;
+var WHATS_NEW=["Rest timer stays on screen until you tap it — no more blinking away","Timer sound and vibration now work every time, not just the first set","Finished a card? It collapses and the next exercise opens automatically","Setup instructions in the Coach tab for machine and cable exercises","Cleaner navigation bar — text only, no icons"];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
 function shouldShowWhatsNew(){return getSeenVersion()<APP_VERSION&&getSeenVersion()>0}
