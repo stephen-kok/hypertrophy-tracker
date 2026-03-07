@@ -1298,7 +1298,7 @@ function RPERating(props){
   var dayData=useDayData();
   var s=useState(function(){var d=dayData.getData(dayId);return d.rpe&&d.rpe[exId]?d.rpe[exId]:null}),rpe=s[0],setRpe=s[1];
   if(!allDone)return null;
-  var save=function(val){setRpe(val);var all=dayData.getData(dayId);if(!all.rpe)all.rpe={};all.rpe[exId]=val;dayData.saveData(dayId,all)};
+  var save=function(val){setRpe(val);var all=dayData.getData(dayId);if(!all.rpe)all.rpe={};all.rpe[exId]=val;dayData.saveData(dayId,all);if(props.onRated)props.onRated()};
   var labels={6:"Light",7:"Moderate",8:"Hard",9:"Very Hard",10:"Max"};
   return h("div",{className:"fade-in",style:{marginTop:8,padding:"8px 0"},"aria-label":"RPE rating"},
     h("div",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"How hard was that? (RPE)"),
@@ -1389,6 +1389,7 @@ function ExerciseCard(props){
   var sswap=useState(false),showSwapMenu=sswap[0],setShowSwapMenu=sswap[1];
   var ssq=useState(""),swapSearch=ssq[0],setSwapSearch=ssq[1];
   var sside=useState("L"),activeSide=sside[0],setActiveSide=sside[1];
+  var prevAllDoneRef=useRef(false);
   var ssk=useState(function(){var d=dayData.getData(dayId);return d._skipped&&d._skipped[exercise.id]||false}),skipped=ssk[0],setSkipped=ssk[1];
   var toggleSkip=function(){var next=!skipped;setSkipped(next);var all=dayData.getData(dayId);if(!all._skipped)all._skipped={};all._skipped[exercise.id]=next;dayData.saveData(dayId,all);if(onSetUpdate)onSetUpdate()};
   var sdr=useState(0),dataRev=sdr[0],bumpDataRev=sdr[1];
@@ -1447,6 +1448,14 @@ function ExerciseCard(props){
     if(onSetUpdate)onSetUpdate();
   },[exKey,exercise.rest,onSetUpdate,timers,supersetGroup,dayId,props.supersetPartnerExId]);
   var onQuickLog=useCallback(function(){bumpDataRev(function(r){return r+1});if(onSetUpdate)onSetUpdate()},[onSetUpdate]);
+  useEffect(function(){
+    if(allDone&&!prevAllDoneRef.current){
+      if(!getPref("showRir",true)&&props.onComplete){
+        setTimeout(function(){setExpanded(false);props.onComplete(props.index)},500);
+      }
+    }
+    prevAllDoneRef.current=allDone;
+  },[allDone]);
   var cardClass="card"+(skipped?" card--skipped":"")+(allDone&&!skipped?" card--done":"")+(isNext&&!allDone&&!skipped&&completedSets===0?" card--next":"");
   return h("div",{className:cardClass,style:{position:"relative"},"aria-label":exercise.name},
     supersetGroup?h("div",{className:"superset-line","aria-hidden":"true"}):null,
@@ -1523,7 +1532,11 @@ function ExerciseCard(props){
           h("span",{style:{fontSize:11,fontWeight:600,color:"var(--info)"}},"Superset with: "+supersetPartner),
           timerData&&timerData.waitingPartner?h("span",{style:{fontSize:10,fontWeight:700,color:"var(--accent)",marginLeft:4}},"\u2192 Do "+supersetPartner+" now"):null,
           h("span",{style:{fontSize:10,color:"var(--text-dim)"}},"Alternate sets, minimal rest")):null,
-        h(RPERating,{exId:exercise.id,dayId:dayId,allDone:allDone}),
+        h(RPERating,{exId:exercise.id,dayId:dayId,allDone:allDone,onRated:function(){
+          if(allDone&&props.onComplete){
+            setTimeout(function(){setExpanded(false);props.onComplete(props.index)},500);
+          }
+        }}),
         h(ExerciseNotes,{exId:exercise.id,dayId:dayId}),
         h(CardExtras,{exId:exercise.id,dayId:dayId,isMachine:!!exercise.machine,exercise:exercise,onUpdate:onSetUpdate}),
         !allDone?h("button",{onClick:toggleSkip,className:skipped?"btn btn--ghost btn--sm":"btn btn--ghost btn--sm",style:{marginTop:8,opacity:0.6}},skipped?"\u21A9 Undo Skip":"\u23ED Skip Exercise"):null),
@@ -2349,10 +2362,56 @@ function DayView(props){
     swappedExercises.map(function(ex,i){
       var ssPartner=null,ssPartnerExId=null;
       if(ex.supersetGroup){for(var si=0;si<swappedExercises.length;si++){if(si!==i&&swappedExercises[si].supersetGroup===ex.supersetGroup){ssPartner=swappedExercises[si].name;ssPartnerExId=swappedExercises[si].id;break}}}
-      return h(CardErrorBoundary,{key:ex.id,name:ex.name},h(ExerciseCard,{exercise:ex,index:i,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===i,supersetGroup:ex.supersetGroup,supersetPartner:ssPartner,supersetPartnerExId:ssPartnerExId,onSwap:handleSwap,exerciseLibrary:exerciseLibrary,meso:meso}))}),
+      return h(CardErrorBoundary,{key:ex.id,name:ex.name},h(ExerciseCard,{exercise:ex,index:i,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===i,supersetGroup:ex.supersetGroup,supersetPartner:ssPartner,supersetPartnerExId:ssPartnerExId,onSwap:handleSwap,exerciseLibrary:exerciseLibrary,meso:meso,onComplete:function(completedIdx){
+        var nextIdx=-1;
+        for(var ni=completedIdx+1;ni<allExercises.length;ni++){
+          var exS=saved._skipped&&saved._skipped[allExercises[ni].id];
+          if(exS)continue;
+          var exD=countBilateralDone(allExercises[ni],saved);
+          if(exD<totalSetsFor(allExercises[ni])){nextIdx=ni;break}
+        }
+        if(nextIdx>=0){
+          setTimeout(function(){
+            var nextEx=allExercises[nextIdx];
+            var cards=document.querySelectorAll(".card");
+            var targetCard=null;
+            for(var ci=0;ci<cards.length;ci++){
+              if(cards[ci].getAttribute("aria-label")===nextEx.name){targetCard=cards[ci];break}
+            }
+            if(targetCard){
+              var header=targetCard.querySelector("[role='button'][aria-expanded]");
+              if(header&&header.getAttribute("aria-expanded")==="false"){header.click()}
+              targetCard.scrollIntoView({behavior:"smooth",block:"center"});
+            }
+          },500);
+        }
+      }}))}),
     customs.length>0?h("div",{style:{borderTop:"1px solid var(--info-border)",marginTop:8,paddingTop:8}},
       h("div",{style:{fontSize:10,fontWeight:700,color:"var(--info)",marginBottom:6,letterSpacing:.5}},"CUSTOM EXERCISES"),
-      customs.map(function(ex,i){var ci=day.exercises.length+i;return h("div",{key:ex.id,style:{position:"relative"}},h(ExerciseCard,{exercise:ex,index:ci,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===ci,meso:meso}),h("button",{onClick:function(){removeCustom(ex.id,ex.name)},style:{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger)",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10},"aria-label":"Remove "+ex.name},"\u2715"))})):null,
+      customs.map(function(ex,i){var ci=day.exercises.length+i;return h("div",{key:ex.id,style:{position:"relative"}},h(ExerciseCard,{exercise:ex,index:ci,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===ci,meso:meso,onComplete:function(completedIdx){
+        var nextIdx=-1;
+        for(var ni=completedIdx+1;ni<allExercises.length;ni++){
+          var exS=saved._skipped&&saved._skipped[allExercises[ni].id];
+          if(exS)continue;
+          var exD=countBilateralDone(allExercises[ni],saved);
+          if(exD<totalSetsFor(allExercises[ni])){nextIdx=ni;break}
+        }
+        if(nextIdx>=0){
+          setTimeout(function(){
+            var nextEx=allExercises[nextIdx];
+            var cards=document.querySelectorAll(".card");
+            var targetCard=null;
+            for(var ci=0;ci<cards.length;ci++){
+              if(cards[ci].getAttribute("aria-label")===nextEx.name){targetCard=cards[ci];break}
+            }
+            if(targetCard){
+              var header=targetCard.querySelector("[role='button'][aria-expanded]");
+              if(header&&header.getAttribute("aria-expanded")==="false"){header.click()}
+              targetCard.scrollIntoView({behavior:"smooth",block:"center"});
+            }
+          },500);
+        }
+      }}),h("button",{onClick:function(){removeCustom(ex.id,ex.name)},style:{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger)",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10},"aria-label":"Remove "+ex.name},"\u2715"))})):null,
     showAddForm?h(AddExerciseForm,{dayId:day.id,onAdd:function(){setCustoms(getCustomExercises(day.id));setShowAddForm(false);refresh()},onCancel:function(){setShowAddForm(false)}}):h("button",{onClick:function(){setShowAddForm(true)},className:"btn btn--info btn--full btn--dashed",style:{marginTop:8}},"+ Add Exercise"),
     h(CardioLog,{dayId:day.id}),
     allComplete?h(SessionRPE,{dayId:day.id}):null,
