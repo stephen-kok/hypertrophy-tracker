@@ -1531,6 +1531,9 @@ function ExerciseCard(props){
         exercise._swappedFrom?h("div",{style:{fontSize:11,color:"var(--info)",marginBottom:6}},"\u21C4 Swapped from ",h("strong",null,exercise._swappedFrom)," for this session"):null,
         h(HistoryPanel,{dayId:dayId,exId:exercise.id,exercise:exercise})),
       activeTab==="coach"&&h("div",{role:"tabpanel",id:"tp-"+exKey+"-coach"},
+        exercise.setup&&exercise.setup.length>0&&getPref("showSetup",true)?h("div",{style:{padding:10,borderRadius:10,background:"rgba(255,255,255,0.03)",border:"1px solid var(--border)",fontSize:12,color:"var(--text-primary)",lineHeight:1.6,marginBottom:8}},
+          h("div",{style:{fontSize:10,fontWeight:700,color:"var(--text-muted)",marginBottom:4}},"SETUP"),
+          exercise.setup.map(function(tip,i){return h("div",{key:i,style:{display:"flex",gap:6,marginBottom:2}},h("span",{style:{color:"var(--text-muted)"}},"•"),tip)})):null,
         exercise.tip?h("div",{style:{padding:10,borderRadius:10,background:"var(--accent-bg)",border:"1px solid rgba(245,158,11,0.1)",fontSize:12,color:"var(--text-primary)",lineHeight:1.6,marginBottom:8}},
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--accent)",marginBottom:4}},"PERFORMANCE"),
           exercise.tip):null,
@@ -1540,7 +1543,7 @@ function ExerciseCard(props){
         exercise.commonMistakes&&exercise.commonMistakes.length>0?h("div",{style:{padding:10,borderRadius:10,background:"var(--danger-bg)",border:"1px solid var(--danger-border)",fontSize:12,color:"var(--text-primary)",lineHeight:1.6,marginBottom:8}},
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--danger)",marginBottom:4}},"COMMON MISTAKES"),
           exercise.commonMistakes.map(function(t,i){return h("div",{key:i,style:{display:"flex",gap:6,marginBottom:2}},h("span",{style:{color:"var(--danger)"}},"•"),t)})):null,
-        !exercise.tip&&!(exercise.formTips&&exercise.formTips.length)&&!(exercise.commonMistakes&&exercise.commonMistakes.length)?h("div",{style:{fontSize:11,color:"var(--text-dim)",fontStyle:"italic"}},"No coaching tips available."):null,
+        !exercise.tip&&!(exercise.formTips&&exercise.formTips.length)&&!(exercise.commonMistakes&&exercise.commonMistakes.length)&&!(exercise.setup&&exercise.setup.length)?h("div",{style:{fontSize:11,color:"var(--text-dim)",fontStyle:"italic"}},"No coaching tips available."):null,
         exercise.notes?h("div",{style:{fontSize:12,color:"var(--text-dim)",fontStyle:"italic",marginTop:8}},exercise.notes):null)));
 }
 
@@ -2386,6 +2389,7 @@ function SettingsPanel(props){
   var s8v=useState(function(){return getStreakData().vacationMode}),vacationMode=s8v[0],setVacationMode=s8v[1];
   var s9b=useState(function(){return getPref("showExBadges",true)}),showExBadges=s9b[0],setShowExBadges=s9b[1];
   var s10t=useState(function(){return getPref("showTempoTimer",false)}),showTempoTimer=s10t[0],setShowTempoTimer=s10t[1];
+  var s11u=useState(function(){return getPref("showSetup",true)}),showSetup=s11u[0],setShowSetup=s11u[1];
   var handleImport=function(e){
     var file=e.target.files&&e.target.files[0];if(!file)return;
     var doImport=function(){importData(file,function(count,err,warnings){if(err)setMsg("Import failed: "+(err.message||"Unknown error"));else{var wmsg=warnings?" ("+warnings.join(" ")+")":"";setMsg("Imported "+count+" records."+wmsg);setTimeout(function(){window.location.reload()},warnings?4000:1500)}})};
@@ -2418,6 +2422,7 @@ function SettingsPanel(props){
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Wellness Check"),h("div",{className:"settings-row__desc"},"Pre-session readiness poll (sleep, energy, etc.)")),h(Toggle,{on:showWellness,onToggle:function(){var next=!showWellness;setShowWellness(next);setPref("showWellness",next)},label:"Show wellness"})),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Exercise Badges"),h("div",{className:"settings-row__desc"},"Show Target RIR and Tempo badges on exercise cards")),h(Toggle,{on:showExBadges,onToggle:function(){var next=!showExBadges;setShowExBadges(next);setPref("showExBadges",next)},label:"Show exercise badges"})),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Tempo Timer"),h("div",{className:"settings-row__desc"},"Show interactive tempo countdown timer on cards")),h(Toggle,{on:showTempoTimer,onToggle:function(){var next=!showTempoTimer;setShowTempoTimer(next);setPref("showTempoTimer",next)},label:"Show tempo timer"})),
+      h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Setup Instructions"),h("div",{className:"settings-row__desc"},"Show equipment setup tips in the Coach tab")),h(Toggle,{on:showSetup,onToggle:function(){var next=!showSetup;setShowSetup(next);setPref("showSetup",next)},label:"Show setup instructions"})),
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Streak Grace Period"),h("div",{className:"settings-row__desc"},"Gap allowed between sessions before streak breaks")),
         h("div",{style:{display:"flex",gap:4}},
           [24,48,72,168].map(function(hrs){var label=hrs===168?"1 wk":hrs+"h";return h("button",{key:hrs,onClick:function(){setGraceHours(hrs);setPref("streakGraceHours",hrs);var sd=getStreakData();sd.graceHours=hrs;saveStreakData(sd)},className:"btn btn--xs "+(graceHours===hrs?"btn--accent":"btn--ghost")},label)}))),
