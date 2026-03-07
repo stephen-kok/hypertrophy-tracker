@@ -2431,9 +2431,9 @@ function SettingsPanel(props){
         return [0,1].map(function(slot){
           var curDef=NAV_SHORTCUTS_DEF.find(function(d){return d.id===curShortcuts[slot]})||NAV_SHORTCUTS_DEF[0];
           return h("div",{key:slot,style:{marginBottom:slot===0?14:0}},
-            h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-primary)",marginBottom:6}},"Slot "+(slot+1)+" \u2014 "+curDef.icon+" "+curDef.label),
+            h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-primary)",marginBottom:6}},"Slot "+(slot+1)+" \u2014 "+curDef.label),
             h("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
-              NAV_SHORTCUTS_DEF.map(function(def){return h("button",{key:def.id,onClick:function(){handleSlot(slot,def.id)},className:"btn btn--xs "+(curShortcuts[slot]===def.id?"btn--accent":"btn--ghost")},def.icon+" "+def.label)})))});
+              NAV_SHORTCUTS_DEF.map(function(def){return h("button",{key:def.id,onClick:function(){handleSlot(slot,def.id)},className:"btn btn--xs "+(curShortcuts[slot]===def.id?"btn--accent":"btn--ghost")},def.label)})))});
       })()),
     h(SettingsGroup,{title:"Mesocycle",defaultOpen:false},
       h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:6}},"4-week training block. Week 4 = deload."),
@@ -2665,9 +2665,9 @@ function MainApp(props){
       var shortcutActions={volume:function(){setShowVolume(true)},insights:function(){setShowInsights(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
       var shortcutActive={volume:showVolume,insights:showInsights,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
       return h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
-        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),h("span",{className:"nav-btn__label"},"TRAIN")),
-        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.icon),h("span",{className:"nav-btn__label"},def.navLabel))}),
-        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u2699\uFE0F"),h("span",{className:"nav-btn__label"},"MORE")));
+        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__label"},"TRAIN")),
+        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__label"},def.navLabel))}),
+        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__label"},"MORE")));
     })(),
     /* More Menu */
     showMore?h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)setShowMore(false)},role:"dialog","aria-modal":"true","aria-label":"More options"},
