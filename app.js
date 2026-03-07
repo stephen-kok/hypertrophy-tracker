@@ -1390,6 +1390,7 @@ function ExerciseCard(props){
   var ssq=useState(""),swapSearch=ssq[0],setSwapSearch=ssq[1];
   var sside=useState("L"),activeSide=sside[0],setActiveSide=sside[1];
   var prevAllDoneRef=useRef(false);
+  var collapseTimerRef=useRef(null);
   var ssk=useState(function(){var d=dayData.getData(dayId);return d._skipped&&d._skipped[exercise.id]||false}),skipped=ssk[0],setSkipped=ssk[1];
   var toggleSkip=function(){var next=!skipped;setSkipped(next);var all=dayData.getData(dayId);if(!all._skipped)all._skipped={};all._skipped[exercise.id]=next;dayData.saveData(dayId,all);if(onSetUpdate)onSetUpdate()};
   var sdr=useState(0),dataRev=sdr[0],bumpDataRev=sdr[1];
@@ -1450,9 +1451,18 @@ function ExerciseCard(props){
   var onQuickLog=useCallback(function(){bumpDataRev(function(r){return r+1});if(onSetUpdate)onSetUpdate()},[onSetUpdate]);
   useEffect(function(){
     if(allDone&&!prevAllDoneRef.current){
-      if(!getPref("showRir",true)&&props.onComplete){
-        setTimeout(function(){setExpanded(false);props.onComplete(props.index)},500);
-      }
+      // All sets just became done — schedule auto-collapse
+      // Give user 2.5s to rate RPE; if they do, onRated will cancel this and collapse immediately
+      if(collapseTimerRef.current)clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current=setTimeout(function(){
+        collapseTimerRef.current=null;
+        setExpanded(false);
+        if(props.onComplete)props.onComplete(props.index);
+      },2500);
+    }
+    if(!allDone&&prevAllDoneRef.current){
+      // Un-done (set unchecked) — cancel pending collapse
+      if(collapseTimerRef.current){clearTimeout(collapseTimerRef.current);collapseTimerRef.current=null}
     }
     prevAllDoneRef.current=allDone;
   },[allDone]);
@@ -1533,6 +1543,8 @@ function ExerciseCard(props){
           timerData&&timerData.waitingPartner?h("span",{style:{fontSize:10,fontWeight:700,color:"var(--accent)",marginLeft:4}},"\u2192 Do "+supersetPartner+" now"):null,
           h("span",{style:{fontSize:10,color:"var(--text-dim)"}},"Alternate sets, minimal rest")):null,
         h(RPERating,{exId:exercise.id,dayId:dayId,allDone:allDone,onRated:function(){
+          // Cancel the pending 2.5s auto-collapse and fire immediately at 500ms
+          if(collapseTimerRef.current){clearTimeout(collapseTimerRef.current);collapseTimerRef.current=null}
           if(allDone&&props.onComplete){
             setTimeout(function(){setExpanded(false);props.onComplete(props.index)},500);
           }
@@ -2381,11 +2393,12 @@ function DayView(props){
       var ssPartner=null,ssPartnerExId=null;
       if(ex.supersetGroup){for(var si=0;si<swappedExercises.length;si++){if(si!==i&&swappedExercises[si].supersetGroup===ex.supersetGroup){ssPartner=swappedExercises[si].name;ssPartnerExId=swappedExercises[si].id;break}}}
       return h(CardErrorBoundary,{key:ex.id,name:ex.name},h(ExerciseCard,{exercise:ex,index:i,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===i,supersetGroup:ex.supersetGroup,supersetPartner:ssPartner,supersetPartnerExId:ssPartnerExId,onSwap:handleSwap,exerciseLibrary:exerciseLibrary,meso:meso,onComplete:function(completedIdx){
+        var freshSaved=dayData.getData(day.id);
         var nextIdx=-1;
         for(var ni=completedIdx+1;ni<allExercises.length;ni++){
-          var exS=saved._skipped&&saved._skipped[allExercises[ni].id];
+          var exS=freshSaved._skipped&&freshSaved._skipped[allExercises[ni].id];
           if(exS)continue;
-          var exD=countBilateralDone(allExercises[ni],saved);
+          var exD=countBilateralDone(allExercises[ni],freshSaved);
           if(exD<totalSetsFor(allExercises[ni])){nextIdx=ni;break}
         }
         if(nextIdx>=0){
@@ -2407,11 +2420,12 @@ function DayView(props){
     customs.length>0?h("div",{style:{borderTop:"1px solid var(--info-border)",marginTop:8,paddingTop:8}},
       h("div",{style:{fontSize:10,fontWeight:700,color:"var(--info)",marginBottom:6,letterSpacing:.5}},"CUSTOM EXERCISES"),
       customs.map(function(ex,i){var ci=day.exercises.length+i;return h("div",{key:ex.id,style:{position:"relative"}},h(ExerciseCard,{exercise:ex,index:ci,dayId:day.id,onSetUpdate:refresh,isNext:nextExIdx===ci,meso:meso,onComplete:function(completedIdx){
+        var freshSaved=dayData.getData(day.id);
         var nextIdx=-1;
         for(var ni=completedIdx+1;ni<allExercises.length;ni++){
-          var exS=saved._skipped&&saved._skipped[allExercises[ni].id];
+          var exS=freshSaved._skipped&&freshSaved._skipped[allExercises[ni].id];
           if(exS)continue;
-          var exD=countBilateralDone(allExercises[ni],saved);
+          var exD=countBilateralDone(allExercises[ni],freshSaved);
           if(exD<totalSetsFor(allExercises[ni])){nextIdx=ni;break}
         }
         if(nextIdx>=0){
