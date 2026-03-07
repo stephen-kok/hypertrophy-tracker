@@ -709,7 +709,13 @@ function TimerProvider(props){
 
   var getActiveTimer=useCallback(function(){
     var keys=Object.keys(timersRef.current);
-    for(var i=0;i<keys.length;i++){var t=timersRef.current[keys[i]];if(t&&t.running)return{key:keys[i],timer:t}}
+    var doneKey=null;
+    for(var i=0;i<keys.length;i++){
+      var t=timersRef.current[keys[i]];
+      if(t&&t.running)return{key:keys[i],timer:t};
+      if(t&&t.done&&!t.waitingPartner&&!doneKey)doneKey=keys[i];
+    }
+    if(doneKey)return{key:doneKey,timer:timersRef.current[doneKey]};
     return null;
   },[]);
 
@@ -1003,7 +1009,7 @@ function FloatingTimer(){
 
   if(!display)return null;
   var isDone=display.remaining===0;
-  return h("div",{style:{position:"fixed",bottom:56,left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between"},"aria-label":isDone?"Rest complete":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
+  return h("div",{style:{position:"fixed",bottom:56,left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:isDone?"pointer":"default"},onClick:isDone?function(){timers.setTimer(display.key,null)}:undefined,"aria-label":isDone?"Rest complete — tap to dismiss":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
     isDone?h("span",{role:"status","aria-live":"assertive",className:"sr-only"},"Rest complete, time to start your next set"):null,
     h("div",{style:{display:"flex",alignItems:"center",gap:10}},
       isDone?h("span",{style:{fontSize:14,fontWeight:800,color:"var(--success)"}},"\u2705 REST COMPLETE"):
