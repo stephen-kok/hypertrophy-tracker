@@ -1262,7 +1262,7 @@ function SetLogger(props){
         h("span",{style:{fontSize:12,color:i>=numSets?"var(--accent)":"var(--text-dim)",textAlign:"center",fontWeight:700},title:schemeData&&schemeData.sets[i]?schemeData.sets[i].note:""},i>=numSets?"+"+(i-numSets+1):i+1),
         h("div",{className:"stepper"},
           h("button",{onClick:function(){step(i,"weight",-increment)},className:"stepper-btn","aria-label":"Decrease weight"},"\u2212"),
-          h("input",{type:"number",inputMode:"decimal",placeholder:ghostWeight||"\u2014",value:set.weight,onChange:function(e){update(i,"weight",e.target.value)},onFocus:function(){if(!set.done&&!set.weight&&ghostWeight){update(i,"weight",ghostWeight)}},className:"input",style:{opacity:set.done?.55:1},"aria-label":"Set "+(i+1)+" weight"}),
+          h("input",{type:"number",inputMode:"decimal",placeholder:ghostWeight||"\u2014",value:set.weight,onChange:function(e){update(i,"weight",e.target.value)},onFocus:function(){if(!set.done&&!set.weight&&ghostWeight){update(i,"weight",ghostWeight)}},className:"input",style:{opacity:set.done?.55:1,minWidth:48},"aria-label":"Set "+(i+1)+" weight"}),
           h("button",{onClick:function(){step(i,"weight",increment)},className:"stepper-btn","aria-label":"Increase weight"},"+")),
         h("div",{className:"stepper"},
           h("button",{onClick:function(){step(i,"reps",-1)},className:"stepper-btn","aria-label":"Decrease reps"},"\u2212"),
