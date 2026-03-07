@@ -2725,7 +2725,7 @@ function MainApp(props){
     h("div",{className:"header"},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}},
         h("div",null,
-          h("div",{onClick:function(){window.location.href=window.location.pathname},style:{fontSize:20,fontWeight:800,margin:0,letterSpacing:-.5,color:"var(--text-bright)",cursor:"pointer"},title:"Switch profile","role":"button","tabIndex":0},"HYPER",h("span",{style:{color:"var(--accent)"}},"TROPHY")),
+          h("div",{onClick:function(){history.pushState(null,"",window.location.pathname);window.dispatchEvent(new PopStateEvent("popstate"))},style:{fontSize:20,fontWeight:800,margin:0,letterSpacing:-.5,color:"var(--text-bright)",cursor:"pointer"},title:"Switch profile",role:"button",tabIndex:0},"HYPER",h("span",{style:{color:"var(--accent)"}},"TROPHY")),
           h("div",{style:{display:"flex",alignItems:"center",gap:6,marginTop:2}},
             h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"}},config.name),
             h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"\u00B7"),
@@ -3596,9 +3596,11 @@ function ProgramBuilder(props){
    ROOT
    ══════════════════════════════════════════ */
 function App(){
-  var profileId=getProfileFromURL();
+  var sp=useState(getProfileFromURL),profileId=sp[0],setProfileId=sp[1];
+  useEffect(function(){var onPop=function(){setProfileId(getProfileFromURL())};window.addEventListener("popstate",onPop);return function(){window.removeEventListener("popstate",onPop)}},[]);
   var s=useState(null),config=s[0],setConfig=s[1];var s2=useState(null),error=s2[0],setError=s2[1];
   useEffect(function(){
+    setConfig(null);setError(null);
     if(!profileId)return;
     var safeId=profileId.replace(/[^a-zA-Z0-9_-]/g,"");
     if(!safeId){setError("Invalid profile name.");return;}
