@@ -62,14 +62,15 @@ var RPE_COLORS={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--wa
 var TREND_RANGES={4:28,8:56,12:84,0:9999};/* 0 = "All"; value = days to look back */
 /* Bottom-nav configurable shortcut definitions */
 var NAV_SHORTCUTS_DEF=[
-  {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL",  navIcon:"\u25A0"},
-  {id:"insights", icon:"\uD83D\uDCCA",label:"Insights",     navLabel:"STATS",navIcon:"\u25C6"},
-  {id:"calendar",icon:"\uD83D\uDCC5",label:"Calendar",     navLabel:"CAL",  navIcon:"\u25CB"},
-  {id:"history", icon:"\uD83D\uDCCB",label:"History",      navLabel:"LOG",  navIcon:"\u2261"},
-  {id:"metrics", icon:"\uD83D\uDCCF",label:"Body Metrics", navLabel:"BODY", navIcon:"\u25C7"},
-  {id:"fatigue", icon:"\uD83D\uDCC8",label:"Fatigue Trend",navLabel:"TREND",navIcon:"\u25B3"},
+  {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL",   navIcon:"\u25A0"},
+  {id:"insights", icon:"\uD83D\uDCCA",label:"Insights",     navLabel:"STATS", navIcon:"\u25C6"},
+  {id:"calendar",icon:"\uD83D\uDCC5",label:"Calendar",     navLabel:"CAL",   navIcon:"\u25CB"},
+  {id:"history", icon:"\uD83D\uDCCB",label:"History",      navLabel:"LOG",   navIcon:"\u2261"},
+  {id:"metrics", icon:"\uD83D\uDCCF",label:"Body Metrics", navLabel:"BODY",  navIcon:"\u25C7"},
+  {id:"fatigue", icon:"\uD83D\uDCC8",label:"Fatigue Trend",navLabel:"TREND", navIcon:"\u25B3"},
+  {id:"cardio",  icon:"\uD83C\uDFC3",label:"Cardio",       navLabel:"CARDIO",navIcon:"\u25CE"},
 ];
-var NAV_SHORTCUT_DEFAULTS=["calendar","insights"];
+var NAV_SHORTCUT_DEFAULTS=["calendar","insights","cardio"];
 
 /* ═══ CONFIG VALIDATION ═══ */
 function validateConfig(cfg){
@@ -2521,13 +2522,13 @@ function SettingsPanel(props){
       h("div",{className:"settings-row"},h("div",null,h("div",{className:"settings-row__label"},"Vacation Mode"),h("div",{className:"settings-row__desc"},"Pause streak countdown while travelling")),
         h(Toggle,{on:vacationMode,onToggle:function(){var next=!vacationMode;setVacationMode(next);var sd=getStreakData();sd.vacationMode=next;if(!next)sd.lastWorkoutTime=Date.now();saveStreakData(sd)},label:"Vacation mode"}))),
     h(SettingsGroup,{title:"Navigation",defaultOpen:false},
-      h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:14}},"Choose the two shortcut buttons in the bottom navigation bar."),
+      h("div",{style:{fontSize:11,color:"var(--text-dim)",marginBottom:14}},"Choose the three shortcut buttons in the bottom navigation bar."),
       (function(){
         var curShortcuts=props.navShortcuts||NAV_SHORTCUT_DEFAULTS;
-        var handleSlot=function(slot,id){var next=[slot===0?id:curShortcuts[0],slot===1?id:curShortcuts[1]];if(props.onNavShortcutsChange)props.onNavShortcutsChange(next)};
-        return [0,1].map(function(slot){
+        var handleSlot=function(slot,id){var next=curShortcuts.slice();next[slot]=id;if(props.onNavShortcutsChange)props.onNavShortcutsChange(next)};
+        return [0,1,2].map(function(slot){
           var curDef=NAV_SHORTCUTS_DEF.find(function(d){return d.id===curShortcuts[slot]})||NAV_SHORTCUTS_DEF[0];
-          return h("div",{key:slot,style:{marginBottom:slot===0?14:0}},
+          return h("div",{key:slot,style:{marginBottom:slot<2?14:0}},
             h("div",{style:{fontSize:12,fontWeight:700,color:"var(--text-primary)",marginBottom:6}},"Slot "+(slot+1)+" \u2014 "+curDef.label),
             h("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
               NAV_SHORTCUTS_DEF.map(function(def){return h("button",{key:def.id,onClick:function(){handleSlot(slot,def.id)},className:"btn btn--xs "+(curShortcuts[slot]===def.id?"btn--accent":"btn--ghost")},def.label)})))});
@@ -2574,10 +2575,7 @@ function SettingsPanel(props){
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"IndexedDB Backup"),
           h("div",{style:{fontSize:9,color:"var(--text-dim)",marginBottom:6}},"Mirror all data to IndexedDB for extra durability and larger storage capacity."),
           h("button",{onClick:function(){migrateToIDB(function(count){showUndoToast("Mirrored "+count+" records to IndexedDB",null,4000)})},className:"btn btn--ghost btn--xs"},"Mirror to IndexedDB")):null)),
-    h(SettingsGroup,{title:"Tools",defaultOpen:false},
-      h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
-        h("button",{onClick:function(){if(props.onBodyMetrics)props.onBodyMetrics()},className:"btn btn--accent-ghost btn--full"},"\uD83D\uDCCF Body Metrics"),
-        h("button",{onClick:function(){if(props.onSessionHistory)props.onSessionHistory()},className:"btn btn--accent-ghost btn--full"},"\uD83D\uDCCB Session History"))));
+    ));
 }
 
 /* ── Profile Selector ── */
@@ -2612,7 +2610,7 @@ function MainApp(props){
   var config=props.config;var DAYS=config.days;
   var s=useState(0),activeDay=s[0],setActiveDay=s[1];var s2=useState(0),_tick=s2[0],setTick=s2[1];
   /* Bottom nav: 0=Train, 1=Volume, 2=History, 3=Settings */
-  var sn=useState(0),navTab=sn[0],setNavTab=sn[1];
+  /* navTab removed — TRAIN button replaced by 3rd shortcut slot */
   var s3=useState(false),showSettings=s3[0],setShowSettings=s3[1];var s4=useState(false),showMetrics=s4[0],setShowMetrics=s4[1];
   var sv=useState(false),showVolume=sv[0],setShowVolume=sv[1];var sh=useState(false),showHistory=sh[0],setShowHistory=sh[1];
   var si=useState(false),showInsights=si[0],setShowInsights=si[1];
@@ -2626,8 +2624,10 @@ function MainApp(props){
   var sns=useState(function(){return getPref("navShortcuts",NAV_SHORTCUT_DEFAULTS)}),navShortcuts=sns[0],setNavShortcutsState=sns[1];
   useEffect(function(){
     var current=getPref("navShortcuts",null);
-    if(current&&current.indexOf("records")!==-1){
-      var migrated=current.map(function(id){return id==="records"?"insights":id});
+    if(!current)return;
+    var migrated=current.map(function(id){return id==="records"?"insights":id});
+    if(migrated.length===2)migrated.push("cardio");
+    if(migrated.length!==current.length||migrated.some(function(id,i){return id!==current[i]})){
       setPref("navShortcuts",migrated);setNavShortcutsState(migrated);
     }
   },[]);
@@ -2735,7 +2735,7 @@ function MainApp(props){
       h("div",{style:{display:"flex",gap:3},role:"tablist","aria-label":"Training days"},DAYS.map(function(day,i){
         var prog=dayTabProgress[i];var doneSets=prog.doneSets,totalSets=prog.totalSets;
         var hasProg=doneSets>0,complete=doneSets===totalSets&&totalSets>0;
-        return h("button",{key:day.id,onClick:function(){setActiveDay(i);setNavTab(0)},className:"tab"+(activeDay===i?" tab--active":"")+(complete?" tab--complete":""),role:"tab","aria-selected":activeDay===i?"true":"false","aria-controls":"day-panel-"+day.id},
+        return h("button",{key:day.id,onClick:function(){setActiveDay(i)},className:"tab"+(activeDay===i?" tab--active":"")+(complete?" tab--complete":""),role:"tab","aria-selected":activeDay===i?"true":"false","aria-controls":"day-panel-"+day.id},
           h("div",{style:{fontSize:12,fontWeight:700,color:activeDay===i?"var(--text-bright)":complete?"var(--text-dim)":"var(--text-dim)",marginTop:1,letterSpacing:.2}},day.label),
           (hasProg||complete)?h("div",{style:{width:4,height:4,borderRadius:2,background:complete?"var(--success)":"var(--accent)",margin:"3px auto 0"},"aria-hidden":"true"}):null)})),
       /* Swipe dot indicators */
@@ -2759,12 +2759,11 @@ function MainApp(props){
     h(FloatingTimer,null),
     /* Bottom Navigation */
     (function(){
-      var shortcutActions={volume:function(){setShowVolume(true)},insights:function(){setShowInsights(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
-      var shortcutActive={volume:showVolume,insights:showInsights,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
+      var shortcutActions={volume:function(){setShowVolume(true)},insights:function(){setShowInsights(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)},cardio:function(){setShowCardio(true)}};
+      var shortcutActive={volume:showVolume,insights:showInsights,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend,cardio:showCardio};
       return h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
-        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u25B2"),h("span",{className:"nav-btn__label"},"TRAIN")),
         navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.navIcon),h("span",{className:"nav-btn__label"},def.navLabel))}),
-        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u22EF"),h("span",{className:"nav-btn__label"},"MORE")));
+        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn"+(showMore?" nav-btn--active":""),"aria-label":"More"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u22EF"),h("span",{className:"nav-btn__label"},"MORE")));
     })(),
     /* More Menu */
     showMore?h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)setShowMore(false)},role:"dialog","aria-modal":"true","aria-label":"More options"},
@@ -2790,7 +2789,7 @@ function MainApp(props){
     /* Modals */
     showCardio?h(StandaloneCardio,{onClose:function(){setShowCardio(false)}}):null,
     showProgramBuilder?h(ProgramBuilder,{config:config,onClose:function(){setShowProgramBuilder(false)},onConfigChange:function(newCfg){if(props.onConfigChange)props.onConfigChange(newCfg)}}):null,
-    showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,onMesoChange:function(m){setMeso(m)},onBodyMetrics:function(){setShowSettings(false);setShowMetrics(true)},onSessionHistory:function(){setShowSettings(false);setShowHistory(true)},navShortcuts:navShortcuts,onNavShortcutsChange:function(v){setPref("navShortcuts",v);setNavShortcutsState(v)}}):null,
+    showSettings?h(SettingsPanel,{onClose:function(){setShowSettings(false);refresh()},config:config,onMesoChange:function(m){setMeso(m)},navShortcuts:navShortcuts,onNavShortcutsChange:function(v){setPref("navShortcuts",v);setNavShortcutsState(v)}}):null,
     showMetrics?h(BodyMetrics,{onClose:function(){setShowMetrics(false)}}):null,
     showVolume?h(VolumeDashboard,{onClose:function(){setShowVolume(false)},config:config}):null,
     showHistory?h(SessionHistory,{onClose:function(){setShowHistory(false)}}):null,
