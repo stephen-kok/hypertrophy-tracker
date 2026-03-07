@@ -2574,8 +2574,8 @@ function SettingsPanel(props){
         _idbReady?h("div",{style:{marginTop:8,padding:"10px 12px",background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid var(--border)"}},
           h("div",{style:{fontSize:10,fontWeight:700,color:"var(--text-dim)",marginBottom:6}},"IndexedDB Backup"),
           h("div",{style:{fontSize:9,color:"var(--text-dim)",marginBottom:6}},"Mirror all data to IndexedDB for extra durability and larger storage capacity."),
-          h("button",{onClick:function(){migrateToIDB(function(count){showUndoToast("Mirrored "+count+" records to IndexedDB",null,4000)})},className:"btn btn--ghost btn--xs"},"Mirror to IndexedDB")):null)),
-    ));
+          h("button",{onClick:function(){migrateToIDB(function(count){showUndoToast("Mirrored "+count+" records to IndexedDB",null,4000)})},className:"btn btn--ghost btn--xs"},"Mirror to IndexedDB")):null))
+    );
 }
 
 /* ── Profile Selector ── */
