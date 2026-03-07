@@ -1573,7 +1573,7 @@ function CardioLog(props){
   var dayId=props.dayId;var unit=getUnit();var cardioKey="cardio_"+dayId+"_"+getSessionDate();
   var s=useState(function(){var saved=lsGet(cardioKey);return saved||{done:false,type:"treadmill",duration:30,incline:12,speed:3.0}}),data=s[0],setData=s[1];
   var s2=useState(data.done),expanded=s2[0],setExpanded=s2[1];
-  var save=function(d){setData(d);lsSet(cardioKey,d)};var update=function(field,val){save(Object.assign({},data,{[field]:val}))};var toggleDone=function(){save(Object.assign({},data,{done:!data.done}));if(!expanded)setExpanded(true)};
+  var save=function(d){setData(d);lsSet(cardioKey,d)};var update=function(field,val){save(Object.assign({},data,{[field]:val}))};var toggleDone=function(){var newDone=!data.done;save(Object.assign({},data,{done:newDone}));if(!expanded)setExpanded(true);if(props.onDone)props.onDone(newDone)};
   var cardioType=CARDIO_TYPES.find(function(c){return c.id===(data.type||"treadmill")})||CARDIO_TYPES[0];
   var switchType=function(typeId){var ct=CARDIO_TYPES.find(function(c){return c.id===typeId})||CARDIO_TYPES[0];save(Object.assign({},ct.defaults,{done:data.done,type:typeId}))};
   var speedLabel=unit==="kg"?"km/h":"mph";
@@ -2310,6 +2310,22 @@ function OnboardingSteps(props){
       h("button",{onClick:props.onDone,className:"btn btn--accent btn--sm"},"Let\u2019s Go!")));
 }
 
+/* ── Session End Prompt ── */
+function SessionEndPrompt(props){
+  var allExDone=props.allExDone,cardioDone=props.cardioDone,onEndSession=props.onEndSession,onScrollToCardio=props.onScrollToCardio;
+  if(!allExDone)return null;
+  if(cardioDone){
+    return h("div",{className:"fade-in",style:{marginTop:16,padding:"16px",background:"var(--success-bg)",border:"1px solid var(--success-border)",borderRadius:12,textAlign:"center"}},
+      h("div",{style:{fontSize:14,fontWeight:700,color:"var(--success)",marginBottom:10}},"Workout complete!"),
+      h("button",{onClick:onEndSession,className:"btn btn--success",style:{width:"100%"}},"End Session"));
+  }
+  return h("div",{className:"fade-in",style:{marginTop:16,padding:"16px",background:"var(--accent-bg)",border:"1px solid var(--accent-border)",borderRadius:12,textAlign:"center"}},
+    h("div",{style:{fontSize:14,fontWeight:700,color:"var(--accent)",marginBottom:10}},"All exercises complete!"),
+    h("div",{style:{display:"flex",gap:8}},
+      h("button",{onClick:onEndSession,className:"btn btn--success",style:{flex:1}},"End Session"),
+      h("button",{onClick:onScrollToCardio,className:"btn btn--accent-ghost",style:{flex:1}},"Still have cardio")));
+}
+
 /* ── Day View ── */
 function DayView(props){
   var day=props.day,refresh=props.refresh,config=props.config;
@@ -2339,6 +2355,7 @@ function DayView(props){
   var deloadWarnings=useMemo(function(){return config?getDeloadWarning(config):null},[config]);
   var meso=getMesocycle();var isDeloadWeek=meso.week===4;
   var srd=useState(function(){return !!getReadiness(day.id)}),readinessDone=srd[0],setReadinessDone=srd[1];
+  var scd=useState(function(){var ck="cardio_"+day.id+"_"+getSessionDate();var cd=lsGet(ck);return !!(cd&&cd.done)}),cardioDone=scd[0],setCardioDone=scd[1];
   /* Completion summary shown on demand via "View Summary" button */
   return h("div",{style:{paddingBottom:40}},
     h("div",{style:{marginBottom:14}},
@@ -2413,7 +2430,8 @@ function DayView(props){
         }
       }}),h("button",{onClick:function(){removeCustom(ex.id,ex.name)},style:{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger)",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10},"aria-label":"Remove "+ex.name},"\u2715"))})):null,
     showAddForm?h(AddExerciseForm,{dayId:day.id,onAdd:function(){setCustoms(getCustomExercises(day.id));setShowAddForm(false);refresh()},onCancel:function(){setShowAddForm(false)}}):h("button",{onClick:function(){setShowAddForm(true)},className:"btn btn--info btn--full btn--dashed",style:{marginTop:8}},"+ Add Exercise"),
-    h(CardioLog,{dayId:day.id}),
+    h(CardioLog,{dayId:day.id,onDone:function(done){setCardioDone(done)}}),
+    allComplete?h(SessionEndPrompt,{allExDone:true,cardioDone:cardioDone,onEndSession:function(){endSession();setShowComplete(true)},onScrollToCardio:function(){var cardioEl=document.querySelector("[aria-label='Cardio log']");if(cardioEl)cardioEl.scrollIntoView({behavior:"smooth",block:"center"})}}):null,
     allComplete?h(SessionRPE,{dayId:day.id}):null,
     showComplete?h(CompletionSummary,{day:day,customs:customs,onClose:function(){setShowComplete(false)}}):null);
 }
