@@ -1007,7 +1007,7 @@ function FloatingTimer(){
 
   if(!display)return null;
   var isDone=display.remaining===0;
-  return h("div",{style:{position:"fixed",bottom:"calc(8px + 11px + 8px + env(safe-area-inset-bottom,0px))",left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:isDone?"pointer":"default"},onClick:isDone?function(){timers.setTimer(display.key,null)}:undefined,"aria-label":isDone?"Rest complete — tap to dismiss":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
+  return h("div",{style:{position:"fixed",bottom:"calc(44px + env(safe-area-inset-bottom,0px))",left:0,right:0,zIndex:100,padding:"10px 16px",background:isDone?"rgba(34,197,94,0.15)":"rgba(10,10,15,0.95)",borderTop:isDone?"1px solid var(--success-border)":"1px solid var(--accent-border)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:isDone?"pointer":"default"},onClick:isDone?function(){timers.setTimer(display.key,null)}:undefined,"aria-label":isDone?"Rest complete — tap to dismiss":"Rest timer: "+fmtTime(display.remaining)+" remaining"},
     isDone?h("span",{role:"status","aria-live":"assertive",className:"sr-only"},"Rest complete, time to start your next set"):null,
     h("div",{style:{display:"flex",alignItems:"center",gap:10}},
       isDone?h("span",{style:{fontSize:14,fontWeight:800,color:"var(--success)"}},"\u2705 REST COMPLETE"):
