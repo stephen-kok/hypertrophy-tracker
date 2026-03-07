@@ -2725,7 +2725,7 @@ function MainApp(props){
     h("div",{className:"header"},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}},
         h("div",null,
-          h("h1",{style:{fontSize:20,fontWeight:800,margin:0,letterSpacing:-.5,color:"var(--text-bright)"}},"HYPER",h("span",{style:{color:"var(--accent)"}},"TROPHY")),
+          h("a",{href:"./",style:{fontSize:20,fontWeight:800,margin:0,letterSpacing:-.5,color:"var(--text-bright)",textDecoration:"none",display:"block"},title:"Switch profile"},"HYPER",h("span",{style:{color:"var(--accent)"}},"TROPHY")),
           h("div",{style:{display:"flex",alignItems:"center",gap:6,marginTop:2}},
             h("span",{style:{fontSize:11,fontWeight:700,color:"var(--accent)"}},config.name),
             h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"\u00B7"),
