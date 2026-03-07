@@ -1,0 +1,209 @@
+{
+  "days": [
+    {
+      "id": "push",
+      "label": "Push",
+      "exercises": [
+        {
+          "id": "ppl_bp",
+          "name": "Barbell Bench Press",
+          "sets": 4,
+          "reps": "6-10",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["chest", "front_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Drive your feet into the floor and squeeze your shoulder blades together. Lower the bar to your lower chest.",
+          "formTips": ["Keep your chest up and shoulders retracted", "Touch the bar to your lower chest — don't bounce", "Drive the bar in a slight arc toward your face at the top"]
+        },
+        {
+          "id": "ppl_ois",
+          "name": "Overhead Press",
+          "sets": 3,
+          "reps": "8-12",
+          "rest": 90,
+          "increment": 5,
+          "muscles": ["front_delt", "side_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Press straight up, keeping your core braced. Don't lean excessively back.",
+          "formTips": ["Brace your core hard before each rep", "Keep the bar close to your face on the way up", "Full lockout at the top"]
+        },
+        {
+          "id": "ppl_incdbp",
+          "name": "Incline Dumbbell Press",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "increment": 5,
+          "muscles": ["chest", "front_delt"],
+          "rir": "1-2",
+          "tip": "Set the bench to 30-45 degrees. Lower slowly and get a good chest stretch at the bottom.",
+          "formTips": ["Lower to a full stretch — elbows just below bench level", "Don't flare elbows too wide", "Squeeze at the top of every rep"]
+        },
+        {
+          "id": "ppl_lcbl",
+          "name": "Cable Lateral Raise",
+          "sets": 3,
+          "reps": "15-20",
+          "rest": 60,
+          "increment": 2.5,
+          "machine": true,
+          "muscles": ["side_delt"],
+          "rir": "0-1",
+          "tip": "Lead with your elbow, not your hand. Slight forward lean keeps the cable pulling at the right angle.",
+          "formTips": ["Lead with elbow, hand slightly below elbow", "Control the descent — don't let it swing back", "Raise to shoulder height only"]
+        },
+        {
+          "id": "ppl_tpd",
+          "name": "Tricep Pushdown",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 60,
+          "increment": 2.5,
+          "machine": true,
+          "muscles": ["triceps"],
+          "rir": "0-1",
+          "tip": "Keep your elbows pinned at your sides. Full extension at the bottom.",
+          "formTips": ["Lock your elbows in at your sides throughout", "Full extension on every rep", "Squeeze at the bottom before releasing"]
+        }
+      ]
+    },
+    {
+      "id": "pull",
+      "label": "Pull",
+      "exercises": [
+        {
+          "id": "ppl_pup",
+          "name": "Pull-Up",
+          "sets": 4,
+          "reps": "6-10",
+          "rest": 120,
+          "increment": 2.5,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Start from a full dead hang. Pull your chest to the bar, leading with your elbows.",
+          "formTips": ["Full dead hang at the bottom — no half reps", "Pull your elbows down and back, not just up", "Chin clearly over the bar at the top"]
+        },
+        {
+          "id": "ppl_bbbr",
+          "name": "Barbell Bent-Over Row",
+          "sets": 4,
+          "reps": "6-10",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["back", "rear_delt", "biceps"],
+          "rir": "1-2",
+          "tip": "Hinge at the hips, chest up. Pull the bar to your lower chest/upper abdomen.",
+          "formTips": ["Keep your back flat — no rounding", "Pull the bar into your belly button, not your chest", "Squeeze your shoulder blades together at the top"]
+        },
+        {
+          "id": "ppl_csr",
+          "name": "Cable Seated Row",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "increment": 5,
+          "machine": true,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Sit tall. Pull the handle to your lower chest and squeeze your back hard before releasing.",
+          "formTips": ["Don't round your lower back at the start", "Drive your elbows behind your body", "Hold the peak contraction for a beat"]
+        },
+        {
+          "id": "ppl_facepull",
+          "name": "Face Pull",
+          "sets": 3,
+          "reps": "15-20",
+          "rest": 60,
+          "increment": 2.5,
+          "machine": true,
+          "muscles": ["rear_delt", "back"],
+          "rir": "0-1",
+          "tip": "Pull to your nose/forehead, with elbows high and flared. Great for shoulder health.",
+          "formTips": ["Elbows must be at or above shoulder height", "Pull to your face, not your neck", "External rotate at the end — hands behind ears"]
+        },
+        {
+          "id": "ppl_dbcurl",
+          "name": "Dumbbell Curl",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 60,
+          "increment": 2.5,
+          "muscles": ["biceps"],
+          "rir": "0-1",
+          "tip": "Supinate your wrist as you curl. Keep your upper arm stationary.",
+          "formTips": ["Pin your elbows at your sides", "Supinate (turn palm up) as you curl", "Full extension at the bottom — don't cut the range short"]
+        }
+      ]
+    },
+    {
+      "id": "legs",
+      "label": "Legs",
+      "exercises": [
+        {
+          "id": "ppl_bbs",
+          "name": "Barbell Back Squat",
+          "sets": 4,
+          "reps": "6-10",
+          "rest": 180,
+          "increment": 5,
+          "muscles": ["quads", "glutes", "hamstrings"],
+          "rir": "1-2",
+          "tip": "Feet shoulder-width, toes slightly out. Squat to parallel or below. Chest up throughout.",
+          "formTips": ["Take a big belly breath and brace before each rep", "Push your knees out in line with your toes", "Break parallel — crease of hip below the top of knee"]
+        },
+        {
+          "id": "ppl_rdl",
+          "name": "Romanian Deadlift",
+          "sets": 3,
+          "reps": "8-12",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["hamstrings", "glutes"],
+          "rir": "1-2",
+          "tip": "Push your hips back, keeping the bar close to your legs. Feel the hamstring stretch before driving back up.",
+          "formTips": ["Bar stays in contact with your legs the whole way down", "Soft bend in the knee — this isn't a stiff-leg deadlift", "Stop when you feel a strong hamstring stretch"]
+        },
+        {
+          "id": "ppl_lprs",
+          "name": "Leg Press",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 10,
+          "muscles": ["quads", "glutes"],
+          "rir": "1-2",
+          "tip": "Place feet shoulder-width in the middle of the platform. Lower until your knees are at 90 degrees.",
+          "formTips": ["Don't lock your knees at the top", "Keep your lower back flat against the pad", "Control the descent — 2-3 seconds down"]
+        },
+        {
+          "id": "ppl_lcc",
+          "name": "Leg Curl",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 60,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["hamstrings"],
+          "rir": "0-1",
+          "tip": "Curl your heels toward your glutes. Don't let your hips rise off the pad.",
+          "formTips": ["Plant your hips firmly — don't let them rise", "Full range of motion — heels toward glutes", "Squeeze at the top before lowering"]
+        },
+        {
+          "id": "ppl_src",
+          "name": "Standing Calf Raise",
+          "sets": 4,
+          "reps": "15-20",
+          "rest": 60,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["calves"],
+          "rir": "0-1",
+          "tip": "Full range: deep stretch at the bottom, full rise at the top. Slow and controlled.",
+          "formTips": ["Get a deep stretch at the bottom — don't bounce", "Rise all the way onto your toes", "Pause at the top and bottom"]
+        }
+      ]
+    }
+  ]
+}

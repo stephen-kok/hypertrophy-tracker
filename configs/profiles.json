@@ -15,5 +15,22 @@
       "name": "Timmy C",
       "program": "6-Day PPL A/B — Push/Pull/Legs Rotation"
     }
+  ],
+  "examples": [
+    {
+      "id": "example-ppl",
+      "name": "Push / Pull / Legs",
+      "program": "3-Day Split — Chest, Shoulders & Triceps / Back & Biceps / Legs"
+    },
+    {
+      "id": "example-upper-lower",
+      "name": "Upper / Lower",
+      "program": "4-Day Split — Two Upper Days, Two Lower Days"
+    },
+    {
+      "id": "example-fullbody",
+      "name": "Full Body",
+      "program": "3-Day Split — Three Full Body Sessions A, B & C"
+    }
   ]
 }

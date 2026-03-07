@@ -37,8 +37,8 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=56;
-var WHATS_NEW=["Rest timer stays on screen until you tap it — no more blinking away","Timer sound and vibration now work every time, not just the first set","Finished a card? It collapses and the next exercise opens automatically","Setup instructions in the Coach tab for machine and cable exercises","Cleaner navigation bar — text only, no icons"];
+var APP_VERSION=57;
+var WHATS_NEW=["Three configurable shortcuts in the nav bar — including a direct Cardio button","Example training splits on the profile screen so you can explore before committing","Navigation now always shows all three shortcut slots"];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
 function shouldShowWhatsNew(){return getSeenVersion()<APP_VERSION&&getSeenVersion()>0}
@@ -2581,14 +2581,18 @@ function SettingsPanel(props){
 /* ── Profile Selector ── */
 function ProfileSelector(){
   var s=useState(null),profiles=s[0],setProfiles=s[1];var s2=useState(null),error=s2[0],setError=s2[1];
-  useEffect(function(){fetch("configs/profiles.json").then(function(r){if(!r.ok)throw new Error("Not found");return r.json()}).then(function(data){setProfiles(data.profiles||[])}).catch(function(){setError("No profiles.json found. Access via ?profile=yourname")})},[]);
+  useEffect(function(){fetch("configs/profiles.json").then(function(r){if(!r.ok)throw new Error("Not found");return r.json()}).then(function(data){setProfiles({real:data.profiles||[],examples:data.examples||[]})}).catch(function(){setError("No profiles.json found. Access via ?profile=yourname")})},[]);
   if(error)return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",padding:40,textAlign:"center"}},h("div",null,h("div",{style:{fontSize:40,marginBottom:16},"aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),h("h1",{style:{fontSize:22,fontWeight:800,color:"var(--text-bright)",marginBottom:8}},"HYPER",h("span",{style:{color:"var(--accent)"}},"TROPHY")),h("p",{style:{fontSize:14,color:"var(--text-dim)",lineHeight:1.6}},error)));
   if(!profiles)return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh"},"aria-label":"Loading"},h("div",{style:{width:24,height:24,border:"3px solid rgba(245,158,11,0.3)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}));
-  return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",padding:32}},h("div",{style:{maxWidth:400,width:"100%",textAlign:"center"}},
+  var renderProfile=function(p){var isCurrent=getProfileFromURL()===p.id;return h("a",{key:p.id,href:"?profile="+p.id,onClick:isCurrent?function(e){e.preventDefault()}:undefined,style:{display:"block",padding:"16px 20px",borderRadius:14,border:isCurrent?"1px solid var(--accent)":"1px solid var(--accent-border)",background:isCurrent?"rgba(245,158,11,0.15)":"var(--accent-bg)",textDecoration:"none",textAlign:"left"},role:"listitem"},h("div",{style:{fontSize:16,fontWeight:700,color:"var(--text-bright)"}},p.name,isCurrent?" (current)":""),h("div",{style:{fontSize:12,color:"var(--text-dim)",marginTop:2}},p.program||""))};
+  return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",padding:32}},h("div",{style:{maxWidth:400,width:"100%",textAlign:"center"}},
     h("div",{style:{fontSize:40,marginBottom:12},"aria-hidden":"true"},"\uD83C\uDFCB\uFE0F"),
     h("h1",{style:{fontSize:24,fontWeight:800,color:"var(--text-bright)",marginBottom:4}},"HYPER",h("span",{style:{color:"var(--accent)"}},"TROPHY")),
     h("p",{style:{fontSize:13,color:"var(--text-dim)",marginBottom:24}},"Select your profile"),
-    h("div",{style:{display:"flex",flexDirection:"column",gap:10},role:"list"},profiles.map(function(p){var isCurrent=getProfileFromURL()===p.id;return h("a",{key:p.id,href:"?profile="+p.id,onClick:isCurrent?function(e){e.preventDefault()}:undefined,style:{display:"block",padding:"16px 20px",borderRadius:14,border:isCurrent?"1px solid var(--accent)":"1px solid var(--accent-border)",background:isCurrent?"rgba(245,158,11,0.15)":"var(--accent-bg)",textDecoration:"none",textAlign:"left"},role:"listitem"},h("div",{style:{fontSize:16,fontWeight:700,color:"var(--text-bright)"}},p.name,isCurrent?" (current)":""),h("div",{style:{fontSize:12,color:"var(--text-dim)",marginTop:2}},p.program||""))}))));
+    profiles.real.length>0?h("div",{style:{display:"flex",flexDirection:"column",gap:10,marginBottom:32},role:"list"},profiles.real.map(renderProfile)):null,
+    profiles.examples.length>0?h("div",null,
+      h("div",{style:{fontSize:11,fontWeight:700,color:"var(--text-dim)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:12,textAlign:"left"}},"Example Splits"),
+      h("div",{style:{display:"flex",flexDirection:"column",gap:8},role:"list"},profiles.examples.map(renderProfile))):null));
 }
 
 /* ── Offline Indicator ── */
@@ -2626,7 +2630,8 @@ function MainApp(props){
     var current=getPref("navShortcuts",null);
     if(!current)return;
     var migrated=current.map(function(id){return id==="records"?"insights":id});
-    if(migrated.length===2)migrated.push("cardio");
+    while(migrated.length<3){migrated.push(NAV_SHORTCUT_DEFAULTS[migrated.length]||"cardio");}
+    migrated=migrated.slice(0,3);
     if(migrated.length!==current.length||migrated.some(function(id,i){return id!==current[i]})){
       setPref("navShortcuts",migrated);setNavShortcutsState(migrated);
     }

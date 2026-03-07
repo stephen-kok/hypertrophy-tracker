@@ -1,5 +1,5 @@
 /* CACHE_NAME must match APP_VERSION in app.js — bump both together */
-var CACHE_NAME = 'hypertrophy-v56';
+var CACHE_NAME = 'hypertrophy-v57';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -9,6 +9,9 @@ var URLS_TO_CACHE = [
   './configs/profiles.json',
   './configs/stephen.json',
   './configs/james.json',
+  './configs/example-ppl.json',
+  './configs/example-upper-lower.json',
+  './configs/example-fullbody.json',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js'
 ];

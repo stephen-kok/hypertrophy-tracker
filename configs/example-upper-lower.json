@@ -1,0 +1,290 @@
+{
+  "days": [
+    {
+      "id": "upper_a",
+      "label": "Upper A",
+      "exercises": [
+        {
+          "id": "ul_bp_a",
+          "name": "Barbell Bench Press",
+          "sets": 4,
+          "reps": "5-8",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["chest", "front_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Heavier, lower-rep pressing day. Focus on adding weight each week.",
+          "formTips": ["Feet planted, back arched slightly, shoulder blades pinched", "Lower to lower chest — elbows at ~75 degrees", "Drive hard off the chest — treat it like a deadlift"]
+        },
+        {
+          "id": "ul_row_a",
+          "name": "Barbell Row",
+          "sets": 4,
+          "reps": "5-8",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["back", "biceps", "rear_delt"],
+          "rir": "1-2",
+          "tip": "Overhand grip. Hinge to near-horizontal. Pull to your lower chest.",
+          "formTips": ["Hinge until your torso is around 45 degrees or lower", "Pull bar into your belly — not your sternum", "Hold at the top, then lower with control"]
+        },
+        {
+          "id": "ul_ohp_a",
+          "name": "Overhead Press",
+          "sets": 3,
+          "reps": "8-12",
+          "rest": 90,
+          "increment": 5,
+          "muscles": ["front_delt", "side_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Brace hard and press straight up. Lock out fully at the top.",
+          "formTips": ["Grip just outside shoulder width", "Bar starts at upper chest/clavicle", "Squeeze your glutes to prevent lower back hyperextension"]
+        },
+        {
+          "id": "ul_pup_a",
+          "name": "Pull-Up",
+          "sets": 3,
+          "reps": "6-10",
+          "rest": 90,
+          "increment": 2.5,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Dead hang start. Lead with your elbows to pull chest to bar.",
+          "formTips": ["Full dead hang at the bottom", "Drive elbows down — not just pull with arms", "Chin over bar — no half reps"]
+        },
+        {
+          "id": "ul_lat_a",
+          "name": "Cable Lateral Raise",
+          "sets": 3,
+          "reps": "15-20",
+          "rest": 60,
+          "machine": true,
+          "increment": 2.5,
+          "muscles": ["side_delt"],
+          "rir": "0-1",
+          "tip": "Light weight, high reps. Lead with your elbow and control the way down.",
+          "formTips": ["Lead with elbow — hand follows", "Raise only to shoulder height", "3-second lowering phase"]
+        }
+      ]
+    },
+    {
+      "id": "lower_a",
+      "label": "Lower A",
+      "exercises": [
+        {
+          "id": "ul_sq_a",
+          "name": "Barbell Back Squat",
+          "sets": 4,
+          "reps": "5-8",
+          "rest": 180,
+          "increment": 5,
+          "muscles": ["quads", "glutes", "hamstrings"],
+          "rir": "1-2",
+          "tip": "Strength-focus squat day. Lower the weight to hit depth with good form.",
+          "formTips": ["Big brace before unracking", "Knees track over toes", "Hit parallel or below every rep"]
+        },
+        {
+          "id": "ul_rdl_a",
+          "name": "Romanian Deadlift",
+          "sets": 3,
+          "reps": "8-12",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["hamstrings", "glutes"],
+          "rir": "1-2",
+          "tip": "Hip hinge movement — feel your hamstrings stretch. Bar stays close to your legs.",
+          "formTips": ["Push hips back — don't bend knees first", "Stop at the point of maximum stretch", "Drive through your hips to stand"]
+        },
+        {
+          "id": "ul_lprs_a",
+          "name": "Leg Press",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 10,
+          "muscles": ["quads", "glutes"],
+          "rir": "1-2",
+          "tip": "Finish your quads when you're too fatigued for more squats.",
+          "formTips": ["Don't lock out at the top", "Lower until knees are at 90 degrees", "Feet mid-platform, shoulder-width"]
+        },
+        {
+          "id": "ul_lcc_a",
+          "name": "Leg Curl",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 60,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["hamstrings"],
+          "rir": "0-1",
+          "tip": "Isolate your hamstrings at the end of the session.",
+          "formTips": ["Hips stay flat on the pad", "Full contraction at the top", "Slow lowering — 3 seconds"]
+        },
+        {
+          "id": "ul_src_a",
+          "name": "Calf Raise",
+          "sets": 4,
+          "reps": "15-20",
+          "rest": 60,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["calves"],
+          "rir": "0-1",
+          "tip": "Full range of motion is the key with calves. Deep stretch at the bottom.",
+          "formTips": ["Pause at the bottom stretch", "Rise all the way to tiptoe", "No bouncing — control everything"]
+        }
+      ]
+    },
+    {
+      "id": "upper_b",
+      "label": "Upper B",
+      "exercises": [
+        {
+          "id": "ul_idp_b",
+          "name": "Incline Dumbbell Press",
+          "sets": 4,
+          "reps": "10-15",
+          "rest": 90,
+          "increment": 2.5,
+          "muscles": ["chest", "front_delt"],
+          "rir": "1-2",
+          "tip": "Hypertrophy-focus upper day. Higher reps, more volume.",
+          "formTips": ["30-45 degree bench angle", "Lower to a full chest stretch", "Controlled press — don't rush"]
+        },
+        {
+          "id": "ul_csr_b",
+          "name": "Cable Seated Row",
+          "sets": 4,
+          "reps": "10-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Squeeze your shoulder blades at the end of every rep.",
+          "formTips": ["Sit tall — don't round", "Pull to your lower chest", "Hold the contraction for a beat"]
+        },
+        {
+          "id": "ul_dprs_b",
+          "name": "Dumbbell Shoulder Press",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "increment": 2.5,
+          "muscles": ["front_delt", "side_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Slightly in front of your ears at the bottom, full lockout at the top.",
+          "formTips": ["Keep your lower back from arching excessively", "Elbows slightly in front of your torso", "Full lockout without shrugging"]
+        },
+        {
+          "id": "ul_latpd_b",
+          "name": "Lat Pulldown",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Wide overhand grip. Pull to your upper chest, leading with your elbows.",
+          "formTips": ["Slight lean back — maybe 10-15 degrees", "Pull bar to upper chest, not neck", "Full stretch at the top — arms completely extended"]
+        },
+        {
+          "id": "ul_dbcurl_b",
+          "name": "Dumbbell Curl",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 60,
+          "increment": 2.5,
+          "muscles": ["biceps"],
+          "rir": "0-1",
+          "tip": "Supinate at the top and squeeze hard.",
+          "formTips": ["Keep elbows pinned to your sides", "Supinate at the top", "Full extension at the bottom"]
+        },
+        {
+          "id": "ul_tpd_b",
+          "name": "Tricep Pushdown",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 60,
+          "machine": true,
+          "increment": 2.5,
+          "muscles": ["triceps"],
+          "rir": "0-1",
+          "tip": "Elbows stay pinned. Full extension on every rep.",
+          "formTips": ["Lock your elbows at your sides", "Full extension at the bottom", "Don't lean into the stack for extra weight"]
+        }
+      ]
+    },
+    {
+      "id": "lower_b",
+      "label": "Lower B",
+      "exercises": [
+        {
+          "id": "ul_dl_b",
+          "name": "Deadlift",
+          "sets": 3,
+          "reps": "5-8",
+          "rest": 180,
+          "increment": 5,
+          "muscles": ["hamstrings", "glutes", "back", "quads"],
+          "rir": "1-2",
+          "tip": "Set your back, brace hard, and push the floor away. Keep the bar over your mid-foot.",
+          "formTips": ["Bar over mid-foot at setup", "Hips and shoulders rise at the same rate", "Lock out by squeezing glutes — don't hyperextend"]
+        },
+        {
+          "id": "ul_hesp_b",
+          "name": "Hack Squat",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 10,
+          "muscles": ["quads", "glutes"],
+          "rir": "1-2",
+          "tip": "Feet low on the platform to maximize quad activation.",
+          "formTips": ["Feet lower on platform = more quads", "Lower until thighs pass parallel", "Drive through your heels"]
+        },
+        {
+          "id": "ul_glb_b",
+          "name": "Glute Bridge",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 60,
+          "increment": 5,
+          "muscles": ["glutes", "hamstrings"],
+          "rir": "1-2",
+          "tip": "Drive your hips up until your body forms a straight line from knee to shoulder. Squeeze hard at the top.",
+          "formTips": ["Feet flat, hip-width apart", "Drive through your heels", "Squeeze glutes hard at the top for 1-2 seconds"]
+        },
+        {
+          "id": "ul_lcc_b",
+          "name": "Leg Curl",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 60,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["hamstrings"],
+          "rir": "0-1",
+          "tip": "Hamstring isolation to finish the session.",
+          "formTips": ["Hips flat on the pad", "Full curl — heels to glutes", "Slow eccentric"]
+        },
+        {
+          "id": "ul_src_b",
+          "name": "Calf Raise",
+          "sets": 4,
+          "reps": "15-20",
+          "rest": 60,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["calves"],
+          "rir": "0-1",
+          "tip": "Deep stretch at the bottom, full rise at the top.",
+          "formTips": ["Pause in the stretched position", "Full plantarflexion at the top", "No bouncing"]
+        }
+      ]
+    }
+  ]
+}

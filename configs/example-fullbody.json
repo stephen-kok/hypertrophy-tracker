@@ -1,0 +1,220 @@
+{
+  "days": [
+    {
+      "id": "full_a",
+      "label": "Full Body A",
+      "exercises": [
+        {
+          "id": "fb_sq_a",
+          "name": "Barbell Back Squat",
+          "sets": 3,
+          "reps": "6-8",
+          "rest": 150,
+          "increment": 5,
+          "muscles": ["quads", "glutes", "hamstrings"],
+          "rir": "1-2",
+          "tip": "The foundation of full-body training. Lower to parallel, drive through your heels.",
+          "formTips": ["Full brace before every rep", "Break at the hips and knees simultaneously", "Knees out — push them into your elbows"]
+        },
+        {
+          "id": "fb_bp_a",
+          "name": "Barbell Bench Press",
+          "sets": 3,
+          "reps": "6-8",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["chest", "front_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Compound press paired with the squat. Lower with control, press explosively.",
+          "formTips": ["Shoulder blades pinched and depressed", "Lower to lower chest", "Leg drive — push through your feet"]
+        },
+        {
+          "id": "fb_row_a",
+          "name": "Barbell Row",
+          "sets": 3,
+          "reps": "6-8",
+          "rest": 120,
+          "increment": 5,
+          "muscles": ["back", "biceps", "rear_delt"],
+          "rir": "1-2",
+          "tip": "Balance out all the pressing. Pull to your belly, squeeze your back.",
+          "formTips": ["Hinge until torso is near-horizontal", "Pull to lower chest/navel", "Lower slowly"]
+        },
+        {
+          "id": "fb_ohp_a",
+          "name": "Overhead Press",
+          "sets": 2,
+          "reps": "8-12",
+          "rest": 90,
+          "increment": 5,
+          "muscles": ["front_delt", "side_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Vertical pressing for shoulder development. Brace hard.",
+          "formTips": ["Core braced — don't hyperextend", "Press straight up", "Lock out at the top"]
+        },
+        {
+          "id": "fb_rdl_a",
+          "name": "Romanian Deadlift",
+          "sets": 2,
+          "reps": "10-12",
+          "rest": 90,
+          "increment": 5,
+          "muscles": ["hamstrings", "glutes"],
+          "rir": "1-2",
+          "tip": "Hip hinge to finish the session. Feel the hamstring stretch on every rep.",
+          "formTips": ["Bar slides down your legs", "Push hips back, not down", "Drive hips forward to finish"]
+        }
+      ]
+    },
+    {
+      "id": "full_b",
+      "label": "Full Body B",
+      "exercises": [
+        {
+          "id": "fb_dl_b",
+          "name": "Deadlift",
+          "sets": 3,
+          "reps": "5-6",
+          "rest": 180,
+          "increment": 5,
+          "muscles": ["hamstrings", "glutes", "back", "quads"],
+          "rir": "1-2",
+          "tip": "Full body B centres around the deadlift. Everything else is accessory work.",
+          "formTips": ["Bar over mid-foot at setup — about 1 inch from shins", "Shoulder blades over the bar", "Push floor away — don't pull"]
+        },
+        {
+          "id": "fb_idp_b",
+          "name": "Incline Dumbbell Press",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "increment": 2.5,
+          "muscles": ["chest", "front_delt"],
+          "rir": "1-2",
+          "tip": "Upper chest focus after heavy deadlifts. Lighter and more controlled than Day A pressing.",
+          "formTips": ["30-45 degree incline", "Lower slowly with a full stretch", "Press without locking elbows"]
+        },
+        {
+          "id": "fb_latpd_b",
+          "name": "Lat Pulldown",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Pull your elbows down and back. Lean slightly back and pull to your upper chest.",
+          "formTips": ["Arms fully extended at the top", "Lead with elbows on the way down", "Pull to upper chest — not behind the neck"]
+        },
+        {
+          "id": "fb_lprs_b",
+          "name": "Leg Press",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 10,
+          "muscles": ["quads", "glutes"],
+          "rir": "1-2",
+          "tip": "Quad work without the spinal load of squats — great after deadlifts.",
+          "formTips": ["Don't lock your knees at the top", "Lower to 90 degree knee angle", "Feet shoulder-width"]
+        },
+        {
+          "id": "fb_lat_b",
+          "name": "Cable Lateral Raise",
+          "sets": 3,
+          "reps": "15-20",
+          "rest": 60,
+          "machine": true,
+          "increment": 2.5,
+          "muscles": ["side_delt"],
+          "rir": "0-1",
+          "tip": "Side delt isolation to finish. Light weight, high reps.",
+          "formTips": ["Lead with elbow", "Only raise to shoulder height", "Control the lowering — don't let it swing back"]
+        }
+      ]
+    },
+    {
+      "id": "full_c",
+      "label": "Full Body C",
+      "exercises": [
+        {
+          "id": "fb_gbsq_c",
+          "name": "Goblet Squat",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 90,
+          "increment": 5,
+          "muscles": ["quads", "glutes"],
+          "rir": "1-2",
+          "tip": "A lighter squat variation — great for depth and posture. Hold a dumbbell at your chest.",
+          "formTips": ["Hold dumbbell vertically at your chest", "Elbows inside your knees at the bottom", "Sit tall — chest up throughout"]
+        },
+        {
+          "id": "fb_dprs_c",
+          "name": "Dumbbell Shoulder Press",
+          "sets": 3,
+          "reps": "10-15",
+          "rest": 90,
+          "increment": 2.5,
+          "muscles": ["front_delt", "side_delt", "triceps"],
+          "rir": "1-2",
+          "tip": "Dumbbell variation for shoulder pressing — more range of motion than a barbell.",
+          "formTips": ["Start at shoulder height, elbows at 90 degrees", "Press up and slightly inward", "Full lockout without shrugging"]
+        },
+        {
+          "id": "fb_csr_c",
+          "name": "Cable Seated Row",
+          "sets": 3,
+          "reps": "12-15",
+          "rest": 90,
+          "machine": true,
+          "increment": 5,
+          "muscles": ["back", "biceps"],
+          "rir": "1-2",
+          "tip": "Horizontal pulling to balance shoulder health. Focus on scapular retraction.",
+          "formTips": ["Sit upright — no rounding", "Pull to lower chest", "Squeeze shoulder blades at the end"]
+        },
+        {
+          "id": "fb_sldl_c",
+          "name": "Single-Leg Deadlift",
+          "sets": 3,
+          "reps": "10-12",
+          "rest": 90,
+          "increment": 2.5,
+          "muscles": ["hamstrings", "glutes"],
+          "bilateral": true,
+          "rir": "1-2",
+          "tip": "Unilateral hip hinge — challenges balance and builds each leg independently.",
+          "formTips": ["Slight bend in the standing knee", "Hips stay square — don't let one side drop", "Feel the stretch in your hamstring before driving back up"]
+        },
+        {
+          "id": "fb_dbcurl_c",
+          "name": "Dumbbell Curl",
+          "sets": 2,
+          "reps": "12-15",
+          "rest": 60,
+          "increment": 2.5,
+          "muscles": ["biceps"],
+          "rir": "0-1",
+          "tip": "Arm isolation to finish the week. Supinate and squeeze.",
+          "formTips": ["Elbows pinned to your sides", "Supinate at the top", "Full extension at the bottom"]
+        },
+        {
+          "id": "fb_tpd_c",
+          "name": "Tricep Pushdown",
+          "sets": 2,
+          "reps": "12-15",
+          "rest": 60,
+          "machine": true,
+          "increment": 2.5,
+          "muscles": ["triceps"],
+          "rir": "0-1",
+          "tip": "Pair with curls for an arm finisher.",
+          "formTips": ["Elbows pinned to your sides", "Full extension at the bottom", "No swinging"]
+        }
+      ]
+    }
+  ]
+}
