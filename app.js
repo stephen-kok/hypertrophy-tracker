@@ -697,7 +697,7 @@ function TimerProvider(props){
   var triggerTimer=useCallback(function(exKey,seconds){
     /* Request notification permission here — this is called from a user gesture (set completion) */
     requestNotifPermission();
-    timersRef.current[exKey]={total:seconds,startedAt:Date.now(),running:true,done:false};
+    timersRef.current[exKey]={total:seconds,startedAt:Date.now(),running:true,done:false,notified:false};
     forceUpdate();
   },[forceUpdate]);
 
@@ -727,7 +727,7 @@ function TimerProvider(props){
           var t=timersRef.current[key];
           if(t&&t.running&&t.startedAt){
             if(Math.floor((Date.now()-t.startedAt)/1000)>=t.total){
-              t.running=false;t.done=true;changed=true;sendTimerNotification();
+              t.running=false;t.done=true;t.notified=true;changed=true;sendTimerNotification();
             }
           }
         });
@@ -970,9 +970,7 @@ function playTimerSound(){
     },450);
   }catch(e){console.debug("Timer sound failed:",e)}
 }
-var _lastTimerNotif=0;
 function sendTimerNotification(){
-  var now=Date.now();if(now-_lastTimerNotif<500)return;_lastTimerNotif=now;
   if(navigator.vibrate)navigator.vibrate([200,100,200]);
   playTimerSound();
   /* Toast removed — FloatingTimer already shows "REST COMPLETE" banner */
@@ -993,7 +991,7 @@ function FloatingTimer(){
       if(active){
         var left=Math.max(0,active.timer.total-Math.floor((Date.now()-active.timer.startedAt)/1000));
         setDisplay({key:active.key,remaining:left,total:active.timer.total});
-        if(left===0&&active.timer.running){var updated=Object.assign({},active.timer,{running:false,done:true});timers.setTimer(active.key,updated);sendTimerNotification()}
+        if(left===0&&active.timer.running&&!active.timer.notified){var updated=Object.assign({},active.timer,{running:false,done:true,notified:true});timers.setTimer(active.key,updated);sendTimerNotification()}
       }else{setDisplay(null)}
     };
     tick();intervalRef.current=setInterval(tick,1000);
