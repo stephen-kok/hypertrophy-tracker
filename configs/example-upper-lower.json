@@ -1,4 +1,6 @@
 {
+  "profile": "example-upper-lower",
+  "name": "Upper / Lower",
   "days": [
     {
       "id": "upper_a",

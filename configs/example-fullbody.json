@@ -1,4 +1,6 @@
 {
+  "profile": "example-fullbody",
+  "name": "Full Body",
   "days": [
     {
       "id": "full_a",

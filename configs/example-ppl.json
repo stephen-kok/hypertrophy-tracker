@@ -1,4 +1,6 @@
 {
+  "profile": "example-ppl",
+  "name": "Push / Pull / Legs",
   "days": [
     {
       "id": "push",

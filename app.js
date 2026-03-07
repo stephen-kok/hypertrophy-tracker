@@ -1585,7 +1585,7 @@ var CARDIO_TYPES=[
 function CardioLog(props){
   var dayId=props.dayId;var unit=getUnit();var cardioKey="cardio_"+dayId+"_"+getSessionDate();
   var s=useState(function(){var saved=lsGet(cardioKey);return saved||{done:false,type:"treadmill",duration:30,incline:12,speed:3.0}}),data=s[0],setData=s[1];
-  var s2=useState(data.done),expanded=s2[0],setExpanded=s2[1];
+  var s2=useState(props.autoExpand||data.done),expanded=s2[0],setExpanded=s2[1];
   var save=function(d){setData(d);lsSet(cardioKey,d)};var update=function(field,val){save(Object.assign({},data,{[field]:val}))};var toggleDone=function(){var newDone=!data.done;save(Object.assign({},data,{done:newDone}));if(!expanded)setExpanded(true);if(props.onDone)props.onDone(newDone)};
   var cardioType=CARDIO_TYPES.find(function(c){return c.id===(data.type||"treadmill")})||CARDIO_TYPES[0];
   var switchType=function(typeId){var ct=CARDIO_TYPES.find(function(c){return c.id===typeId})||CARDIO_TYPES[0];save(Object.assign({},ct.defaults,{done:data.done,type:typeId}))};
@@ -2300,7 +2300,7 @@ function StandaloneCardio(props){
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
       h("h3",{style:{fontSize:18,fontWeight:800,color:"var(--text-bright)"}},"Rest Day Cardio"),
       h(CloseBtn,{onClick:onClose})),
-    h(CardioLog,{dayId:"rest"}));
+    h(CardioLog,{dayId:"rest",autoExpand:true}));
 }
 
 /* ── Onboarding Steps ── */
