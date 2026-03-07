@@ -145,9 +145,9 @@ input[type="number"]{-moz-appearance:textfield}
 .vol-fill{height:100%;border-radius:4px;transition:width 0.3s}
 
 /* ═══ BOTTOM NAV ═══ */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;border-top:1px solid var(--border);background:var(--surface);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding-bottom:max(env(safe-area-inset-bottom,0px),4px);z-index:50}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;border-top:1px solid var(--border);background:rgba(10,10,15,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding-bottom:max(env(safe-area-inset-bottom,0px),4px);z-index:50}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;background:none;border:none;cursor:pointer;color:var(--text-dim);transition:color .15s,background .15s}
-.nav-btn--active{color:var(--accent);background:var(--accent-bg);border-radius:10px}
+.nav-btn--active{color:var(--accent)}
 .nav-btn__icon{font-size:11px;line-height:1}
 .nav-btn__label{font-size:13px;font-weight:800;letter-spacing:.3px}
 
