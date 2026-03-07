@@ -2331,6 +2331,7 @@ function DayView(props){
   var day=props.day,refresh=props.refresh,config=props.config;
   var dayData=useDayData();
   var s5=useState(false),showComplete=s5[0],setShowComplete=s5[1];
+  var swe=useState(false),willEndSession=swe[0],setWillEndSession=swe[1];
   var s8=useState(false),showAddForm=s8[0],setShowAddForm=s8[1];
   var sc=useState(function(){return getCustomExercises(day.id)}),customs=sc[0],setCustoms=sc[1];
   var sw=useState(0),swapRev=sw[0],bumpSwapRev=sw[1];
@@ -2431,9 +2432,9 @@ function DayView(props){
       }}),h("button",{onClick:function(){removeCustom(ex.id,ex.name)},style:{position:"absolute",top:10,right:10,width:22,height:22,borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger)",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10},"aria-label":"Remove "+ex.name},"\u2715"))})):null,
     showAddForm?h(AddExerciseForm,{dayId:day.id,onAdd:function(){setCustoms(getCustomExercises(day.id));setShowAddForm(false);refresh()},onCancel:function(){setShowAddForm(false)}}):h("button",{onClick:function(){setShowAddForm(true)},className:"btn btn--info btn--full btn--dashed",style:{marginTop:8}},"+ Add Exercise"),
     h(CardioLog,{dayId:day.id,onDone:function(done){setCardioDone(done)}}),
-    allComplete?h(SessionEndPrompt,{allExDone:true,cardioDone:cardioDone,onEndSession:function(){endSession();setShowComplete(true)},onScrollToCardio:function(){var cardioEl=document.querySelector("[aria-label='Cardio log']");if(cardioEl)cardioEl.scrollIntoView({behavior:"smooth",block:"center"})}}):null,
+    allComplete?h(SessionEndPrompt,{allExDone:true,cardioDone:cardioDone,onEndSession:function(){setWillEndSession(true);setShowComplete(true)},onScrollToCardio:function(){var cardioEl=document.querySelector("[aria-label='Cardio log']");if(cardioEl)cardioEl.scrollIntoView({behavior:"smooth",block:"center"})}}):null,
     allComplete?h(SessionRPE,{dayId:day.id}):null,
-    showComplete?h(CompletionSummary,{day:day,customs:customs,onClose:function(){setShowComplete(false)}}):null);
+    showComplete?h(CompletionSummary,{day:day,customs:customs,onClose:function(){if(willEndSession){endSession();setWillEndSession(false)}setShowComplete(false)}}):null);
 }
 
 /* ── Collapsible Settings Group ── */
