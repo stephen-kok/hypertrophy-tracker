@@ -62,12 +62,12 @@ var RPE_COLORS={6:"var(--success)",7:"var(--lime)",8:"var(--accent)",9:"var(--wa
 var TREND_RANGES={4:28,8:56,12:84,0:9999};/* 0 = "All"; value = days to look back */
 /* Bottom-nav configurable shortcut definitions */
 var NAV_SHORTCUTS_DEF=[
-  {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL"},
-  {id:"insights", icon:"\uD83D\uDCCA",label:"Insights",     navLabel:"STATS"},
-  {id:"calendar",icon:"\uD83D\uDCC5",label:"Calendar",     navLabel:"CAL"},
-  {id:"history", icon:"\uD83D\uDCCB",label:"History",      navLabel:"LOG"},
-  {id:"metrics", icon:"\uD83D\uDCCF",label:"Body Metrics", navLabel:"BODY"},
-  {id:"fatigue", icon:"\uD83D\uDCC8",label:"Fatigue Trend",navLabel:"TREND"},
+  {id:"volume",  icon:"\uD83D\uDCCA",label:"Volume",       navLabel:"VOL",  navIcon:"\u25A0"},
+  {id:"insights", icon:"\uD83D\uDCCA",label:"Insights",     navLabel:"STATS",navIcon:"\u25C6"},
+  {id:"calendar",icon:"\uD83D\uDCC5",label:"Calendar",     navLabel:"CAL",  navIcon:"\u25CB"},
+  {id:"history", icon:"\uD83D\uDCCB",label:"History",      navLabel:"LOG",  navIcon:"\u2261"},
+  {id:"metrics", icon:"\uD83D\uDCCF",label:"Body Metrics", navLabel:"BODY", navIcon:"\u25C7"},
+  {id:"fatigue", icon:"\uD83D\uDCC8",label:"Fatigue Trend",navLabel:"TREND",navIcon:"\u25B3"},
 ];
 var NAV_SHORTCUT_DEFAULTS=["calendar","insights"];
 
@@ -2762,9 +2762,9 @@ function MainApp(props){
       var shortcutActions={volume:function(){setShowVolume(true)},insights:function(){setShowInsights(true)},calendar:function(){setShowCalendar(true)},history:function(){setShowHistory(true)},metrics:function(){setShowMetrics(true)},fatigue:function(){setShowFatigueTrend(true)}};
       var shortcutActive={volume:showVolume,insights:showInsights,calendar:showCalendar,history:showHistory,metrics:showMetrics,fatigue:showFatigueTrend};
       return h("nav",{className:"bottom-nav",role:"navigation","aria-label":"Main navigation"},
-        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__label"},"TRAIN")),
-        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__label"},def.navLabel))}),
-        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__label"},"MORE")));
+        h("button",{onClick:function(){setNavTab(0)},className:"nav-btn"+(navTab===0?" nav-btn--active":""),"aria-label":"Train","aria-current":navTab===0?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u25B2"),h("span",{className:"nav-btn__label"},"TRAIN")),
+        navShortcuts.map(function(id){var def=NAV_SHORTCUTS_DEF.find(function(d){return d.id===id})||NAV_SHORTCUTS_DEF[0];return h("button",{key:id,onClick:function(){if(shortcutActions[id])shortcutActions[id]()},className:"nav-btn"+(shortcutActive[id]?" nav-btn--active":""),"aria-label":def.label,"aria-current":shortcutActive[id]?"page":undefined},h("span",{className:"nav-btn__icon","aria-hidden":"true"},def.navIcon),h("span",{className:"nav-btn__label"},def.navLabel))}),
+        h("button",{onClick:function(){setShowMore(true)},className:"nav-btn","aria-label":"More"},h("span",{className:"nav-btn__icon","aria-hidden":"true"},"\u22EF"),h("span",{className:"nav-btn__label"},"MORE")));
     })(),
     /* More Menu */
     showMore?h("div",{className:"overlay",onClick:function(e){if(e.target===e.currentTarget)setShowMore(false)},role:"dialog","aria-modal":"true","aria-label":"More options"},
