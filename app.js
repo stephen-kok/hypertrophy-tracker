@@ -37,8 +37,8 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
  */
 
 /* ═══ APP VERSION & WHAT'S NEW ═══ */
-var APP_VERSION=57;
-var WHATS_NEW=["Three configurable shortcuts in the nav bar — including a direct Cardio button","Example training splits on the profile screen so you can explore before committing","Navigation now always shows all three shortcut slots"];
+var APP_VERSION=58;
+var WHATS_NEW=["Deload panel collapses after selecting a strategy — tap to expand again","Exercise cards wait longer before auto-collapsing so you can rate RPE","+/\u2212 buttons now start from the displayed suggestion instead of zero"];
 function getSeenVersion(){return lsGet("_app_version")||0}
 function markVersionSeen(){lsSet("_app_version",APP_VERSION)}
 function shouldShowWhatsNew(){return getSeenVersion()<APP_VERSION&&getSeenVersion()>0}
@@ -1234,7 +1234,7 @@ function SetLogger(props){
   var update=function(idx,field,val){if(val!==""&&(isNaN(Number(val))||Number(val)<0))return;if(val!==""&&field==="weight"&&Number(val)>MAX_WEIGHT)return;if(val!==""&&field==="reps"&&Number(val)>MAX_REPS)return;setData(function(prev){var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{[field]:val}):s});save(next);return next})};
   var toggle=function(idx){setData(function(prev){var wasDone=prev[idx].done;var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{done:!s.done}):s});persist(next);if(!wasDone){saveSetTimestamp(idx);if(navigator.vibrate)navigator.vibrate(30);showSaveFlash();if(onSetDone)onSetDone();showUndoToast("Set "+(idx+1)+" logged",function(){setData(function(cur){var reverted=cur.map(function(s,i){return i===idx?Object.assign({},s,{done:false}):s});persist(reverted);if(onSetUpdate)onSetUpdate();return reverted})})}else if(onSetUpdate){onSetUpdate()}return next})};
   var autoFill=function(idx,field){if(lastSession&&lastSession[idx]&&lastSession[idx][field])update(idx,field,lastSession[idx][field])};
-  var step=function(idx,field,delta){if(navigator.vibrate)navigator.vibrate(10);setData(function(prev){var cur=parseFloat(prev[idx][field])||0;var val=Math.max(0,cur+delta);var max=field==="weight"?MAX_WEIGHT:MAX_REPS;if(val>max)val=max;var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{[field]:String(val)}):s});save(next);return next})};
+  var step=function(idx,field,delta){if(navigator.vibrate)navigator.vibrate(10);setData(function(prev){var cur=parseFloat(prev[idx][field]);if(isNaN(cur)||prev[idx][field]===""){var ghost=lastSession&&lastSession[idx];if(field==="weight"&&ghost&&ghost.weight){cur=parseFloat(ghost.weight)||0;if(intensityMult)cur=unit==="kg"?Math.round(cur*intensityMult*2)/2:Math.round(cur*intensityMult/5)*5}else if(field==="reps"){if(schemeData&&schemeData.sets[idx])cur=parseFloat(schemeData.sets[idx].reps)||0;else if(ghost&&ghost.reps)cur=parseFloat(ghost.reps)||0;else cur=0}else{cur=0}}var val=Math.max(0,cur+delta);var max=field==="weight"?MAX_WEIGHT:MAX_REPS;if(val>max)val=max;var next=prev.map(function(s,i){return i===idx?Object.assign({},s,{[field]:String(val)}):s});save(next);return next})};
   var addExtraSet=function(){setData(function(prev){var last=prev[prev.length-1];var next=prev.concat([{weight:last&&last.weight?last.weight:"",reps:"",done:false,extra:true}]);save(next);return next})};
   var removeExtraSet=function(idx){setData(function(prev){var next=prev.filter(function(_,i){return i!==idx});save(next);if(onSetUpdate)onSetUpdate();return next})};
   /* RIR tracking per set */
@@ -1453,13 +1453,25 @@ function ExerciseCard(props){
   useEffect(function(){
     if(allDone&&!prevAllDoneRef.current){
       // All sets just became done — schedule auto-collapse
-      // Give user 2.5s to rate RPE; if they do, onRated will cancel this and collapse immediately
+      // If RPE rating is enabled, give the user time to rate before collapsing
       if(collapseTimerRef.current)clearTimeout(collapseTimerRef.current);
-      collapseTimerRef.current=setTimeout(function(){
-        collapseTimerRef.current=null;
-        setExpanded(false);
-        if(props.onComplete)props.onComplete(props.index);
-      },2500);
+      var rpeEnabled=getPref("showRir",true);
+      var hasRpe=(function(){var d=dayData.getData(dayId);return d.rpe&&d.rpe[exercise.id]})();
+      if(rpeEnabled&&!hasRpe){
+        // RPE enabled but not yet rated — use longer timeout so user can rate
+        collapseTimerRef.current=setTimeout(function(){
+          collapseTimerRef.current=null;
+          setExpanded(false);
+          if(props.onComplete)props.onComplete(props.index);
+        },10000);
+      }else{
+        // RPE disabled or already rated — collapse quickly
+        collapseTimerRef.current=setTimeout(function(){
+          collapseTimerRef.current=null;
+          setExpanded(false);
+          if(props.onComplete)props.onComplete(props.index);
+        },2500);
+      }
     }
     if(!allDone&&prevAllDoneRef.current){
       // Un-done (set unchecked) — cancel pending collapse
@@ -2230,9 +2242,21 @@ function DeloadOptions(props){
   var s=useState(function(){return getActiveDeload()}),active=s[0],setActive=s[1];
   var sm=useState(function(){return getDeloadMuscles()||[]}),selectedMuscles=sm[0],setSelectedMuscles=sm[1];
   var sme=useState(false),showMuscleFilter=sme[0],setShowMuscleFilter=sme[1];
-  var select=function(stratId){setActiveDeload(stratId);setActive(stratId);showUndoToast(DELOAD_STRATEGIES.find(function(d){return d.id===stratId}).label+" applied"+(selectedMuscles.length?" to "+selectedMuscles.length+" muscle groups":" to all exercises"),function(){clearActiveDeload();setActive(null)});if(onSelect)onSelect()};
-  var clear=function(){clearActiveDeload();setActive(null);setSelectedMuscles([]);showUndoToast("Deload strategy cleared",null,3000);if(onSelect)onSelect()};
+  var sc=useState(function(){return !!getActiveDeload()}),collapsed=sc[0],setCollapsed=sc[1];
+  var select=function(stratId){setActiveDeload(stratId);setActive(stratId);setCollapsed(true);showUndoToast(DELOAD_STRATEGIES.find(function(d){return d.id===stratId}).label+" applied"+(selectedMuscles.length?" to "+selectedMuscles.length+" muscle groups":" to all exercises"),function(){clearActiveDeload();setActive(null);setCollapsed(false)});if(onSelect)onSelect()};
+  var clear=function(){clearActiveDeload();setActive(null);setSelectedMuscles([]);setCollapsed(false);showUndoToast("Deload strategy cleared",null,3000);if(onSelect)onSelect()};
   var toggleMuscle=function(m){var next=selectedMuscles.indexOf(m)>=0?selectedMuscles.filter(function(x){return x!==m}):selectedMuscles.concat([m]);setSelectedMuscles(next);setDeloadMuscles(next.length?next:null);if(onSelect)onSelect()};
+  if(collapsed&&active){
+    var activeStrat=DELOAD_STRATEGIES.find(function(d){return d.id===active});
+    return h("div",{style:{background:"var(--danger-bg)",border:"1px solid var(--danger-border)",borderRadius:10,padding:"8px 14px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"},onClick:function(){setCollapsed(false)}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:6}},
+        h("span",{style:{fontSize:14}},activeStrat?activeStrat.icon:"\u26A0"),
+        h("span",{style:{fontSize:12,fontWeight:700,color:"var(--danger)"}},"Deload: "+(activeStrat?activeStrat.label:"Active")),
+        selectedMuscles.length?h("span",{style:{fontSize:10,color:"var(--text-dim)"}},"("+selectedMuscles.length+" muscles)"):null),
+      h("div",{style:{display:"flex",alignItems:"center",gap:6}},
+        h("button",{onClick:function(e){e.stopPropagation();clear()},className:"btn btn--ghost btn--xs"},"Clear"),
+        h("span",{style:{fontSize:10,color:"var(--text-dim)"}},"Tap to edit")));
+  }
   return h("div",{style:{background:"var(--danger-bg)",border:"1px solid var(--danger-border)",borderRadius:10,padding:"12px 14px",marginBottom:10}},
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
       h("div",{style:{fontSize:12,fontWeight:700,color:"var(--danger)"}},"\u26A0 Deload Week \u2014 Choose Your Strategy"),
