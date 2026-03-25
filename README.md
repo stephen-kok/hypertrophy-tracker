@@ -183,6 +183,12 @@ Vanilla JavaScript with React 18 (CDN), no build step. Extracted CSS design syst
 
 ## Changelog
 
+### v58 — Bug Fixes (2026-03-23)
+
+- **Fix**: Deload panel now collapses after selecting a strategy, showing a compact summary bar instead
+- **Fix**: Exercise cards no longer auto-close before you can rate RPE — timeout extended to 10s when RPE is pending
+- **Fix**: +/− buttons now start from the displayed suggestion (last session value) instead of zero when the field is empty
+
 ### v55 — Program Builder (2026-03-06)
 
 - Program Builder: create and edit your workout program entirely in-app
