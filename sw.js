@@ -86,7 +86,12 @@ self.addEventListener('fetch', function(event) {
         }
         return response;
       }).catch(function() {
-        return caches.match(new Request('./index.html'));
+        /* Try cached version of this exact asset first; only fall back to index.html for navigation */
+        return caches.match(event.request).then(function(cached) {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') return caches.match(new Request('./index.html'));
+          return new Response('Not available offline', {status: 503, statusText: 'Service Unavailable'});
+        });
       })
     );
     return;

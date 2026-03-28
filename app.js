@@ -189,6 +189,7 @@ function flushPendingSaves(){
   Object.keys(_pendingSaves).forEach(function(dayId){
     clearTimeout(_saveTimers[dayId]);
     var p=_pendingSaves[dayId];
+    if(!p)return;
     lsSet(dataKey(dayId,p.date),p.data);
     updateHistoryIndex(dayId,p.date,p.data);
     delete _pendingSaves[dayId];delete _saveTimers[dayId];
@@ -221,7 +222,7 @@ function buildHistoryIndex(){
       var rest=k.slice(LS.length);var atIdx=rest.indexOf("@");if(atIdx===-1)continue;
       var dayId=rest.slice(0,atIdx);var date=rest.slice(atIdx+1);
       if(!date||date.length!==10)continue;
-      try{var data=JSON.parse(localStorage.getItem(k));if(data&&data.exercises){if(!_historyIndex[dayId])_historyIndex[dayId]=[];_historyIndex[dayId].push({date:date,data:deepClone(data)});if(!newManifest[dayId])newManifest[dayId]=[];newManifest[dayId].push(date)}}catch(e){}
+      try{var data=JSON.parse(localStorage.getItem(k));if(data&&data.exercises){if(!_historyIndex[dayId])_historyIndex[dayId]=[];_historyIndex[dayId].push({date:date,data:data});if(!newManifest[dayId])newManifest[dayId]=[];newManifest[dayId].push(date)}}catch(e){}
     }
     lsSet("_historyManifest",newManifest);
   }
@@ -243,7 +244,7 @@ function updateHistoryIndex(dayId,date,data){
 function getIndexDataForDate(dayId,dateStr){
   if(!_historyBuilt)buildHistoryIndex();
   var entries=_historyIndex[dayId]||[];
-  for(var i=0;i<entries.length;i++){if(entries[i].date===dateStr)return entries[i].data}
+  for(var i=0;i<entries.length;i++){if(entries[i].date===dateStr)return entries[i].data||null}
   return null;
 }
 function getHistory(dayId,exId,limit){
@@ -276,7 +277,7 @@ function getMachineWeight(exId){return lsGet("mw_"+exId)||0}
 function setMachineWeightLS(exId,w){lsSet("mw_"+exId,w)}
 function getSessionStart(){return lsGet("session_"+getSessionDate())}
 function markSessionStart(){if(!getSessionStart()){lsSet("session_"+getSessionDate(),Date.now());lockSessionDate()}}
-function endSession(){flushPendingSaves();try{localStorage.removeItem(LS+"session_"+getSessionDate())}catch(e){};unlockSessionDate()}
+function endSession(){flushPendingSaves();try{localStorage.removeItem(LS+"session_"+getSessionDate())}catch(e){}unlockSessionDate()}
 function getStorageUsage(){try{var used=0;for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith(LS)){used+=localStorage.getItem(k).length}}return used}catch(e){return 0}}
 /* ht_onboarded is intentionally global (no profile prefix) — shown once across all profiles */
 function getOnboarded(){try{return localStorage.getItem("ht_onboarded")}catch(e){return"1"}}
@@ -424,7 +425,7 @@ function getOverloadSuggestion(dayId,exercise){
   /* Use mesocycle-adjusted rep range if undulating mode is active */
   var meso=getMesocycle();var mesoTarget=meso.mode==="undulating"?getMesoRepTarget(exercise.reps,meso.week):null;
   var effectiveRange=mesoTarget?{min:mesoTarget.min,max:mesoTarget.max}:range;
-  var comp=lastSets.filter(function(s){return s.done&&s.weight&&s.reps});if(comp.length<Math.max(1,Math.floor(exercise.sets*0.8)))return null;
+  var comp=lastSets.filter(function(s){return s.done&&s.weight&&s.reps});var minComp=Math.max(1,Math.floor((exercise.bilateral?exercise.sets*2:exercise.sets)*0.8));if(comp.length<minComp)return null;
   var allTop=comp.every(function(s){return parseInt(s.reps)>=effectiveRange.max});
   /* For bilateral exercises use the weaker side's best weight to avoid over-progressing */
   var lw;if(exercise.bilateral){var lComp=comp.filter(function(s){return s._side==="L"});var rComp=comp.filter(function(s){return s._side==="R"});var lwL=bestWeight(lComp);var lwR=bestWeight(rComp);lw=(lwL>0&&lwR>0)?Math.min(lwL,lwR):(lwL||lwR)}else{lw=bestWeight(comp)}
@@ -452,7 +453,7 @@ function getOverloadSuggestion(dayId,exercise){
     var hist3=getBilateralHistory(dayId,exercise,3);
     if(hist3.length>=3){
       var sameWeight=hist3.every(function(h){return h.sets.filter(function(s){return s.done&&s.weight}).some(function(s){return parseFloat(s.weight)===lw})});
-      if(sameWeight&&comp.length>=Math.ceil(exercise.sets*0.8)){
+      if(sameWeight&&comp.length>=Math.ceil((exercise.bilateral?exercise.sets*2:exercise.sets)*0.8)){
         return{type:"volume",from:lw,to:lw,msg:"Stuck at "+lw+" for 3 sessions \u2014 try adding 1 extra set"};
       }
     }
@@ -481,6 +482,7 @@ function calc1RM(weight,reps){var w=parseFloat(weight),r=parseInt(reps);if(!w||!
 function calcFatigueScore(config,dayData){
   var rpeScore=0,rpeCount=0,rirScore=0,rirCount=0;
   var todayDate=getSessionDate();
+  if(!_historyBuilt)buildHistoryIndex();
   config.days.forEach(function(day){
     /* Include today's live data from context if available */
     if(dayData){
@@ -495,8 +497,6 @@ function calcFatigueScore(config,dayData){
         });
       }
     }
-    /* Use in-memory history index — avoids N×3 loadDayData calls per fatigue recalc */
-    if(!_historyBuilt)buildHistoryIndex();
     var dayEntries=_historyIndex[day.id]||[];var histCount=0;
     for(var hi=0;hi<dayEntries.length&&histCount<3;hi++){
       var hEntry=dayEntries[hi];if(hEntry.date===todayDate)continue;
@@ -676,7 +676,7 @@ function validateImportData(data){
   if(matchingKeys===0&&foreignKeys>0)return"This export is from a different profile. Expected keys starting with '"+LS+"'.";
   return null;
 }
-function importData(file,cb){if(file.size>50*1024*1024){cb(0,new Error("File too large (max 50 MB). Export a smaller dataset."));return}var r=new FileReader();r.onload=function(e){try{var data=JSON.parse(e.target.result);var err=validateImportData(data);if(err){cb(0,new Error(err));return}var meta=data._export_meta;var warnings=[];if(meta){if(meta.format&&meta.format!==1)warnings.push("Unknown export format (v"+meta.format+").");if(meta.version&&meta.version>APP_VERSION)warnings.push("Export from newer app (v"+meta.version+" vs v"+APP_VERSION+").");if(meta.profile&&meta.profile!==PROFILE)warnings.push("Profile mismatch: export is '"+meta.profile+"', current is '"+PROFILE+"'.")}var c=0;Object.keys(data).forEach(function(k){if(k==="_export_meta")return;if(!k.startsWith(LS))return;/* skip cross-profile keys *//* Strip the profile prefix so lsSet can add it correctly */var shortKey=k.slice(LS.length);try{lsSet(shortKey,data[k]);c++}catch(e){console.warn("[import] Failed to write key",k,e.message)}});_historyBuilt=false;try{localStorage.removeItem(LS+"_historyManifest")}catch(e){};cb(c,null,warnings.length?warnings:null)}catch(err){cb(0,err,null)}};r.onerror=function(){cb(0,new Error("File could not be read"),null)};r.readAsText(file)}
+function importData(file,cb){if(file.size>50*1024*1024){cb(0,new Error("File too large (max 50 MB). Export a smaller dataset."));return}var r=new FileReader();r.onload=function(e){try{var data=JSON.parse(e.target.result);var err=validateImportData(data);if(err){cb(0,new Error(err));return}var meta=data._export_meta;var warnings=[];if(meta){if(meta.format&&meta.format!==1)warnings.push("Unknown export format (v"+meta.format+").");if(meta.version&&meta.version>APP_VERSION)warnings.push("Export from newer app (v"+meta.version+" vs v"+APP_VERSION+").");if(meta.profile&&meta.profile!==PROFILE)warnings.push("Profile mismatch: export is '"+meta.profile+"', current is '"+PROFILE+"'.")}var c=0;Object.keys(data).forEach(function(k){if(k==="_export_meta")return;if(!k.startsWith(LS))return;/* skip cross-profile keys *//* Strip the profile prefix so lsSet can add it correctly */var shortKey=k.slice(LS.length);try{lsSet(shortKey,data[k]);c++}catch(e){console.warn("[import] Failed to write key",k,e.message)}});_historyBuilt=false;try{localStorage.removeItem(LS+"_historyManifest")}catch(e){}cb(c,null,warnings.length?warnings:null)}catch(err){cb(0,err,null)}};r.onerror=function(){cb(0,new Error("File could not be read"),null)};r.readAsText(file)}
 
 /* ═══ SHAREABLE SESSION SUMMARY ═══ */
 function generateShareText(day,stats,unit){
@@ -780,6 +780,8 @@ function DayDataProvider(props){
       var suffix=e.key.slice(LS.length);
       var atIdx=suffix.indexOf("@");
       if(atIdx>=0){var dayId=suffix.slice(0,atIdx);if(dayId)delete cacheRef.current[dayId];else cacheRef.current={}}else{cacheRef.current={}}
+      /* Invalidate history index so overload/volume recalc picks up cross-tab changes */
+      _historyBuilt=false;
       bump(function(r){return r+1});
     };
     window.addEventListener("storage",onStorage);
@@ -957,17 +959,20 @@ function playTimerSound(){
     osc.connect(gain);gain.connect(ctx.destination);
     osc.frequency.value=880;gain.gain.value=0.6;
     osc.start();osc.stop(ctx.currentTime+0.15);
+    osc.onended=function(){osc.disconnect();gain.disconnect()};
     setTimeout(function(){
       var o2=ctx.createOscillator();var g2=ctx.createGain();
       o2.connect(g2);g2.connect(ctx.destination);
       o2.frequency.value=1100;g2.gain.value=0.6;
       o2.start();o2.stop(ctx.currentTime+0.2);
+      o2.onended=function(){o2.disconnect();g2.disconnect()};
     },200);
     setTimeout(function(){
       var o3=ctx.createOscillator();var g3=ctx.createGain();
       o3.connect(g3);g3.connect(ctx.destination);
       o3.frequency.value=1320;g3.gain.value=0.6;
       o3.start();o3.stop(ctx.currentTime+0.2);
+      o3.onended=function(){o3.disconnect();g3.disconnect()};
     },450);
   }catch(e){console.debug("Timer sound failed:",e)}
 }
@@ -983,7 +988,7 @@ function sendTimerNotification(){
 function FloatingTimer(){
   var timers=useTimers();
   var s=useState(null),display=s[0],setDisplay=s[1];
-  var intervalRef=useRef(null);;
+  var intervalRef=useRef(null);
 
   useEffect(function(){
     if(intervalRef.current)clearInterval(intervalRef.current);
@@ -1226,7 +1231,7 @@ function SetLogger(props){
   };
   var baseExId=exId.replace(/_[LR]$/,"");
   var schemeData=useMemo(function(){var ov=getExOverrides(baseExId);if(!ov||!ov.scheme||!SCHEME_PRESETS[ov.scheme])return null;return{type:ov.scheme,sets:SCHEME_PRESETS[ov.scheme](numSets,ov.reps||props.reps||"8-10")}},[baseExId,numSets]);
-  var s=useState(function(){var saved=dayData.getData(dayId);var ex=saved.exercises&&saved.exercises[exId];var len=ex?Math.max(numSets,ex.length):numSets;return Array.from({length:len},function(_,i){return ex&&ex[i]?{weight:ex[i].weight||"",reps:ex[i].reps||"",done:!!ex[i].done,extra:i>=numSets||undefined}:{weight:"",reps:"",done:false}})}),data=s[0],setData=s[1];
+  var s=useState(function(){var saved=dayData.getData(dayId);var ex=saved.exercises&&saved.exercises[exId];var len=ex?Math.max(numSets,ex.length):numSets;return Array.from({length:len},function(_,i){return ex&&ex[i]?{weight:ex[i].weight||"",reps:ex[i].reps||"",done:!!ex[i].done,extra:i>=numSets?true:undefined}:{weight:"",reps:"",done:false}})}),data=s[0],setData=s[1];
   var lastSession=useMemo(function(){var h=getHistory(dayId,exId,1);return h.length?h[0].sets:null},[dayId,exId]);
   var save=useCallback(function(d){var all=dayData.getData(dayId);if(!all.exercises)all.exercises={};all.exercises[exId]=d;dayData.saveData(dayId,all)},[dayId,exId,dayData.getData,dayData.saveData]);
   var persist=useCallback(function(d){save(d);markSessionStart()},[save]);
@@ -1701,7 +1706,7 @@ function VolumeDashboard(props){
           h("input",{type:"number",inputMode:"numeric",min:"0",value:editTargets[m]?editTargets[m][0]:"",onChange:function(e){var t=Object.assign({},editTargets);t[m]=[Math.max(0,parseInt(e.target.value,10)||0),(t[m]||[10,20])[1]];setEditTargets(t)},className:"input input--sm",style:{width:40},"aria-label":(MUSCLE_LABELS[m]||m)+" minimum sets target"}),
           h("span",{style:{fontSize:9,color:"var(--text-dim)"}},"-"),
           h("input",{type:"number",inputMode:"numeric",min:"0",value:editTargets[m]?editTargets[m][1]:"",onChange:function(e){var t=Object.assign({},editTargets);t[m]=[(t[m]||[10,20])[0],Math.max(0,parseInt(e.target.value,10)||0)];setEditTargets(t)},className:"input input--sm",style:{width:40},"aria-label":(MUSCLE_LABELS[m]||m)+" maximum sets target"})
-        ):h("div",{className:"vol-bar"},
+        ):h("div",{className:"vol-bar",role:"progressbar","aria-valuenow":sets,"aria-valuemin":0,"aria-valuemax":target[1],"aria-label":(MUSCLE_LABELS[m]||m)+": "+sets+" sets"},
           h("div",{className:"vol-fill",style:{width:(pct*100)+"%",background:color,minWidth:sets>0?2:0}}),
           h("span",{style:{position:"absolute",right:4,top:0,lineHeight:"16px",fontSize:9,fontWeight:700,color:"var(--text-secondary)"}},sets>0?sets:"")),
         !editing?h("span",{style:{width:30,fontSize:9,fontWeight:700,color:color,textAlign:"left",flexShrink:0}},label):null,
@@ -2399,7 +2404,7 @@ function DayView(props){
     h("div",{style:{marginBottom:14}},
       h("h2",{style:{fontSize:18,fontWeight:800,margin:0,color:"var(--text-bright)",letterSpacing:-.3}},day.title),
       h("div",{style:{marginTop:10,display:"flex",alignItems:"center",gap:10},"aria-label":"Workout progress"},
-        h("div",{className:"progress"},h("div",{className:"progress-fill",style:{width:(pct*100)+"%",background:pct>=1?"var(--success)":"var(--accent)"}})),
+        h("div",{className:"progress",role:"progressbar","aria-valuenow":doneSets,"aria-valuemin":0,"aria-valuemax":totalSets,"aria-label":doneSets+" of "+totalSets+" sets complete"},h("div",{className:"progress-fill",style:{width:(pct*100)+"%",background:pct>=1?"var(--success)":"var(--accent)"}})),
         h("span",{style:{fontSize:11,fontWeight:700,color:pct>=1?"var(--success)":"var(--text-secondary)",fontVariantNumeric:"tabular-nums",flexShrink:0}},doneSets+"/"+totalSets+" sets"),
         allComplete?h("button",{onClick:function(){setShowComplete(true)},className:"btn btn--success btn--sm",style:{animation:"celebrate 0.4s ease"}},"View Summary"):null)),
     /* Readiness check - show before first set */
